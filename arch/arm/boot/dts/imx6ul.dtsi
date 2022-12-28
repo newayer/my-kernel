@@ -791,6 +791,12 @@
 				reg = <0x020e4000 0x4000>;
 			};
 
+			mqs: mqs {
+				compatible = "fsl,imx6sx-mqs";
+				gpr = <&gpr>;
+				status = "disabled";
+			};
+
 			gpt2: gpt@20e8000 {
 				compatible = "fsl,imx6ul-gpt", "fsl,imx6sx-gpt";
 				reg = <0x020e8000 0x4000>;

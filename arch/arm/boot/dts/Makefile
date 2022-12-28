@@ -616,6 +616,7 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-14x14-evk-ecspi-slave.dtb \
 	imx6ul-14x14-evk-ecspi.dtb \
 	imx6ul-14x14-evk-gpmi-weim.dtb \
+	imx6ul-14x14-evk-a6g2c-wifi-256m.dtb \
 	imx6ul-9x9-evk.dtb \
 	imx6ul-9x9-evk-ldo.dtb \
 	imx6ul-9x9-evk-btwifi.dtb \
