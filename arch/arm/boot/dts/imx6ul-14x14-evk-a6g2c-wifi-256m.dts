@@ -239,7 +239,7 @@
 &uart6 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart6>;
-	status = "disabled";
+	status = "okay";
 };
 
 &uart7 {
@@ -251,7 +251,7 @@
 &uart8 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart8>;
-	status = "disabled";
+	status = "okay";
 };
 
 &usbotg2 {
@@ -376,6 +376,10 @@
 	/delete-property/ xceiver-supply;
 };
 
+&wdog1 {
+	status = "disabled";
+};
+
 &iomuxc {
 	pinctrl-0 = <&pinctrl_hog_1 &pinctrl_wifi &pinctrl_paver>;
 
@@ -383,8 +387,6 @@
 		fsl,pins = <
 			MX6UL_PAD_NAND_DQS__GPIO4_IO16      0x17059 /* err led */
 			MX6UL_PAD_NAND_CE1_B__GPIO4_IO14    0x17059 /* run led */
-			MX6UL_PAD_LCD_RESET__GPIO3_IO04     0x40017059 /* gpio3_4 */
-			/* MX6UL_PAD_SNVS_TAMPER9__GPIO5_IO09  0x17059  gpio5_9 */
 			MX6UL_PAD_SNVS_TAMPER1__GPIO5_IO01  0x17059 /* sys mode */
 			MX6UL_PAD_SNVS_TAMPER2__GPIO5_IO02  0x17059 /* clr reg */
 			MX6UL_PAD_SNVS_TAMPER3__GPIO5_IO03  0x17059 /* eth1_reset */
@@ -394,11 +396,14 @@
 
 	pinctrl_paver: paver {
 		fsl,pins = <
-			MX6UL_PAD_LCD_DATA21__GPIO3_IO26    0x40017059 /* rtk sys rest */
-			MX6UL_PAD_CSI_MCLK__GPIO4_IO17      0x40017059 /* rtk event1 */
-			MX6UL_PAD_CSI_PIXCLK__GPIO4_IO18    0x40017059 /* rs485 dir */
-			MX6UL_PAD_LCD_DATA20__GPIO3_IO25    0x40017059 /* can1 enabled */
-			MX6UL_PAD_SNVS_TAMPER6__GPIO5_IO06  0x40017059 /* can2 enabled */
+			MX6UL_PAD_LCD_CLK__GPIO3_IO00       0x40017059 /* BD_V_POWER_EN */
+			MX6UL_PAD_SNVS_TAMPER6__GPIO5_IO06  0x40017059 /* BD_L_POWER_EN */
+			MX6UL_PAD_LCD_ENABLE__GPIO3_IO01    0x40017059 /* BD_RESET */
+			MX6UL_PAD_LCD_DATA09__GPIO3_IO14    0x40017059 /* VPcie_En */
+			MX6UL_PAD_LCD_HSYNC__GPIO3_IO02     0x40017059 /* Can1Stb */
+			MX6UL_PAD_LCD_VSYNC__GPIO3_IO03     0x40017059 /* Can2Stb */
+			MX6UL_PAD_LCD_RESET__GPIO3_IO04     0x40017059 /* 4G_Power_on/off */
+			MX6UL_PAD_LCD_DATA13__GPIO3_IO18    0x40017059 /* 4G_RESET */
 		>;
 	};
 
