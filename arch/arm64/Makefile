@@ -209,6 +209,15 @@ endef
 
 MAKE_MODULES ?= y
 
+kernel.img: Image
+	$(Q)scripts/mkkrnlimg $(objtree)/arch/arm64/boot/Image $(objtree)/kernel.img >/dev/null
+	@echo '  Image:  kernel.img is ready'
+
+DTBS := rk3588-evb7-v11*.dtb
+
+%-images: dtbs kernel.img $(LOGO) $(LOGO_KERNEL)
+	$(Q)$(srctree)/scripts/mkimg --dtb $(DTBS) --keep-dtb-name
+
 %.img:
 ifeq ("$(CONFIG_MODULES)$(MAKE_MODULES)$(srctree)","yy$(objtree)")
 	$(Q)$(MAKE) rockchip/$*.dtb Image.lz4 modules
