@@ -41,3 +41,12 @@ config RFKILL_RK
 	default n
 	help
 	  Rockchip rfkill driver for rk29/rk3X
+
+config RFKILL_JZ
+	tristate "JZ RFKILL driver"
+	depends on RFKILL
+	depends on MMC
+	depends on ARCH_ROCKCHIP
+	default n
+	help
+	  JZ rfkill driver for jad221x
