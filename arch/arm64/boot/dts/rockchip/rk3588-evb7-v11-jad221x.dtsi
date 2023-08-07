@@ -918,7 +918,7 @@
 };
 
 &u2phy0_otg {
-	rockchip,typec-vbus-det;
+	rockchip,sel-pipe-phystatus;
 };
 
 &u2phy1_otg {
@@ -961,8 +961,11 @@
 };
 
 &usbdrd_dwc3_0 {
-	dr_mode = "otg";
-	usb-role-switch;
+	dr_mode = "peripheral";
+	phys = <&u2phy0_otg>;
+	phy-names = "usb2-phy";
+	maximum-speed = "high-speed";
+
 	port {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -982,6 +985,10 @@
 };
 
 &usbdp_phy0_dp {
+	status = "disabled";
+};
+
+&usbdp_phy0_u3 {
 	status = "disabled";
 };
 
