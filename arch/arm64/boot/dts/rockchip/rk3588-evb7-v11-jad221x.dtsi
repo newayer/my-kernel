@@ -256,24 +256,32 @@
 		enable-active-high;
 	};
 
-	wireless_dq600m: wireless-dq600m {
+	wireless_modem: wireless-modem {
 		compatible = "wlan-platdata";
 		wifi_chip_type = "dq600m";
+
 		WIFI,pdn_gpio = <&gpio4 RK_PB5 GPIO_ACTIVE_HIGH>;
-		//WIFI,wake_host_irq = <&gpio2 RK_PB0 GPIO_ACTIVE_HIGH>;
-		//WIFI,wake_gpio     = <&gpio2 RK_PB3 GPIO_ACTIVE_HIGH>;
-		WIFI,reset_gpio    = <&gpio2 RK_PB4 GPIO_ACTIVE_HIGH>;
-		WIFI,poweren_gpio  = <&gpio2 RK_PB5 GPIO_ACTIVE_HIGH>;
-		WIFI,vbat_gpio    = <&gpio2 RK_PB7 GPIO_ACTIVE_HIGH>;
-		//WIFI,usbsel        = <&gpio2 RK_PC1 GPIO_ACTIVE_HIGH>;
+		WIFI,poweren_gpio = <&gpio4 RK_PC6 GPIO_ACTIVE_HIGH>;
+		WIFI,heat_gpio     = <&gpio4 RK_PC5 GPIO_ACTIVE_HIGH>;
 
-		//WIFI,usim_det = <&gpio2 RK_PC0 GPIO_ACTIVE_HIGH>;
-		//WIFI,pa_28v_en = <&gpio0 RK_PC2 GPIO_ACTIVE_HIGH>;
+		MODEM,fastboot     = <&gpio2 RK_PB1 GPIO_ACTIVE_HIGH>;
+		MODEM,ap_wake_dq     = <&gpio2 RK_PB3 GPIO_ACTIVE_HIGH>;
+		MODEM,reset_gpio    = <&gpio2 RK_PB4 GPIO_ACTIVE_HIGH>;
+		MODEM,poweren_gpio  = <&gpio2 RK_PB5 GPIO_ACTIVE_HIGH>;
+		MODEM,usb_detect    = <&gpio2 RK_PB7 GPIO_ACTIVE_HIGH>;
+		MODEM,usbsel        = <&gpio2 RK_PC1 GPIO_ACTIVE_HIGH>;
+		MODEM,usim_det = <&gpio2 RK_PC0 GPIO_ACTIVE_HIGH>;
+		MODEM,pa_28v_en = <&gpio0 RK_PC2 GPIO_ACTIVE_HIGH>;
+		MODEM,dq_4v0_en = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
+		MODEM,dq_id0 = <&gpio1 RK_PC3 GPIO_ACTIVE_HIGH>;
+		MODEM,dq_id1 = <&gpio1 RK_PC2 GPIO_ACTIVE_HIGH>;
+		MODEM,dq_id2 = <&gpio1 RK_PC1 GPIO_ACTIVE_HIGH>;
+		MODEM,dq_id3 = <&gpio1 RK_PC0 GPIO_ACTIVE_HIGH>;
 
-		//WIFI,dq_id0 = <&gpio1 RK_PC3 GPIO_ACTIVE_HIGH>;
-		//WIFI,dq_id1 = <&gpio1 RK_PC2 GPIO_ACTIVE_HIGH>;
-		//WIFI,dq_id2 = <&gpio1 RK_PC1 GPIO_ACTIVE_HIGH>;
-		//WIFI,dq_id3 = <&gpio1 RK_PC0 GPIO_ACTIVE_HIGH>;
+		MODEM,dq_wake_irq = <&gpio2 RK_PB0 GPIO_ACTIVE_HIGH>;
+		MODEM,dq_slp_stat = <&gpio2 RK_PB2 GPIO_ACTIVE_HIGH>;
+		MODEM,dq_irig = <&gpio2 RK_PB6 GPIO_ACTIVE_HIGH>;
+
 		status = "okay";
 	};
 

@@ -61,6 +61,24 @@ struct rfkill_wlan_data {
 	struct wake_lock wlan_irq_wl;
 };
 
+
+struct rksdmmc_gpio_modem_moudle {
+    struct rksdmmc_gpio   fastboot;
+    struct rksdmmc_gpio   ap_wake_dq;
+    struct rksdmmc_gpio   reset_gpio;
+    struct rksdmmc_gpio   poweren_gpio;
+    struct rksdmmc_gpio   usb_detect;
+    struct rksdmmc_gpio   usbsel;
+    struct rksdmmc_gpio   usim_det;
+    struct rksdmmc_gpio   pa_28v_en;
+    struct rksdmmc_gpio   dq_4v0_en;
+    struct rksdmmc_gpio   dq_wake_irq;
+    struct rksdmmc_gpio   dq_slp_stat;
+    struct rksdmmc_gpio   dq_irig;
+    struct rksdmmc_gpio   wifi_pdn;
+	struct rksdmmc_gpio   wifi_heat;
+};
+
 static struct rfkill_wlan_data *g_rfkill = NULL;
 static int power_set_time = 0;
 static int wifi_bt_vbat_state;
@@ -70,6 +88,9 @@ static int wifi_reset_state = 0;
 static const char wlan_name[] = "rkwifi";
 
 static char wifi_chip_type_string[64];
+
+static struct rksdmmc_gpio_modem_moudle g_modem = {0};
+
 /***********************************************************
  * 
  * Broadcom Wifi Static Memory
@@ -527,6 +548,218 @@ static int rfkill_rk_setup_gpio(struct rksdmmc_gpio *gpio, const char *prefix,
 }
 
 #ifdef CONFIG_OF
+
+
+static void modem_parse_dt(struct device_node *node)
+{
+	int gpio;
+	enum of_gpio_flags flags;
+
+	//memset(g_modem, 0, sizeof(*g_modem));
+
+	gpio = of_get_named_gpio_flags(node, "WIFI,pdn_gpio", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.wifi_pdn.io = gpio;
+		g_modem.wifi_pdn.enable = !flags;
+		LOG("%s: MODEM,wifi_pdn = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.wifi_pdn.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "WIFI,heat_gpio", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.wifi_heat.io = gpio;
+		g_modem.wifi_heat.enable = !flags;
+		LOG("%s: MODEM,wifi_heat = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.wifi_heat.io = -1;
+	}
+
+	
+	gpio = of_get_named_gpio_flags(node, "MODEM,fastboot", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.fastboot.io = gpio;
+		g_modem.fastboot.enable = !flags;
+		LOG("%s: MODEM,fastboot = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.fastboot.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,ap_wake_dq", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.ap_wake_dq.io = gpio;
+		g_modem.ap_wake_dq.enable = !flags;
+		LOG("%s: MODEM,ap_wake_dq = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.ap_wake_dq.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,reset_gpio", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.reset_gpio.io = gpio;
+		g_modem.reset_gpio.enable = !flags;
+		LOG("%s: MODEM,reset_gpio = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.reset_gpio.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,poweren_gpio", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.poweren_gpio.io = gpio;
+		g_modem.poweren_gpio.enable = !flags;
+		LOG("%s: MODEM,poweren_gpio = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.poweren_gpio.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,usb_detect", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.usb_detect.io = gpio;
+		g_modem.usb_detect.enable = !flags;
+		LOG("%s: MODEM,usb_detect = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.usb_detect.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,usbsel", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.usbsel.io = gpio;
+		g_modem.usbsel.enable = !flags;
+		LOG("%s: MODEM,usbsel = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.usbsel.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,usim_det", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.usim_det.io = gpio;
+		g_modem.usim_det.enable = !flags;
+		LOG("%s: MODEM,usim_det = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.usim_det.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,pa_28v_en", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.pa_28v_en.io = gpio;
+		g_modem.pa_28v_en.enable = !flags;
+		LOG("%s: MODEM,pa_28v_en = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.pa_28v_en.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,dq_4v0_en", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.dq_4v0_en.io = gpio;
+		g_modem.dq_4v0_en.enable = !flags;
+		LOG("%s: MODEM,dq_4v0_en = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.dq_4v0_en.io = -1;
+	}
+
+/*
+	gpio = of_get_named_gpio_flags(node, "MODEM,dq_id0", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.dq_id0.io = gpio;
+		g_modem.dq_id0.enable = !flags;
+		LOG("%s: MODEM,dq_id0 = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.dq_id0.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,dq_id1", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.dq_id1.io = gpio;
+		g_modem.dq_id1.enable = !flags;
+		LOG("%s: MODEM,dq_id1 = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.dq_id1.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,dq_id2", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.dq_id2.io = gpio;
+		g_modem.dq_id2.enable = !flags;
+		LOG("%s: MODEM,dq_id2 = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.dq_id2.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,dq_id3", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.dq_id3.io = gpio;
+		g_modem.dq_id3.enable = !flags;
+		LOG("%s: MODEM,dq_id3 = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.dq_id3.io = -1;
+	}
+*/
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,dq_wake_irq", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.dq_wake_irq.io = gpio;
+		g_modem.dq_wake_irq.enable = !flags;
+		LOG("%s: MODEM,dq_wake_irq = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.dq_wake_irq.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,dq_slp_stat", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.dq_slp_stat.io = gpio;
+		g_modem.dq_slp_stat.enable = !flags;
+		LOG("%s: MODEM,dq_slp_stat = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.dq_slp_stat.io = -1;
+	}
+
+	gpio = of_get_named_gpio_flags(node, "MODEM,dq_irig", 0,
+						&flags);
+	if (gpio_is_valid(gpio)) {
+		g_modem.dq_irig.io = gpio;
+		g_modem.dq_irig.enable = !flags;
+		LOG("%s: MODEM,dq_irig = %d, flags = %d.\n",
+			__func__, gpio, flags);
+	} else {
+		g_modem.dq_irig.io = -1;
+	}
+
+}
+
 static int wlan_platdata_parse_dt(struct device *dev,
 				  struct rksdmmc_gpio_wifi_moudle *data)
 {
@@ -639,6 +872,9 @@ static int wlan_platdata_parse_dt(struct device *dev,
 		} else {
 			data->wifi_int_b.io = -1;
 		}
+
+        modem_parse_dt(node);
+
 	}
 
 	data->ext_clk = devm_clk_get(dev, "clk_wifi");
@@ -855,11 +1091,277 @@ static ssize_t wifi_reset_store(struct class *cls, struct class_attribute *attr,
 
 static CLASS_ATTR_RW(wifi_reset);
 
+static ssize_t modem_fastboot_store(struct class *cls, struct class_attribute *attr, const char *_buf, size_t _count)
+{
+	long val = 0;
+
+	if (kstrtol(_buf, 10, &val) < 0)
+		return -EINVAL;
+
+	LOG("%s: val = %ld\n", __func__, val);
+
+	if (val > 0){
+		if (gpio_is_valid(g_modem.fastboot.io)) {
+			gpio_direction_output(g_modem.fastboot.io, g_modem.fastboot.enable);
+		};
+	} else {
+		if (gpio_is_valid(g_modem.fastboot.io)) {
+			gpio_direction_output(g_modem.fastboot.io, !(g_modem.fastboot.enable));
+		};
+	}
+
+	return _count;
+}
+static CLASS_ATTR_WO(modem_fastboot);
+
+static ssize_t modem_ap_wake_dq_store(struct class *cls, struct class_attribute *attr, const char *_buf, size_t _count)
+{
+	long val = 0;
+
+	if (kstrtol(_buf, 10, &val) < 0)
+		return -EINVAL;
+
+	LOG("%s: val = %ld\n", __func__, val);
+
+	if (val > 0){
+		if (gpio_is_valid(g_modem.ap_wake_dq.io)) {
+			gpio_direction_output(g_modem.ap_wake_dq.io, g_modem.ap_wake_dq.enable);
+		};
+	} else {
+		if (gpio_is_valid(g_modem.ap_wake_dq.io)) {
+			gpio_direction_output(g_modem.ap_wake_dq.io, !(g_modem.ap_wake_dq.enable));
+		};
+	}
+
+	return _count;
+}
+static CLASS_ATTR_WO(modem_ap_wake_dq);
+
+static ssize_t modem_reset_gpio_store(struct class *cls, struct class_attribute *attr, const char *_buf, size_t _count)
+{
+	long val = 0;
+
+	if (kstrtol(_buf, 10, &val) < 0)
+		return -EINVAL;
+
+	LOG("%s: val = %ld\n", __func__, val);
+
+	if (val > 0){
+		if (gpio_is_valid(g_modem.reset_gpio.io)) {
+			gpio_direction_output(g_modem.reset_gpio.io, g_modem.reset_gpio.enable);
+		};
+	} else {
+		if (gpio_is_valid(g_modem.reset_gpio.io)) {
+			gpio_direction_output(g_modem.reset_gpio.io, !(g_modem.reset_gpio.enable));
+		};
+	}
+
+	return _count;
+}
+static CLASS_ATTR_WO(modem_reset_gpio);
+
+static ssize_t modem_poweren_gpio_store(struct class *cls, struct class_attribute *attr, const char *_buf, size_t _count)
+{
+	long val = 0;
+
+	if (kstrtol(_buf, 10, &val) < 0)
+		return -EINVAL;
+
+	LOG("%s: val = %ld\n", __func__, val);
+
+	if (val > 0){
+		if (gpio_is_valid(g_modem.poweren_gpio.io)) {
+			gpio_direction_output(g_modem.poweren_gpio.io, g_modem.poweren_gpio.enable);
+		};
+	} else {
+		if (gpio_is_valid(g_modem.poweren_gpio.io)) {
+			gpio_direction_output(g_modem.poweren_gpio.io, !(g_modem.poweren_gpio.enable));
+		};
+	}
+
+	return _count;
+}
+static CLASS_ATTR_WO(modem_poweren_gpio);
+
+static ssize_t modem_usb_detect_store(struct class *cls, struct class_attribute *attr, const char *_buf, size_t _count)
+{
+	long val = 0;
+
+	if (kstrtol(_buf, 10, &val) < 0)
+		return -EINVAL;
+
+	LOG("%s: val = %ld\n", __func__, val);
+
+	if (val > 0){
+		if (gpio_is_valid(g_modem.usb_detect.io)) {
+			gpio_direction_output(g_modem.usb_detect.io, g_modem.usb_detect.enable);
+		};
+	} else {
+		if (gpio_is_valid(g_modem.usb_detect.io)) {
+			gpio_direction_output(g_modem.usb_detect.io, !(g_modem.usb_detect.enable));
+		};
+	}
+
+	return _count;
+}
+static CLASS_ATTR_WO(modem_usb_detect);
+
+static ssize_t modem_usbsel_store(struct class *cls, struct class_attribute *attr, const char *_buf, size_t _count)
+{
+	long val = 0;
+
+	if (kstrtol(_buf, 10, &val) < 0)
+		return -EINVAL;
+
+	LOG("%s: val = %ld\n", __func__, val);
+
+	if (val > 0){
+		if (gpio_is_valid(g_modem.usbsel.io)) {
+			gpio_direction_output(g_modem.usbsel.io, g_modem.usbsel.enable);
+		};
+	} else {
+		if (gpio_is_valid(g_modem.usbsel.io)) {
+			gpio_direction_output(g_modem.usbsel.io, !(g_modem.usbsel.enable));
+		};
+	}
+
+	return _count;
+}
+static CLASS_ATTR_WO(modem_usbsel);
+
+static ssize_t modem_usim_det_store(struct class *cls, struct class_attribute *attr, const char *_buf, size_t _count)
+{
+	long val = 0;
+
+	if (kstrtol(_buf, 10, &val) < 0)
+		return -EINVAL;
+
+	LOG("%s: val = %ld\n", __func__, val);
+
+	if (val > 0){
+		if (gpio_is_valid(g_modem.usim_det.io)) {
+			gpio_direction_output(g_modem.usim_det.io, g_modem.usim_det.enable);
+		};
+	} else {
+		if (gpio_is_valid(g_modem.usim_det.io)) {
+			gpio_direction_output(g_modem.usim_det.io, !(g_modem.usim_det.enable));
+		};
+	}
+
+	return _count;
+}
+static CLASS_ATTR_WO(modem_usim_det);
+
+static ssize_t modem_pa_28v_en_store(struct class *cls, struct class_attribute *attr, const char *_buf, size_t _count)
+{
+	long val = 0;
+
+	if (kstrtol(_buf, 10, &val) < 0)
+		return -EINVAL;
+
+	LOG("%s: val = %ld\n", __func__, val);
+
+	if (val > 0){
+		if (gpio_is_valid(g_modem.pa_28v_en.io)) {
+			gpio_direction_output(g_modem.pa_28v_en.io, g_modem.pa_28v_en.enable);
+		};
+	} else {
+		if (gpio_is_valid(g_modem.pa_28v_en.io)) {
+			gpio_direction_output(g_modem.pa_28v_en.io, !(g_modem.pa_28v_en.enable));
+		};
+	}
+
+	return _count;
+}
+static CLASS_ATTR_WO(modem_pa_28v_en);
+
+static ssize_t modem_dq_4v0_en_store(struct class *cls, struct class_attribute *attr, const char *_buf, size_t _count)
+{
+	long val = 0;
+
+	if (kstrtol(_buf, 10, &val) < 0)
+		return -EINVAL;
+
+	LOG("%s: val = %ld\n", __func__, val);
+
+	if (val > 0){
+		if (gpio_is_valid(g_modem.dq_4v0_en.io)) {
+			gpio_direction_output(g_modem.dq_4v0_en.io, g_modem.dq_4v0_en.enable);
+		};
+	} else {
+		if (gpio_is_valid(g_modem.dq_4v0_en.io)) {
+			gpio_direction_output(g_modem.dq_4v0_en.io, !(g_modem.dq_4v0_en.enable));
+		};
+	}
+
+	return _count;
+}
+static CLASS_ATTR_WO(modem_dq_4v0_en);
+
+static ssize_t wifi_pdn_store(struct class *cls, struct class_attribute *attr, const char *_buf, size_t _count)
+{
+	long val = 0;
+
+	if (kstrtol(_buf, 10, &val) < 0)
+		return -EINVAL;
+
+	LOG("%s: val = %ld\n", __func__, val);
+
+	if (val > 0){
+		if (gpio_is_valid(g_modem.wifi_pdn.io)) {
+			gpio_direction_output(g_modem.wifi_pdn.io, g_modem.wifi_pdn.enable);
+		};
+	} else {
+		if (gpio_is_valid(g_modem.wifi_pdn.io)) {
+			gpio_direction_output(g_modem.wifi_pdn.io, !(g_modem.wifi_pdn.enable));
+		};
+	}
+
+	return _count;
+}
+static CLASS_ATTR_WO(wifi_pdn);
+
+static ssize_t wifi_heat_store(struct class *cls, struct class_attribute *attr, const char *_buf, size_t _count)
+{
+	long val = 0;
+
+	if (kstrtol(_buf, 10, &val) < 0)
+		return -EINVAL;
+
+	LOG("%s: val = %ld\n", __func__, val);
+
+	if (val > 0){
+		if (gpio_is_valid(g_modem.wifi_heat.io)) {
+			gpio_direction_output(g_modem.wifi_heat.io, g_modem.wifi_heat.enable);
+		};
+	} else {
+		if (gpio_is_valid(g_modem.wifi_heat.io)) {
+			gpio_direction_output(g_modem.wifi_heat.io, !(g_modem.wifi_heat.enable));
+		};
+	}
+
+	return _count;
+}
+static CLASS_ATTR_WO(wifi_heat);
+
+
+
 static struct attribute *rkwifi_power_attrs[] = {
 	&class_attr_wifi_power.attr,
 	&class_attr_wifi_bt_vbat.attr,
 	&class_attr_wifi_set_carddetect.attr,
 	&class_attr_wifi_reset.attr,
+	&class_attr_wifi_pdn.attr,
+	&class_attr_wifi_heat.attr,
+	&class_attr_modem_fastboot.attr,
+	&class_attr_modem_ap_wake_dq.attr,
+	&class_attr_modem_reset_gpio.attr,
+	&class_attr_modem_poweren_gpio.attr,
+	&class_attr_modem_usb_detect.attr,
+	&class_attr_modem_usbsel.attr,
+	&class_attr_modem_usim_det.attr,
+	&class_attr_modem_pa_28v_en.attr,
+	&class_attr_modem_dq_4v0_en.attr,
 	NULL,
 };
 ATTRIBUTE_GROUPS(rkwifi_power);
@@ -874,6 +1376,9 @@ static int rfkill_wlan_probe(struct platform_device *pdev)
 {
 	struct rfkill_wlan_data *rfkill;
 	struct rksdmmc_gpio_wifi_moudle *pdata = pdev->dev.platform_data;
+
+    //struct rksdmmc_gpio_modem_moudle *modem;
+
 	int ret = -1;
 
 	LOG("Enter %s\n", __func__);
@@ -902,6 +1407,12 @@ static int rfkill_wlan_probe(struct platform_device *pdev)
 
 	rfkill->pdata = pdata;
 	g_rfkill = rfkill;
+
+//	modem = kzalloc(sizeof(*modem), GFP_KERNEL);
+//	if (!modem)
+//		goto modem_alloc_fail;
+
+//	g_modem = modem;
 
 	LOG("%s: init gpio\n", __func__);
 
@@ -944,6 +1455,9 @@ static int rfkill_wlan_probe(struct platform_device *pdev)
 	LOG("Exit %s\n", __func__);
 
 	return 0;
+
+//modem_alloc_fail:
+//	g_modem = NULL;
 
 fail_alloc:
 	kfree(rfkill);
