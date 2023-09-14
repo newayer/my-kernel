@@ -37,7 +37,10 @@ cd -
 
 tar -xvf $ROOT_DIR/kernel_learn.tar
 
-cp `grep -E "^/" result.txt` include/
+for file in `grep -E "^/" result.txt`
+do
+    cp $file include/
+done
 
 src_dir=`grep kernel/printk/printk.c result.txt | sed -e "s@/\(.*\)/kernel/printk/printk\.c@\1@"`
 if [ "$src_dir" != "kernel/printk/printk.c" ];
@@ -54,3 +57,13 @@ else
 fi
 
 rm -fr $ROOT_DIR/kernel_learn.tar $ROOT_DIR/tmp*.txt $ROOT_DIR/result.txt
+
+echo "begin to ln extracted files......"
+
+for line in `find -type f -name "*.[c|h|S|d]*"`
+do
+	dir=$(dirname $line)/
+	lnfile=`echo $dir | sed 's@[^/]*/@../@g'``echo $line | sed 's@\.\/@@'`
+
+    rm -fr $line && ln -s $lnfile $line
+done
