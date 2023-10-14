@@ -809,6 +809,30 @@
 		net_net_5g_green_gpio: net_net_5g_green_gpio {
 			rockchip,pins = <4 RK_PA3 RK_FUNC_GPIO &pcfg_pull_down>;
 		};
+
+		net_1_gpio: net_1_gpio {
+			rockchip,pins = <4 RK_PA1 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+
+		net_2_gpio: net_2_gpio {
+			rockchip,pins = <4 RK_PA0 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+
+		net_3_gpio: net_3_gpio {
+			rockchip,pins = <4 RK_PA7 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+
+		sig_1_gpio: sig_1_gpio {
+			rockchip,pins = <4 RK_PA4 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+
+		sig_2_gpio: sig_2_gpio {
+			rockchip,pins = <4 RK_PA5 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+
+		sig_3_gpio: sig_3_gpio {
+			rockchip,pins = <4 RK_PA6 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
 	};
 
 	sdio-pwrseq {
@@ -1016,30 +1040,4 @@
 	gpios = <&gpio4 RK_PB2 GPIO_ACTIVE_HIGH>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&work_leds_gpio>;
-};
-
-&leds {
-	net-lan {
-		gpios = <&gpio4 RK_PA0 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&net_lan_gpio>;
-	};
-
-	net-wan {
-		gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&net_wan_gpio>;
-	};
-
-	net-5g-red {
-		gpios = <&gpio4 RK_PA2 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&net_net_5g_red_gpio>;
-	};
-
-	net-5g-green {
-		gpios = <&gpio4 RK_PA3 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&net_net_5g_green_gpio>;
-	};
 };

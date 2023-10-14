@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2023 Rockchip Electronics Co., Ltd.
+ *
+ */
+
+/dts-v1/;
+
+#include "rk3588-evb7-v11-jad221x.dtsi"
+#include "rk3588-openwrt.dtsi"
+
+/ {
+	model = "Rockchip RK3588 EVB7 V11 Board";
+	compatible = "rockchip,rk3588-evb7-v11", "rockchip,rk3588";
+};
+
+&leds {
+	net-5g-red {
+		gpios = <&gpio4 RK_PA2 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&net_net_5g_red_gpio>;
+	};
+
+	net-5g-green {
+		gpios = <&gpio4 RK_PA3 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&net_net_5g_green_gpio>;
+	};
+
+	net-1 {
+		gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&net_1_gpio>;
+	};
+
+	net-2 {
+		gpios = <&gpio4 RK_PA0 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&net_2_gpio>;
+	};
+
+	net-3 {
+		gpios = <&gpio4 RK_PA7 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&net_3_gpio>;
+	};
+
+	sig-1 {
+		gpios = <&gpio4 RK_PA4 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sig_1_gpio>;
+	};
+
+	sig-2 {
+		gpios = <&gpio4 RK_PA5 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sig_2_gpio>;
+	};
+
+	sig-3 {
+		gpios = <&gpio4 RK_PA6 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sig_3_gpio>;
+	};
+};

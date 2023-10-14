@@ -13,3 +13,29 @@
 	model = "Rockchip RK3588 EVB7 V11 Board";
 	compatible = "rockchip,rk3588-evb7-v11", "rockchip,rk3588";
 };
+
+&leds {
+       net-lan {
+               gpios = <&gpio4 RK_PA0 GPIO_ACTIVE_HIGH>;
+               pinctrl-names = "default";
+               pinctrl-0 = <&net_lan_gpio>;
+       };
+
+       net-wan {
+               gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_HIGH>;
+               pinctrl-names = "default";
+               pinctrl-0 = <&net_wan_gpio>;
+       };
+
+       net-5g-red {
+               gpios = <&gpio4 RK_PA2 GPIO_ACTIVE_HIGH>;
+               pinctrl-names = "default";
+               pinctrl-0 = <&net_net_5g_red_gpio>;
+       };
+
+       net-5g-green {
+               gpios = <&gpio4 RK_PA3 GPIO_ACTIVE_HIGH>;
+               pinctrl-names = "default";
+               pinctrl-0 = <&net_net_5g_green_gpio>;
+       };
+};
