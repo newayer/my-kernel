@@ -62,8 +62,10 @@ echo "begin to ln extracted files......"
 
 for line in `find -type f -name "*.[c|h|S|d]*"`
 do
-	dir=$(dirname $line)/
-	lnfile=`echo $dir | sed 's@[^/]*/@../@g'``echo $line | sed 's@\.\/@@'`
-
-    rm -fr $line && ln -s $lnfile $line
+    dir=$(dirname $line)/
+    lnfile=`echo $dir | sed 's@[^/]*/@../@g'``echo $line | sed 's@\.\/@@'`
+    if [ -f ".$line" ]; then
+        rm -fr $line && ln -s $lnfile $line
+    fi
 done
+
