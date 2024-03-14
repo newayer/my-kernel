@@ -17,6 +17,7 @@
 #include <sound/core.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
+#include <sound/tlv.h>
 #include "rk817_codec.h"
 
 #ifdef CONFIG_SND_DEBUG
@@ -369,9 +370,6 @@ static struct rk817_reg_val_typ playback_power_up_list[] = {
 	{RK817_CODEC_DI2S_RXCMD_TSD, 0x20},
 	{RK817_CODEC_DTOP_VUCTIME, 0xf4},
 	{RK817_CODEC_DDAC_MUTE_MIXCTL, 0x00},
-
-	{RK817_CODEC_DDAC_VOLL, 0x0a},
-	{RK817_CODEC_DDAC_VOLR, 0x0a},
 };
 
 #define RK817_CODEC_PLAYBACK_POWER_UP_LIST_LEN \
@@ -502,11 +500,6 @@ static int rk817_codec_power_up(struct snd_soc_component *component, int type)
 						      RK817_CODEC_DI2S_CKM,
 						      PDM_EN_MASK,
 						      PDM_EN_ENABLE);
-
-		snd_soc_component_write(component, RK817_CODEC_DADC_VOLL,
-					rk817->capture_volume);
-		snd_soc_component_write(component, RK817_CODEC_DADC_VOLR,
-					rk817->capture_volume);
 	}
 
 	return 0;
@@ -705,11 +698,6 @@ static int rk817_playback_path_config(struct snd_soc_component *component,
 		snd_soc_component_update_bits(component,
 					      RK817_CODEC_DDAC_MUTE_MIXCTL,
 					      DACMT_ENABLE, DACMT_DISABLE);
-
-		snd_soc_component_write(component, RK817_CODEC_DDAC_VOLL,
-					rk817->hp_volume);
-		snd_soc_component_write(component, RK817_CODEC_DDAC_VOLR,
-					rk817->hp_volume);
 		break;
 	case BT:
 		break;
@@ -742,11 +730,6 @@ static int rk817_playback_path_config(struct snd_soc_component *component,
 						RK817_CODEC_ACLASSD_CFG2,
 						0xf7);
 		}
-
-		snd_soc_component_write(component, RK817_CODEC_DDAC_VOLL,
-					rk817->hp_volume);
-		snd_soc_component_write(component, RK817_CODEC_DDAC_VOLR,
-					rk817->hp_volume);
 		break;
 	default:
 		return -EINVAL;
@@ -949,7 +932,18 @@ static int rk817_resume_path_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static const SNDRV_CTL_TLVD_DECLARE_DB_RANGE(vol_tlv,
+    0, 54, SNDRV_CTL_TLVD_DB_SCALE_ITEM(SNDRV_CTL_TLVD_DB_GAIN_MUTE, 0, 1),
+    55, 255, SNDRV_CTL_TLVD_DB_MINMAX_ITEM(-7500, 0),
+);
+
 static struct snd_kcontrol_new rk817_snd_path_controls[] = {
+	SOC_DOUBLE_R_TLV("DAC Playback Volume",
+			 RK817_CODEC_DDAC_VOLL, RK817_CODEC_DDAC_VOLR, 0, 0xff, 1, vol_tlv),
+
+	SOC_SINGLE_TLV("Left Capture Volume", RK817_CODEC_DADC_VOLL, 0, 0xff, 1, vol_tlv),
+	SOC_SINGLE_TLV("Right Capture Volume", RK817_CODEC_DADC_VOLR, 0, 0xff, 1, vol_tlv),
+
 	SOC_ENUM_EXT("Playback Path", rk817_playback_path_type,
 		     rk817_playback_path_get, rk817_playback_path_put),
 
@@ -1308,6 +1302,15 @@ static int rk817_probe(struct snd_soc_component *component)
 	mutex_init(&rk817->clk_lock);
 	rk817->clk_capture = 0;
 	rk817->clk_playback = 0;
+
+	snd_soc_component_write(component, RK817_CODEC_DDAC_VOLL,
+				rk817->hp_volume);
+	snd_soc_component_write(component, RK817_CODEC_DDAC_VOLR,
+				rk817->hp_volume);
+	snd_soc_component_write(component, RK817_CODEC_DADC_VOLL,
+				rk817->capture_volume);
+	snd_soc_component_write(component, RK817_CODEC_DADC_VOLR,
+				rk817->capture_volume);
 
 	snd_soc_add_component_controls(component, rk817_snd_path_controls,
 				       ARRAY_SIZE(rk817_snd_path_controls));
