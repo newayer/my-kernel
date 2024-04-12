@@ -15582,7 +15582,9 @@ static s32 wl_setup_wiphy(struct wireless_dev *wdev, struct device *sdiofunc_dev
 	WL_DBG(("Registering custom regulatory)\n"));
 #if defined(WL_SELF_MANAGED_REGDOM) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0))
         wdev->wiphy->regulatory_flags |= REGULATORY_WIPHY_SELF_MANAGED;
-        //wdev->wiphy->regulatory_flags |= REGULATORY_IGNORE_STALE_KICKOFF;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0))
+        wdev->wiphy->regulatory_flags |= REGULATORY_IGNORE_STALE_KICKOFF;
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0) */
 #else
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
 	wdev->wiphy->regulatory_flags |= REGULATORY_CUSTOM_REG;
