@@ -251,15 +251,14 @@
 &dp {
 	pinctrl-0 = <&dpm0_pins>;
 	pinctrl-names = "default";
-	#sound-dai-cells = <1>;
 	status = "okay";
 };
 
-&dp_sound {
+&dp0 {
 	status = "okay";
 };
 
-&dp0_in_vp0 {
+&dp0_sound {
 	status = "okay";
 };
 
@@ -316,6 +315,7 @@
 };
 
 &hdmi {
+	enable-gpios = <&gpio4 RK_PC6 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 

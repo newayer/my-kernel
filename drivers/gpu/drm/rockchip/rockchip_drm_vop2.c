@@ -2213,11 +2213,6 @@ static void vop2_set_system_status(struct vop2 *vop2)
 		rockchip_set_system_status(SYS_STATUS_DUALVIEW);
 	else
 		rockchip_clear_system_status(SYS_STATUS_DUALVIEW);
-
-	if (hweight8(vop2->active_vp_mask))
-		rockchip_request_late_resume();
-	else
-		rockchip_request_early_suspend();
 }
 
 static bool vop2_win_rb_swap(uint32_t format)
@@ -4920,6 +4915,8 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
 	vop2_unlock(vop2);
 
 	vop2_set_system_status(vop2);
+	if (!vop2->active_vp_mask)
+		rockchip_request_early_suspend();
 
 out:
 	if (crtc->state->event && !crtc->state->active) {
@@ -5298,23 +5295,31 @@ static int vop2_plane_atomic_check(struct drm_plane *plane, struct drm_atomic_st
 		if (!vpstate->afbc_en &&
 		    (fb->format->format == DRM_FORMAT_XRGB2101010 ||
 		     fb->format->format == DRM_FORMAT_XBGR2101010)) {
-			DRM_ERROR("RK3588 unsupported linear XRGB2101010 at %s\n", win->name);
+			DRM_ERROR("Unsupported linear XRGB2101010 at %s\n", win->name);
+			return -EINVAL;
+		}
+
+		if (vop2_cluster_window(win) && !vpstate->afbc_en && fb->format->is_yuv) {
+			DRM_ERROR("Unsupported linear yuv format at %s\n", win->name);
 			return -EINVAL;
 		}
 	}
 
-	if (vp->vop2->version > VOP_VERSION_RK3568) {
-		if (vop2_cluster_window(win) && !vpstate->afbc_en && fb->format->is_yuv && !is_vop3(vop2)) {
-			DRM_ERROR("Unsupported linear yuv format at %s\n", win->name);
-			return -EINVAL;
-		}
+	/* Cluster can't support xmirror/rotate90/rotate270 when it isn't fbc format. */
+	if (vop2_cluster_window(win) && !vpstate->afbc_en &&
+	    (pstate->rotation & (DRM_MODE_REFLECT_X | DRM_MODE_ROTATE_90 | DRM_MODE_ROTATE_270))) {
+		DRM_ERROR("Unsupported linear rotation(%d) format at %s\n",
+			  pstate->rotation, win->name);
+		return -EINVAL;
+	}
 
-		if (vop2_cluster_window(win) && !vpstate->afbc_en &&
-		    (win->supported_rotations & pstate->rotation)) {
-			DRM_ERROR("Unsupported linear rotation(%d) format at %s\n",
-				  pstate->rotation, win->name);
-			return -EINVAL;
-		}
+	/* Cluster can't support xmirror/ymirror/rotate90/rotate270 when it is tiled format. */
+	if (vop2_cluster_window(win) && vpstate->tiled_en &&
+	    (pstate->rotation & (DRM_MODE_REFLECT_X | DRM_MODE_REFLECT_Y |
+				 DRM_MODE_ROTATE_90 | DRM_MODE_ROTATE_270))) {
+		DRM_ERROR("Unsupported x/y mirror or rotation(%d) tiled format at %s\n",
+			  pstate->rotation, win->name);
+		return -EINVAL;
 	}
 
 	if (win->feature & WIN_FEATURE_CLUSTER_SUB) {
@@ -7244,7 +7249,8 @@ vop2_crtc_mode_valid(struct drm_crtc *crtc, const struct drm_display_mode *mode)
 			else if (vop2->version == VOP_VERSION_RK3588)
 				request_clock = request_clock >> 2;
 		}
-		clock = rockchip_drm_dclk_round_rate(vop2->version, vp->dclk,
+		clock = rockchip_drm_dclk_round_rate(vop2->version,
+						     vp->dclk_parent ? vp->dclk_parent : vp->dclk,
 						     request_clock * 1000) / 1000;
 	}
 
@@ -8626,6 +8632,7 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc, struct drm_atomic_sta
 
 	vop2->active_vp_mask |= BIT(vp->id);
 	vop2_set_system_status(vop2);
+	rockchip_request_late_resume();
 
 	vop2_lock(vop2);
 	DRM_DEV_INFO(vop2->dev, "Update mode to %dx%d%s%d, type: %d(if:%x, flag:0x%x) for vp%d dclk: %llu\n",
@@ -10667,7 +10674,7 @@ static void vop2_crtc_atomic_begin(struct drm_crtc *crtc, struct drm_atomic_stat
 			sort(vop2_zpos_splice, splice_nr_layers, sizeof(vop2_zpos_splice[0]),
 			     vop2_zpos_cmp, NULL);
 
-			vop2_setup_port_mux(splice_vp);
+			vop2_setup_port_mux(vp);
 			if (!vp->hdr10_at_splice_mode)
 				vop2_setup_layer_mixer_for_vp(splice_vp, vop2_zpos_splice);
 			vop2_setup_hdr10(splice_vp, vop2_zpos_splice[0].win_phys_id);
@@ -12324,7 +12331,8 @@ static int vop2_plane_init(struct vop2 *vop2, struct vop2_win *win, unsigned lon
 	drm_object_attach_property(&win->base.base, win->output_width_prop, 0);
 	drm_object_attach_property(&win->base.base, win->output_height_prop, 0);
 	drm_object_attach_property(&win->base.base, win->scale_prop, 0);
-	drm_object_attach_property(&win->base.base, win->color_key_prop, 0);
+	if (win->regs->color_key.mask)
+		drm_object_attach_property(&win->base.base, win->color_key_prop, 0);
 
 	return 0;
 }
@@ -12398,17 +12406,18 @@ static int vop2_gamma_init(struct vop2 *vop2)
 			continue;
 		vp->gamma_lut_len = vp_data->gamma_lut_len;
 		vp->lut_dma_rid = vp_data->lut_dma_rid;
-		vp->lut = devm_kmalloc_array(dev, lut_len, sizeof(*vp->lut),
-					     GFP_KERNEL);
-		if (!vp->lut)
-			return -ENOMEM;
+		if (!vp->gamma_lut_active) {
+			vp->lut = devm_kmalloc_array(dev, lut_len, sizeof(*vp->lut), GFP_KERNEL);
+			if (!vp->lut)
+				return -ENOMEM;
 
-		for (j = 0; j < lut_len; j++) {
-			u32 b = j * lut_len * lut_len;
-			u32 g = j * lut_len;
-			u32 r = j;
+			for (j = 0; j < lut_len; j++) {
+				u32 b = j * lut_len * lut_len;
+				u32 g = j * lut_len;
+				u32 r = j;
 
-			vp->lut[j] = r | g | b;
+				vp->lut[j] = r | g | b;
+			}
 		}
 
 		drm_mode_crtc_set_gamma_size(crtc, lut_len);
@@ -12885,6 +12894,11 @@ static int vop2_create_crtc(struct vop2 *vop2, uint8_t enabled_vp_mask)
 			vop2_crtc_create_post_sharp_property(vop2, crtc);
 
 		registered_num_crtcs++;
+	}
+
+	if (registered_num_crtcs == 0) {
+		DRM_DEV_ERROR(vop2->dev, "No crtc register, please check dts config\n");
+		return -ENODEV;
 	}
 
 	/*
@@ -13498,6 +13512,84 @@ static inline void rockchip_vop2_devfreq_uninit(struct vop2 *vop2)
 }
 #endif
 
+static int vop2_of_get_gamma_lut(struct vop2 *vop2, struct device_node *dsp_lut_node, int vp_id)
+{
+	const struct vop2_data *vop2_data = vop2->data;
+	const struct vop2_video_port_data *vp_data = &vop2_data->vp[vp_id];
+	struct vop2_video_port *vp = &vop2->vps[vp_id];
+	struct property *prop;
+	u32 lut_len = vp_data->gamma_lut_len;
+	int length = 0;
+	int i = 0, j = 0;
+	int ret = 0;
+
+	if (!vop2->lut_regs || !lut_len)
+		return 0;
+
+	prop = of_find_property(dsp_lut_node, "gamma-lut", &length);
+	if (!prop)
+		return -EINVAL;
+
+	vp->lut = devm_kmalloc_array(vop2->dev, lut_len, sizeof(*vp->lut), GFP_KERNEL);
+	if (!vp->lut)
+		return -ENOMEM;
+
+	length >>= 2;
+	if (length != vp_data->gamma_lut_len) {
+		u32 r, g, b;
+		u32 *lut;
+
+		lut = kmalloc_array(length, sizeof(*lut), GFP_KERNEL);
+		if (!lut) {
+			devm_kfree(vop2->dev, vp->lut);
+			vp->lut = NULL;
+			return -ENOMEM;
+		}
+
+		ret = of_property_read_u32_array(dsp_lut_node, "gamma-lut", lut, length);
+		if (ret) {
+			devm_kfree(vop2->dev, vp->lut);
+			vp->lut = NULL;
+			kfree(lut);
+			return -EINVAL;
+		}
+
+		/*
+		 * In order to achieve the same gamma correction effect in different
+		 * platforms, the following conversion helps to translate from 8bit
+		 * gamma table with 256 parameters to 10bit gamma with 1024 parameters.
+		 */
+		for (i = 0; i < lut_len; i++) {
+			j = i * length / lut_len;
+			r = lut[j] / length / length * lut_len / length;
+			g = lut[j] / length % length * lut_len / length;
+			b = lut[j] % length * lut_len / length;
+
+			vp->lut[i] = r * lut_len * lut_len + g * lut_len + b;
+		}
+
+		kfree(lut);
+	} else {
+		of_property_read_u32_array(dsp_lut_node, "gamma-lut", vp->lut, vp->gamma_lut_len);
+	}
+	vp->gamma_lut_active = true;
+
+	return 0;
+}
+
+static void vop2_of_get_dsp_lut(struct vop2 *vop2, struct device_node *vp_node, int vp_id)
+{
+	struct device_node *dsp_lut_node;
+	int ret = 0;
+
+	dsp_lut_node = of_parse_phandle(vp_node, "dsp-lut", 0);
+	if (dsp_lut_node) {
+		ret = vop2_of_get_gamma_lut(vop2, dsp_lut_node, vp_id);
+		if (ret)
+			DRM_ERROR("load vp%d gamma-lut failed\n", vp_id);
+	}
+}
+
 static int vop2_bind(struct device *dev, struct device *master, void *data)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -13694,6 +13786,8 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
 				if (!of_property_read_u32(mcu_timing_node, "mcu-hold-mode", &val))
 					vop2->vps[vp_id].mcu_timing.mcu_hold_mode = val;
 			}
+
+			vop2_of_get_dsp_lut(vop2, child, vp_id);
 
 			if (vop2_get_vp_of_status(child))
 				enabled_vp_mask |= BIT(vp_id);

@@ -33,6 +33,14 @@
 	};
 };
 
+&display_subsystem {
+	status = "disabled";
+};
+
+&dmc {
+	wait-mode = <DMC_WAIT_MODE_EBC_VBANK>;
+};
+
 &ebc {
 	status = "okay";
 };
@@ -69,6 +77,7 @@
 		pmic-reset-func = <1>;
 		/* buck5 external feedback resister disable */
 		buck5-feedback-disable;
+		vdc-wakeup-enable;
 
 		vcc1-supply = <&vcc_sys>;
 		vcc2-supply = <&vcc_sys>;

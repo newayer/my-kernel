@@ -196,6 +196,10 @@
 #define GRF_SW_HDMIRXPHY_CRTL		0x00f4
 #define GRF_INTR0_EN			0x0100
 #define GRF_INTR0_CLR_EN		0x0104
+#define GRF_INT0_HDMIRX_CLR_MASK_D(x)	HIWORD_UPDATE(x, 8, 8)
+#define GRF_INT0_HDMIRX_CLR_D(x)	HIWORD_UPDATE(x, 8, 8)
+#define GRF_INT0_HDMIRX_CLR_MASK_F(x)	HIWORD_UPDATE(x, 9, 9)
+#define GRF_INT0_HDMIRX_CLR_F(x)	HIWORD_UPDATE(x, 9, 9)
 #define GRF_INTR0_STATUS		0x0108
 #define GRF_INTR0_RAW_STATUS		0x010c
 #define GRF_INTR1_EN			0x0110
@@ -293,9 +297,16 @@ struct rk628 {
 	struct mipi_timing mipi_timing[2];
 	struct mutex rst_lock;
 	int tx_mode;
+	int dbg_en;
 	struct dentry *debug_dir;
 	struct gpio_desc *hdmirx_det_gpio;
 };
+
+#define rk628_dbg(rk628, format, ...)	\
+do {			\
+	if (rk628->dbg_en)	\
+		dev_info(rk628->dev, format, ##__VA_ARGS__); \
+} while (0)
 
 int rk628_media_i2c_write(struct rk628 *rk628, u32 reg, u32 val);
 int rk628_media_i2c_read(struct rk628 *rk628, u32 reg, u32 *val);
