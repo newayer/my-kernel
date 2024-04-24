@@ -10,6 +10,7 @@
 #include <dt-bindings/power/rk3576-power.h>
 #include <dt-bindings/pinctrl/rockchip.h>
 #include <dt-bindings/soc/rockchip,boot-mode.h>
+#include <dt-bindings/soc/rockchip-csu.h>
 #include <dt-bindings/soc/rockchip-system-status.h>
 #include <dt-bindings/suspend/rockchip-rk3576.h>
 #include <dt-bindings/thermal/thermal.h>
@@ -694,6 +695,34 @@
 		rockchip,hw = <&csi2_dphy0_hw>, <&csi2_dphy1_hw>;
 		phys = <&mipidcphy0>;
 		phy-names = "dcphy0";
+		status = "disabled";
+	};
+
+	csu: csu {
+		compatible = "rockchip,rk3576-csu", "rockchip,rk3562-csu";
+		rockchip,clock = <CSU_VOP_ACLK 3>;
+		rockchip,bus = <0 0x01900047 0x7001>,
+			       <2 0x00a00041 0xb0ff>,
+			       <3 0x00a00041 0xb001>,
+			       <4 0x00a00047 0x7001>,
+			       <6 0x00a00045 0xb001>,
+			       <7 0x00a00045 0x7001>,
+			       <8 0x00a00041 0xb001>,
+			       <9 0x00a00045 0x7001>,
+			       <10 0x00a00041 0xb001>,
+			       <11 0x00a00045 0x7001>,
+			       <12 0x00a00041 0xb001>,
+			       <13 0x00a00043 0xb001>,
+			       <15 0x00a00045 0x7001>,
+			       <16 0x00a00043 0xb001>,
+			       <17 0x00a00043 0xb001>,
+			       <18 0x00a00043 0xb001>,
+			       <19 0x00a00043 0x7001>,
+			       <27 0x00a00045 0x7001>,
+			       <28 0x00a00045 0x7001>,
+			       <29 0x00a00045 0xb001>,
+			       <30 0x00a00045 0x7001>,
+			       <31 0x00a00045 0x7001>;
 		status = "disabled";
 	};
 
@@ -1474,6 +1503,7 @@
 		snps,dis_rxdet_inp3_quirk;
 		snps,parkmode-disable-hs-quirk;
 		snps,parkmode-disable-ss-quirk;
+		dma-coherent;
 		status = "disabled";
 	};
 
@@ -3587,6 +3617,7 @@
 		reg-names = "pcie-apb", "pcie-dbi", "config";
 		resets = <&cru SRST_PCIE0_POWER_UP>, <&cru SRST_P_PCIE0>;
 		reset-names = "pipe", "p_pcie0";
+		dma-coherent;
 		status = "disabled";
 
 		pcie0_intc: legacy-interrupt-controller {
@@ -3642,6 +3673,7 @@
 		reg-names = "pcie-apb", "pcie-dbi", "config";
 		resets = <&cru SRST_PCIE1_POWER_UP>, <&cru SRST_P_PCIE1>;
 		reset-names = "pipe", "p_pcie1";
+		dma-coherent;
 		status = "disabled";
 
 		pcie1_intc: legacy-interrupt-controller {
@@ -3671,6 +3703,7 @@
 		reset-names = "stmmaceth";
 		power-domains = <&power RK3576_PD_SDGMAC>;
 
+		dma-coherent;
 		snps,mixed-burst;
 		snps,tso;
 
@@ -3720,6 +3753,7 @@
 		reset-names = "stmmaceth";
 		power-domains = <&power RK3576_PD_SDGMAC>;
 
+		dma-coherent;
 		snps,mixed-burst;
 		snps,tso;
 
@@ -3763,6 +3797,7 @@
 		phys = <&combphy0_ps PHY_TYPE_SATA>;
 		phy-names = "sata-phy";
 		ports-implemented = <0x1>;
+		dma-coherent;
 		status = "disabled";
 	};
 
@@ -3778,6 +3813,7 @@
 		phys = <&combphy1_psu PHY_TYPE_SATA>;
 		phy-names = "sata-phy";
 		ports-implemented = <0x1>;
+		dma-coherent;
 		status = "disabled";
 	};
 
