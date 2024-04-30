@@ -284,6 +284,7 @@ struct dw_dp_hdcp {
 	u8 hdcp_content_type;
 	bool hdcp2_encrypted;
 	bool hdcp_encrypted;
+	bool is_repeater;
 };
 
 struct drm_dp_link_caps {
@@ -356,7 +357,15 @@ struct dw_dp_sdp {
 	int stream_id;
 };
 
+enum gpio_hpd_state {
+	GPIO_STATE_IDLE,
+	GPIO_STATE_PLUG,
+	GPIO_STATE_UNPLUG,
+};
+
 struct dw_dp_hotplug {
+	struct delayed_work state_work;
+	enum gpio_hpd_state state;
 	bool long_hpd;
 	bool status;
 };
@@ -738,6 +747,7 @@ static int _dw_dp_hdcp2_enable(struct dw_dp *dp)
 
 static bool dw_dp_hdcp_capable(struct dw_dp *dp)
 {
+	struct dw_dp_hdcp *hdcp = &dp->hdcp;
 	int ret;
 	u8 bcaps;
 
@@ -746,6 +756,7 @@ static bool dw_dp_hdcp_capable(struct dw_dp *dp)
 		dev_err(dp->dev, "get hdcp capable failed:%d\n", ret);
 		return false;
 	}
+	hdcp->is_repeater = (bcaps & DP_BCAPS_REPEATER_PRESENT) ? true : false;
 
 	return bcaps & DP_BCAPS_HDCP_CAPABLE;
 }
@@ -765,11 +776,12 @@ static int _dw_dp_hdcp_disable(struct dw_dp *dp)
 
 static int _dw_dp_hdcp_enable(struct dw_dp *dp)
 {
-	unsigned long timeout = msecs_to_jiffies(1000);
+	unsigned long timeout;
 	int ret;
 	u8 rev;
 	struct dw_dp_hdcp *hdcp = &dp->hdcp;
 
+	timeout = msecs_to_jiffies(hdcp->is_repeater ? 5200 : 1000);
 	hdcp->status = HDCP_TX_1;
 
 	dw_dp_hdcp_rng_init(dp);
@@ -782,7 +794,7 @@ static int _dw_dp_hdcp_enable(struct dw_dp *dp)
 	if (ret < 0)
 		return ret;
 
-	if (rev >= DP_DPCD_REV_12)
+	if (rev > DP_DPCD_REV_12)
 		regmap_update_bits(dp->regmap, DPTX_HDCPCFG, DPCD12PLUS, DPCD12PLUS);
 
 	regmap_update_bits(dp->regmap, DPTX_HDCPCFG, ENABLE_HDCP | ENABLE_HDCP_13,
@@ -2746,28 +2758,56 @@ static int dw_dp_video_enable(struct dw_dp *dp, struct dw_dp_video *video, int s
 	return 0;
 }
 
+static void dw_dp_gpio_hpd_state_work(struct work_struct *work)
+{
+	struct dw_dp_hotplug *hotplug = container_of(to_delayed_work(work), struct dw_dp_hotplug,
+						     state_work);
+	struct dw_dp *dp = container_of(hotplug, struct dw_dp, hotplug);
+
+	mutex_lock(&dp->irq_lock);
+	if (hotplug->state == GPIO_STATE_UNPLUG) {
+		dev_dbg(dp->dev, "hpd state unplug to idle\n");
+		dp->hotplug.long_hpd = true;
+		dp->hotplug.status = false;
+		dp->hotplug.state = GPIO_STATE_IDLE;
+		schedule_work(&dp->hpd_work);
+	}
+	mutex_unlock(&dp->irq_lock);
+}
+
 static irqreturn_t dw_dp_hpd_irq_handler(int irq, void *arg)
 {
 	struct dw_dp *dp = arg;
 	bool hpd = dw_dp_detect(dp);
 
+	dev_dbg(dp->dev, "trigger gpio to %s\n", hpd ? "high" : "low");
 	mutex_lock(&dp->irq_lock);
-
-	dp->hotplug.long_hpd = true;
-
-	if (dp->hotplug.status && !hpd) {
-		usleep_range(2000, 2001);
-
-		hpd = dw_dp_detect(dp);
-		if (hpd)
+	if (dp->hotplug.state == GPIO_STATE_IDLE) {
+		if (hpd) {
+			dev_dbg(dp->dev, "hpd state idle to plug\n");
+			dp->hotplug.long_hpd = true;
+			dp->hotplug.status = hpd;
+			dp->hotplug.state = GPIO_STATE_PLUG;
+			schedule_work(&dp->hpd_work);
+		}
+	} else if (dp->hotplug.state == GPIO_STATE_PLUG) {
+		if (!hpd) {
+			dev_dbg(dp->dev, "hpd state plug to unplug\n");
+			dp->hotplug.state = GPIO_STATE_UNPLUG;
+			schedule_delayed_work(&dp->hotplug.state_work, msecs_to_jiffies(2));
+		}
+	} else if (dp->hotplug.state == GPIO_STATE_UNPLUG) {
+		if (hpd) {
+			dev_dbg(dp->dev, "hpd state unplug to plug\n");
+			cancel_delayed_work_sync(&dp->hotplug.state_work);
 			dp->hotplug.long_hpd = false;
+			dp->hotplug.status = hpd;
+			dp->hotplug.state = GPIO_STATE_PLUG;
+			schedule_work(&dp->hpd_work);
+		}
 	}
-
-	dp->hotplug.status = hpd;
-
 	mutex_unlock(&dp->irq_lock);
 
-	schedule_work(&dp->hpd_work);
 
 	return IRQ_HANDLED;
 }
@@ -4150,9 +4190,6 @@ static void dw_dp_bridge_atomic_enable(struct drm_bridge *bridge,
 		return;
 	}
 
-	if (conn_state->content_protection == DRM_MODE_CONTENT_PROTECTION_DESIRED)
-		dw_dp_hdcp_enable(dp, conn_state->hdcp_content_type);
-
 	ret = dw_dp_video_enable(dp, &dp->video, 0);
 	if (ret < 0) {
 		dev_err(dp->dev, "failed to enable video: %d\n", ret);
@@ -4160,6 +4197,8 @@ static void dw_dp_bridge_atomic_enable(struct drm_bridge *bridge,
 	}
 
 	dw_dp_enable_vop_gate(dp, bridge->encoder->crtc, dp->id, true);
+	if (conn_state->content_protection == DRM_MODE_CONTENT_PROTECTION_DESIRED)
+		dw_dp_hdcp_enable(dp, conn_state->hdcp_content_type);
 
 	if (dp->panel)
 		drm_panel_enable(dp->panel);
@@ -5347,6 +5386,7 @@ static int dw_dp_probe(struct platform_device *pdev)
 
 	mutex_init(&dp->irq_lock);
 	INIT_WORK(&dp->hpd_work, dw_dp_hpd_work);
+	INIT_DELAYED_WORK(&dp->hotplug.state_work, dw_dp_gpio_hpd_state_work);
 	init_completion(&dp->complete);
 	init_completion(&dp->hdcp_complete);
 
@@ -5468,6 +5508,7 @@ static int dw_dp_remove(struct platform_device *pdev)
 
 	component_del(dp->dev, &dw_dp_component_ops);
 	cancel_work_sync(&dp->hpd_work);
+	cancel_delayed_work_sync(&dp->hotplug.state_work);
 
 	return 0;
 }

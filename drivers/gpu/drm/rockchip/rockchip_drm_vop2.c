@@ -820,6 +820,12 @@ struct vop2_video_port {
 	 * @has_extra_layer: like rk3576, the vp1 layer can merge into vp0 layer after overlay
 	 */
 	bool has_extra_layer;
+
+	/**
+	 * @crc_frame_num: calc crc frame num
+	 */
+	u32 crc_frame_num;
+
 	/**
 	 * @irq: independent irq for each vp
 	 */
@@ -879,6 +885,7 @@ struct vop2 {
 
 	bool aclk_rate_reset;
 	unsigned long aclk_current_freq;
+	enum rockchip_drm_vop_aclk_mode aclk_mode;
 	bool merge_irq;
 
 	const struct vop2_data *data;
@@ -2693,10 +2700,8 @@ static uint16_t vop2_scale_factor(enum scale_mode mode,
 	/*
 	 * A workaround to avoid zero div.
 	 */
-	if ((dst == 1) || (src == 1)) {
-		dst = dst + 1;
-		src = src + 1;
-	}
+	if (dst < 2)
+		dst = 2;
 
 	if ((mode == SCALE_DOWN) && (filter_mode == VOP2_SCALE_DOWN_BIL)) {
 		fac = VOP2_BILI_SCL_DN(src, dst);
@@ -3111,6 +3116,7 @@ static void vop2_setup_csc_mode(struct vop2_video_port *vp,
 {
 	struct drm_plane_state *pstate = &vpstate->base;
 	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(vp->rockchip_crtc.crtc.state);
+	struct vop2 *vop2 = vp->vop2;
 	int is_input_yuv = pstate->fb->format->is_yuv;
 	int is_output_yuv = vcstate->yuv_overlay;
 	struct vop2_win *win = to_vop2_win(pstate->plane);
@@ -3172,12 +3178,26 @@ static void vop2_setup_csc_mode(struct vop2_video_port *vp,
 		}
 	}
 
+	if ((win->feature & WIN_FEATURE_DCI) && vpstate->dci_data)
+		is_input_yuv = true;
+
 	if (is_input_yuv && !is_output_yuv) {
 		vpstate->y2r_en = 1;
 		vpstate->csc_mode = vop2_convert_csc_mode(pstate->color_encoding, pstate->color_range, csc_y2r_bit_depth);
 	} else if (!is_input_yuv && is_output_yuv) {
 		vpstate->r2y_en = 1;
 		vpstate->csc_mode = vop2_convert_csc_mode(vcstate->color_encoding, vcstate->color_range, CSC_10BIT_DEPTH);
+
+		/**
+		 * VOP YUV overlay only can support YUV limit range, so force
+		 * select BT601L todo R2Y.
+		 */
+		if (vcstate->yuv_overlay && vpstate->csc_mode == CSC_BT601F &&
+		    (vop2->version == VOP_VERSION_RK3528 ||
+		     vop2->version == VOP_VERSION_RK3568 ||
+		     vop2->version == VOP_VERSION_RK3576 ||
+		     vop2->version == VOP_VERSION_RK3588))
+			vpstate->csc_mode = CSC_BT601L;
 	}
 }
 
@@ -4410,6 +4430,9 @@ static void vop2_disable(struct drm_crtc *crtc)
 		 * vop2 standby complete, so iommu detach is safe.
 		 */
 		VOP_CTRL_SET(vop2, dma_stop, 1);
+		if (vop2->aclk_mode_rate[ROCKCHIP_VOP_ACLK_RESET_MODE] &&
+		    clk_get_rate(vop2->aclk) > vop2->aclk_mode_rate[ROCKCHIP_VOP_ACLK_RESET_MODE])
+			vop2_devfreq_set_aclk(crtc, ROCKCHIP_VOP_ACLK_RESET_MODE);
 		rockchip_drm_dma_detach_device(vop2->drm_dev, vop2->dev);
 		vop2->is_iommu_enabled = false;
 	}
@@ -5586,6 +5609,7 @@ static const char *modifier_to_string(uint64_t modifier)
 
 static void vop3_dci_config(struct vop2_win *win, struct vop2_plane_state *vpstate)
 {
+	struct drm_plane_state *pstate = &vpstate->base;
 	struct vop2 *vop2 = win->vop2;
 	const struct vop2_data *vop2_data = vop2->data;
 	const struct vop2_win_data *win_data = &vop2_data->win[win->win_id];
@@ -5600,6 +5624,7 @@ static void vop3_dci_config(struct vop2_win *win, struct vop2_plane_state *vpsta
 	u32 blk_size_fix;
 	u32 blk_size_hor_half, blk_size_ver_half;
 	u8 dw, dh;
+	enum vop_csc_format plane_csc_mode;
 
 	if (!vpstate->dci_data || !vpstate->dci_data->data) {
 		VOP_CLUSTER_SET(vop2, win, dci_en, 0);
@@ -5673,8 +5698,11 @@ static void vop3_dci_config(struct vop2_win *win, struct vop2_plane_state *vpsta
 	VOP_CLUSTER_SET(vop2, win, sat_adj_k, dci_data->adj1 & 0xffff);
 	VOP_CLUSTER_SET(vop2, win, sat_w, (dci_data->adj1 >> 16) & 0x7f);
 
+	plane_csc_mode = vop2_convert_csc_mode(pstate->color_encoding, pstate->color_range,
+					       CSC_10BIT_DEPTH);
+
 	VOP_CLUSTER_SET(vop2, win, uv_adjust_en, dci_data->uv_adj);
-	VOP_CLUSTER_SET(vop2, win, csc_range, vop2_is_full_range_csc_mode(vpstate->csc_mode));
+	VOP_CLUSTER_SET(vop2, win, csc_range, vop2_is_full_range_csc_mode(plane_csc_mode));
 	VOP_CLUSTER_SET(vop2, win, dci_en, 1);
 
 	VOP_CTRL_SET(vop2, lut_dma_en, 1);
@@ -5950,9 +5978,19 @@ static void vop2_win_atomic_update(struct vop2_win *win, struct drm_rect *src, s
 		}
 		format = VOP2_FMT_RGB888_YUV444;
 	}
+
+	if ((win->feature & WIN_FEATURE_DCI) && vpstate->dci_data)
+		y2r_path_sel = true;
+
 	VOP_WIN_SET(vop2, win, rb_swap, rb_swap);
 	VOP_WIN_SET(vop2, win, rg_swap, rg_swap);
 	VOP_WIN_SET(vop2, win, uv_swap, uv_swap);
+	/*
+	 * csc path and csc function are different. The choice of csc path is
+	 * determined by the actual color of the csc input. If input color is
+	 * in yuv format, y2r path must be selected. Whether actual r2y/y2r
+	 * function is enabled depends on the input and output of the csc.
+	 */
 	VOP_WIN_SET(vop2, win, csc_y2r_path_sel, y2r_path_sel);
 	VOP_WIN_SET(vop2, win, format, format);
 	VOP_WIN_SET(vop2, win, format_argb1555, is_argb1555_format(fb->format->format));
@@ -7495,6 +7533,22 @@ static int vop2_crtc_set_color_bar(struct drm_crtc *crtc, enum rockchip_color_ba
 	return ret;
 }
 
+static int vop2_crtc_get_crc(struct drm_crtc *crtc)
+{
+	struct vop2_video_port *vp = to_vop2_video_port(crtc);
+	struct vop2 *vop2 = vp->vop2;
+	const struct vop2_data *vop2_data = vop2->data;
+	u32 crc32 = 0;
+
+	if (!vop2_data->crc_sources)
+		return -ENODEV;
+
+	crc32 = VOP_MODULE_GET(vop2, vp, crc_val);
+	drm_crtc_add_crc_entry(crtc, true, vp->crc_frame_num++, &crc32);
+
+	return 0;
+}
+
 static const struct rockchip_crtc_funcs private_crtc_funcs = {
 	.loader_protect = vop2_crtc_loader_protect,
 	.cancel_pending_vblank = vop2_crtc_cancel_pending_vblank,
@@ -7512,6 +7566,7 @@ static const struct rockchip_crtc_funcs private_crtc_funcs = {
 	.crtc_output_pre_disable = vop2_crtc_output_pre_disable,
 	.crtc_set_color_bar = vop2_crtc_set_color_bar,
 	.set_aclk = vop2_devfreq_set_aclk,
+	.get_crc = vop2_crtc_get_crc,
 };
 
 static bool vop2_crtc_mode_fixup(struct drm_crtc *crtc,
@@ -7649,6 +7704,12 @@ static void vop2_dither_setup(struct rockchip_crtc_state *vcstate, struct drm_cr
 	} else {
 		VOP_MODULE_SET(vop2, vp, pre_dither_down_en, pre_dither_down_en);
 		VOP_MODULE_SET(vop2, vp, dither_down_sel, DITHER_DOWN_ALLEGRO);
+	}
+
+	/* If dither down enabled will lead to crc value dynamic changed */
+	if (crtc->crc.opened) {
+		VOP_MODULE_SET(vop2, vp, dither_down_en, 0);
+		VOP_MODULE_SET(vop2, vp, pre_dither_down_en, 0);
 	}
 }
 
@@ -11246,10 +11307,19 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc, struct drm_atomic_stat
 	vop2_cfg_update(crtc, old_cstate);
 
 	if (!vop2->is_iommu_enabled && vop2->is_iommu_needed) {
+		enum rockchip_drm_vop_aclk_mode aclk_mode = vop2->aclk_mode;
+		bool enter_vop_aclk_reset_mode = false;
+
 		if (vcstate->mode_update)
 			VOP_CTRL_SET(vop2, dma_stop, 1);
-
+		if (vop2->aclk_mode_rate[ROCKCHIP_VOP_ACLK_RESET_MODE] &&
+		    clk_get_rate(vop2->aclk) > vop2->aclk_mode_rate[ROCKCHIP_VOP_ACLK_RESET_MODE]) {
+			vop2_devfreq_set_aclk(crtc, ROCKCHIP_VOP_ACLK_RESET_MODE);
+			enter_vop_aclk_reset_mode = true;
+		}
 		ret = rockchip_drm_dma_attach_device(vop2->drm_dev, vop2->dev);
+		if (enter_vop_aclk_reset_mode)
+			vop2_devfreq_set_aclk(crtc, aclk_mode);
 		if (ret) {
 			vop2->is_iommu_enabled = false;
 			vop2_disable_all_planes_for_crtc(crtc);
@@ -11409,8 +11479,7 @@ static void vop2_crtc_destroy_state(struct drm_crtc *crtc,
 	kfree(vcstate);
 }
 
-#ifdef CONFIG_DRM_ANALOGIX_DP
-static struct drm_connector *vop2_get_edp_connector(struct vop2 *vop2)
+static __maybe_unused struct drm_connector *vop2_get_edp_connector(struct vop2 *vop2)
 {
 	struct drm_connector *connector;
 	struct drm_connector_list_iter conn_iter;
@@ -11427,24 +11496,42 @@ static struct drm_connector *vop2_get_edp_connector(struct vop2 *vop2)
 	return NULL;
 }
 
-static int vop2_crtc_set_crc_source(struct drm_crtc *crtc,
-				    const char *source_name)
+static int vop2_crtc_set_crc_source(struct drm_crtc *crtc, const char *source_name)
 {
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
 	struct vop2 *vop2 = vp->vop2;
-	struct drm_connector *connector;
-	int ret;
+	const struct vop2_data *vop2_data = vp->vop2->data;
+	const char * const *crc_sources = vop2_data->crc_sources;
+	uint8_t crc_sources_num = vop2_data->crc_sources_num;
+	int ret = 0;
 
-	connector = vop2_get_edp_connector(vop2);
-	if (!connector)
-		return -EINVAL;
+	/* use crtc crc */
+	if (crc_sources && strcmp(crtc->crc.source, "encoder") != 0) {
+		if (source_name &&
+		    match_string(crc_sources, crc_sources_num, source_name) >= 0) {
+			VOP_MODULE_SET(vop2, vp, crc_en, 1);
+		} else if (!source_name) {
+			VOP_MODULE_SET(vop2, vp, crc_en, 0);
+		} else {
+			ret = -EINVAL;
+		}
+	} else {/* use encoder crc */
+#ifdef CONFIG_DRM_ANALOGIX_DP
+		struct drm_connector *connector;
 
-	if (source_name && strcmp(source_name, "auto") == 0)
-		ret = analogix_dp_start_crc(connector);
-	else if (!source_name)
-		ret = analogix_dp_stop_crc(connector);
-	else
-		ret = -EINVAL;
+		connector = vop2_get_edp_connector(vop2);
+		if (!connector)
+			return -EINVAL;
+		if (source_name && strcmp(source_name, "auto") == 0)
+			ret = analogix_dp_start_crc(connector);
+		else if (!source_name)
+			ret = analogix_dp_stop_crc(connector);
+		else
+			ret = -EINVAL;
+#else
+		return -ENODEV;
+#endif
+	}
 
 	return ret;
 }
@@ -11452,27 +11539,44 @@ static int vop2_crtc_set_crc_source(struct drm_crtc *crtc,
 static int vop2_crtc_verify_crc_source(struct drm_crtc *crtc, const char *source_name,
 				       size_t *values_cnt)
 {
-	if (source_name && strcmp(source_name, "auto") != 0)
-		return -EINVAL;
+	struct vop2_video_port *vp = to_vop2_video_port(crtc);
+	const struct vop2_data *vop2_data = vp->vop2->data;
+	const char * const *crc_sources = vop2_data->crc_sources;
+	uint8_t crc_sources_num = vop2_data->crc_sources_num;
 
-	*values_cnt = 3;
+	if (crc_sources) {
+		if (source_name &&
+		    match_string(crc_sources, crc_sources_num, source_name) < 0)
+			return -EINVAL;
+	} else {
+		if (source_name && strcmp(source_name, "auto") != 0)
+			return -EINVAL;
+	}
+
+	/*
+	 * The number of CRC values from encoder is 3 words;
+	 * The number of CRC values from VOP is 1 words;
+	 */
+	if (crc_sources && source_name && strcmp(source_name, "encoder") != 0)
+		*values_cnt = 1;
+	else
+		*values_cnt = 3;
+
 	return 0;
 }
 
-#else
-static int vop2_crtc_set_crc_source(struct drm_crtc *crtc,
-				    const char *source_name)
+static const char *const *vop2_crtc_get_crc_sources(struct drm_crtc *crtc, size_t *count)
 {
-	return -ENODEV;
-}
+	struct vop2_video_port *vp = to_vop2_video_port(crtc);
+	const struct vop2_data *vop2_data = vp->vop2->data;
 
-static int
-vop2_crtc_verify_crc_source(struct drm_crtc *crtc, const char *source_name,
-			    size_t *values_cnt)
-{
-	return -ENODEV;
+	if (vop2_data->crc_sources) {
+		*count = vop2_data->crc_sources_num;
+		return vop2_data->crc_sources;
+	} else {
+		return NULL;
+	}
 }
-#endif
 
 static int vop2_crtc_atomic_get_property(struct drm_crtc *crtc,
 					 const struct drm_crtc_state *state,
@@ -11707,6 +11811,7 @@ static const struct drm_crtc_funcs vop2_crtc_funcs = {
 	.disable_vblank = vop2_crtc_disable_vblank,
 	.set_crc_source = vop2_crtc_set_crc_source,
 	.verify_crc_source = vop2_crtc_verify_crc_source,
+	.get_crc_sources = vop2_crtc_get_crc_sources,
 };
 
 static void vop2_fb_unref_worker(struct drm_flip_work *work, void *val)
@@ -13375,6 +13480,7 @@ static int vop2_devfreq_set_aclk(struct drm_crtc *crtc, enum rockchip_drm_vop_ac
 	mutex_unlock(&vop2->devfreq->lock);
 	if (ret)
 		dev_err(vop2->dev, "failed to set rate %lu\n", vop2->aclk_target_freq);
+	vop2->aclk_mode = aclk_mode;
 
 	return 0;
 }
@@ -13443,7 +13549,7 @@ static int rockchip_vop2_devfreq_init(struct vop2 *vop2)
 
 	ret = rockchip_init_opp_table(vop2->dev, &vop2->opp_info, NULL, "vop");
 	if (ret) {
-		dev_err(vop2->dev, "failed to init_opp_table\n");
+		dev_info(vop2->dev, "Unsupported VOP aclk dvfs\n");
 		return ret;
 	}
 
@@ -13489,11 +13595,15 @@ static int rockchip_vop2_devfreq_init(struct vop2 *vop2)
 	of_property_read_u32(vop2->dev->of_node, "rockchip,aclk-normal-mode-rates",
 			     &vop2->aclk_mode_rate[ROCKCHIP_VOP_ACLK_NORMAL_MODE]);
 
+	of_property_read_u32(vop2->dev->of_node, "rockchip,aclk-reset-mode-rates",
+			     &vop2->aclk_mode_rate[ROCKCHIP_VOP_ACLK_RESET_MODE]);
+
 	of_property_read_u32(vop2->dev->of_node, "rockchip,aclk-advanced-mode-rates",
 			     &vop2->aclk_mode_rate[ROCKCHIP_VOP_ACLK_ADVANCED_MODE]);
 
-	dev_err(vop2->dev, "Supported VOP aclk dvfs, normal mode:%d, advanced mode:%d\n",
+	dev_err(vop2->dev, "Supported VOP aclk dvfs, normal mode:%d, reset mode:%d, advanced mode:%d\n",
 			   vop2->aclk_mode_rate[ROCKCHIP_VOP_ACLK_NORMAL_MODE],
+			   vop2->aclk_mode_rate[ROCKCHIP_VOP_ACLK_RESET_MODE],
 			   vop2->aclk_mode_rate[ROCKCHIP_VOP_ACLK_ADVANCED_MODE]);
 
 	return 0;
