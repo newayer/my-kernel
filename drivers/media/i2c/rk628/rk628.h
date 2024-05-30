@@ -228,6 +228,9 @@
 #define GRF_SOC_VERSION			0x0200
 #define GRF_MAX_REGISTER		GRF_SOC_VERSION
 
+#define RK628_DEFAULT_WIDTH	64
+#define RK628_DEFAULT_HEIGHT	64
+
 enum {
 	COMBTXPHY_MODULEA_EN = BIT(0),
 	COMBTXPHY_MODULEB_EN = BIT(1),
@@ -305,6 +308,7 @@ struct rk628 {
 	struct dentry *debug_dir;
 	struct gpio_desc *hdmirx_det_gpio;
 	bool last_mipi_status;
+	bool is_suspend;
 };
 
 #define rk628_dbg(rk628, format, ...)	\

@@ -1067,6 +1067,15 @@ static int udphy_power_on(struct rockchip_udphy *udphy, u8 mode)
 		udphy->mode_change = false;
 		udphy->status = UDPHY_MODE_NONE;
 
+		/*
+		 * For DP 4xlanes + USB2 only scenario, it needs to
+		 * select utmi clock from the USB2 PHY for the USB
+		 * controller source clock, then it can safely disable
+		 * the USBDP PHY later to reconfigure lanes for DP.
+		 */
+		if (udphy->mode == UDPHY_MODE_DP)
+			udphy_u3_port_disable(udphy, true);
+
 		ret = udphy_disable(udphy);
 		if (ret)
 			return ret;
@@ -1620,8 +1629,8 @@ static const struct rockchip_udphy_cfg rk3576_udphy_cfgs = {
 		},
 	},
 	.dp_tx_ctrl_cfg = {
-		rk3588_dp_tx_drv_ctrl_rbr_hbr,
-		rk3588_dp_tx_drv_ctrl_rbr_hbr,
+		rk3588_dp_tx_drv_ctrl_rbr_hbr_typec,
+		rk3588_dp_tx_drv_ctrl_rbr_hbr_typec,
 		rk3588_dp_tx_drv_ctrl_hbr2,
 		rk3588_dp_tx_drv_ctrl_hbr3,
 	},

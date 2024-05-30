@@ -818,6 +818,8 @@
 		nvmem-cells = <&log_leakage>, <&logic_opp_info>;
 		nvmem-cell-names = "leakage", "opp-info";
 
+		rockchip,early-min-microvolt = <0 750000>; /* <vdd_ddr vdd_logic> */
+
 		rockchip,temp-hysteresis = <5000>;
 		rockchip,low-temp = <10000>;
 		rockchip,low-temp-min-volt = <750000>;
@@ -1326,6 +1328,7 @@
 			)
 			(0)
 		>;
+		power-domains = <&power RK3576_PD_USB>, <&power RK3576_PD_PHP>;
 	};
 
 	rockchip_system_monitor: rockchip-system-monitor {
@@ -1772,13 +1775,16 @@
 		#reset-cells = <1>;
 
 		assigned-clocks =
+			<&cru CLK_AUDIO_FRAC_1_SRC>,
 			<&cru PLL_GPLL>, <&cru PLL_CPLL>,
 			<&cru PLL_AUPLL>, <&cru CLK_UART_FRAC_0>,
 			<&cru CLK_UART_FRAC_1>, <&cru CLK_UART_FRAC_2>,
 			<&cru CLK_AUDIO_FRAC_0>, <&cru CLK_AUDIO_FRAC_1>,
 			<&cru CLK_CPLL_DIV2>, <&cru CLK_CPLL_DIV4>,
 			<&cru CLK_CPLL_DIV10>, <&cru FCLK_DDR_CM0_CORE>;
+		assigned-clock-parents = <&cru PLL_AUPLL>;
 		assigned-clock-rates =
+			<0>,
 			<1188000000>, <1000000000>,
 			<786432000>, <18432000>,
 			<96000000>, <128000000>,
@@ -2534,6 +2540,9 @@
 		rockchip,srv = <&mpp_srv>;
 		rockchip,task-capacity = <8>;
 		rockchip,taskqueue-node = <5>;
+		rockchip,sram = <&rkvdec_sram>;
+		rockchip,rcb-iova = <0x10000000 0x78000>;
+		rockchip,rcb-min-width = <512>;
 		power-domains = <&power RK3576_PD_VDEC>;
 		status = "disabled";
 	};
@@ -2900,6 +2909,8 @@
 		nvmem-cells = <&log_leakage>;
 		nvmem-cell-names = "leakage";
 
+		rockchip,early-min-microvolt = <750000>; /* vdd_logic */
+
 		rockchip,init-freq = <702000>; /* KHz */
 
 		rockchip,leakage-voltage-sel = <
@@ -3155,6 +3166,7 @@
 		phy-names = "dp";
 		power-domains = <&power RK3576_PD_VO0>;
 		rockchip,grf = <&vo0_grf>;
+		#sound-dai-cells = <1>;
 		status = "disabled";
 
 		ports {
@@ -5266,6 +5278,20 @@
 		rockchip,grf = <&mipidphy1_grf>;
 		rockchip,sys_grf = <&sys_grf>;
 		status = "okay";
+	};
+
+	sram: sram@3ff88000 {
+		compatible = "mmio-sram";
+		reg = <0x0 0x3ff88000 0x0 0x78000>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0x0 0x0 0x3ff88000 0x78000>;
+
+		/* start address and size should be 4k align */
+		rkvdec_sram: rkvdec-sram@0 {
+			reg = <0x0 0x78000>;
+		};
 	};
 
 	scmi_shmem: scmi-shmem@4010f000 {

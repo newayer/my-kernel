@@ -313,6 +313,7 @@ struct drm_dp_link_train {
 struct dw_dp_link {
 	u8 dpcd[DP_RECEIVER_CAP_SIZE];
 	unsigned char revision;
+	unsigned int max_rate;
 	unsigned int rate;
 	unsigned int lanes;
 	struct drm_dp_link_caps caps;
@@ -1573,6 +1574,7 @@ static void dw_dp_link_reset(struct dw_dp_link *link)
 
 	link->rate = 0;
 	link->lanes = 0;
+	link->max_rate = 0;
 }
 
 static int dw_dp_link_power_up(struct dw_dp *dp)
@@ -1668,10 +1670,11 @@ static int dw_dp_link_probe(struct dw_dp *dp)
 			!!(dpcd & DP_VSC_SDP_EXT_FOR_COLORIMETRY_SUPPORTED);
 
 	link->revision = link->dpcd[DP_DPCD_REV];
-	link->rate = min_t(u32, min(dp->max_link_rate, dp->phy->attrs.max_link_rate * 100),
-			   drm_dp_max_link_rate(link->dpcd));
+	link->max_rate = min_t(u32, min(dp->max_link_rate, dp->phy->attrs.max_link_rate * 100),
+			 drm_dp_max_link_rate(link->dpcd));
 	link->lanes = min_t(u8, phy_get_bus_width(dp->phy),
-			    drm_dp_max_lane_count(link->dpcd));
+		      drm_dp_max_lane_count(link->dpcd));
+	link->rate = link->max_rate;
 
 	link->caps.enhanced_framing = drm_dp_enhanced_frame_cap(link->dpcd);
 	link->caps.tps3_supported = drm_dp_tps3_supported(link->dpcd);
@@ -2488,9 +2491,9 @@ static int dw_dp_video_ts_calculate(struct dw_dp *dp, struct dw_dp_video *video,
 	u32 peak_stream_bandwidth, link_bandwidth;
 	u32 ts_calc;
 	u32 t1 = 0, t2 = 0, t3 = 0;
-	u32 hblank = mode->htotal - mode->hdisplay;
+	u32 hblank = mode->crtc_htotal - mode->crtc_hdisplay;
 
-	peak_stream_bandwidth = mode->clock * bpp / 8;
+	peak_stream_bandwidth = mode->crtc_clock * bpp / 8;
 	link_bandwidth = (link->rate / 1000) * link->lanes;
 	ts_calc = peak_stream_bandwidth * 64 / link_bandwidth;
 	ts->average_bytes_per_tu = ts_calc / 1000;
@@ -2547,9 +2550,9 @@ static int dw_dp_video_ts_calculate(struct dw_dp *dp, struct dw_dp_video *video,
 		}
 
 		if (color_format == DRM_COLOR_FORMAT_YCBCR420)
-			t2 = (link->rate / 4) * 1000 / (mode->clock / 2);
+			t2 = (link->rate / 4) * 1000 / (mode->crtc_clock / 2);
 		else
-			t2 = (link->rate / 4) * 1000 / mode->clock;
+			t2 = (link->rate / 4) * 1000 / mode->crtc_clock;
 
 		if (ts->average_bytes_per_tu_frac)
 			t3 = ts->average_bytes_per_tu + 1;
@@ -2576,7 +2579,7 @@ static int dw_dp_video_mst_ts_calculate(struct dw_dp *dp, struct dw_dp_video *vi
 	u32 num_lanes_divisor = 0;
 	u32 slot_count_adjust = 0;
 
-	peak_stream_bandwidth = mode->clock * video->bpp / 8;
+	peak_stream_bandwidth = mode->crtc_clock * video->bpp / 8;
 	link_bandwidth = (link->rate / 1000) * link->lanes;
 	ts_calc = peak_stream_bandwidth * 64 / link_bandwidth;
 	ts->average_bytes_per_tu = ts_calc / 1000;
@@ -2617,9 +2620,9 @@ static int dw_dp_video_mst_ts_calculate(struct dw_dp *dp, struct dw_dp_video *vi
 	}
 
 	if (color_format == DRM_COLOR_FORMAT_YCBCR420)
-		t2 = (link->rate / 4) * 1000 / (mode->clock / 2);
+		t2 = (link->rate / 4) * 1000 / (mode->crtc_clock / 2);
 	else
-		t2 = (link->rate / 4) * 1000 / mode->clock;
+		t2 = (link->rate / 4) * 1000 / mode->crtc_clock;
 
 	if (ts->average_bytes_per_tu_frac)
 		slot_count = ts->average_bytes_per_tu + 1;
@@ -2654,8 +2657,8 @@ static int dw_dp_video_enable(struct dw_dp *dp, struct dw_dp_video *video, int s
 	u8 vic;
 	u32 hactive, hblank, h_sync_width, h_front_porch;
 	u32 vactive, vblank, v_sync_width, v_front_porch;
-	u32 vstart = mode->vtotal - mode->vsync_start;
-	u32 hstart = mode->htotal - mode->hsync_start;
+	u32 vstart = mode->crtc_vtotal - mode->crtc_vsync_start;
+	u32 hstart = mode->crtc_htotal - mode->crtc_hsync_start;
 	u32 hblank_interval;
 	u32 value;
 	int ret;
@@ -2680,8 +2683,8 @@ static int dw_dp_video_enable(struct dw_dp *dp, struct dw_dp_video *video, int s
 	regmap_write(dp->regmap, DPTX_VINPUT_POLARITY_CTRL_N(stream_id), value);
 
 	/* Configure DPTX_VIDEO_CONFIG1 register */
-	hactive = mode->hdisplay;
-	hblank = mode->htotal - mode->hdisplay;
+	hactive = mode->crtc_hdisplay;
+	hblank = mode->crtc_htotal - mode->crtc_hdisplay;
 	value = FIELD_PREP(HACTIVE, hactive) | FIELD_PREP(HBLANK, hblank);
 	if (mode->flags & DRM_MODE_FLAG_INTERLACE)
 		value |= FIELD_PREP(I_P, 1);
@@ -2697,21 +2700,21 @@ static int dw_dp_video_enable(struct dw_dp *dp, struct dw_dp_video *video, int s
 	regmap_write(dp->regmap, DPTX_VIDEO_CONFIG1_N(stream_id), value);
 
 	/* Configure DPTX_VIDEO_CONFIG2 register */
-	vblank = mode->vtotal - mode->vdisplay;
-	vactive = mode->vdisplay;
+	vblank = mode->crtc_vtotal - mode->crtc_vdisplay;
+	vactive = mode->crtc_vdisplay;
 	regmap_write(dp->regmap, DPTX_VIDEO_CONFIG2_N(stream_id),
 		     FIELD_PREP(VBLANK, vblank) | FIELD_PREP(VACTIVE, vactive));
 
 	/* Configure DPTX_VIDEO_CONFIG3 register */
-	h_sync_width = mode->hsync_end - mode->hsync_start;
-	h_front_porch = mode->hsync_start - mode->hdisplay;
+	h_sync_width = mode->crtc_hsync_end - mode->crtc_hsync_start;
+	h_front_porch = mode->crtc_hsync_start - mode->crtc_hdisplay;
 	regmap_write(dp->regmap, DPTX_VIDEO_CONFIG3_N(stream_id),
 		     FIELD_PREP(H_SYNC_WIDTH, h_sync_width) |
 		     FIELD_PREP(H_FRONT_PORCH, h_front_porch));
 
 	/* Configure DPTX_VIDEO_CONFIG4 register */
-	v_sync_width = mode->vsync_end - mode->vsync_start;
-	v_front_porch = mode->vsync_start - mode->vdisplay;
+	v_sync_width = mode->crtc_vsync_end - mode->crtc_vsync_start;
+	v_front_porch = mode->crtc_vsync_start - mode->crtc_vdisplay;
 	regmap_write(dp->regmap, DPTX_VIDEO_CONFIG4_N(stream_id),
 		     FIELD_PREP(V_SYNC_WIDTH, v_sync_width) |
 		     FIELD_PREP(V_FRONT_PORCH, v_front_porch));
@@ -2741,9 +2744,9 @@ static int dw_dp_video_enable(struct dw_dp *dp, struct dw_dp_video *video, int s
 	/* Configure DPTX_VIDEO_HBLANK_INTERVAL register */
 	if (dp->is_mst)
 		hblank_interval = hblank * ts.average_bytes_per_tu * (link->rate / 4) / 16 /
-				  mode->clock;
+				  mode->crtc_clock;
 	else
-		hblank_interval = hblank * (link->rate / 4) / mode->clock;
+		hblank_interval = hblank * (link->rate / 4) / mode->crtc_clock;
 	regmap_write(dp->regmap, DPTX_VIDEO_HBLANK_INTERVAL_N(stream_id),
 		     FIELD_PREP(HBLANK_INTERVAL_EN, 1) |
 		     FIELD_PREP(HBLANK_INTERVAL, hblank_interval));
@@ -3135,7 +3138,7 @@ dw_dp_bridge_mode_valid(struct drm_bridge *bridge,
 	    drm_mode_is_420_only(info, &m))
 		return MODE_NO_420;
 
-	if (!dw_dp_bandwidth_ok(dp, &m, min_bpp, link->lanes, link->rate))
+	if (!dw_dp_bandwidth_ok(dp, &m, min_bpp, link->lanes, link->max_rate))
 		return MODE_CLOCK_HIGH;
 
 	return MODE_OK;
@@ -3171,17 +3174,21 @@ static void _dw_dp_loader_protect(struct dw_dp *dp, bool on)
 		switch (FIELD_GET(PHY_RATE, value)) {
 		case 3:
 			link->rate = 810000;
+			link->max_rate = 810000;
 			break;
 		case 2:
 			link->rate = 540000;
+			link->max_rate = 540000;
 			break;
 		case 1:
 			link->rate = 270000;
+			link->max_rate = 270000;
 			break;
 		case 0:
 			fallthrough;
 		default:
 			link->rate = 162000;
+			link->max_rate = 162000;
 			break;
 		}
 
@@ -3418,7 +3425,7 @@ dw_dp_mst_connector_mode_valid(struct drm_connector *connector, struct drm_displ
 	if (drm_connector_is_unregistered(connector))
 		return  MODE_ERROR;
 
-	if (!dw_dp_bandwidth_ok(dp, mode, min_bpp, dp->link.lanes, dp->link.rate))
+	if (!dw_dp_bandwidth_ok(dp, mode, min_bpp, dp->link.lanes, dp->link.max_rate))
 		return MODE_CLOCK_HIGH;
 
 	if (drm_dp_calc_pbn_mode(mode->clock, min_bpp, false) > port->full_pbn)
@@ -3475,17 +3482,35 @@ static void dw_dp_clear_vcpid_table(struct dw_dp *dp)
 
 static int dw_dp_initiate_mst_act(struct dw_dp *dp)
 {
-	int val, ret = 0;
+	int val, retries, ret = 0;
 
 	regmap_update_bits(dp->regmap, DPTX_CCTL, DPTX_CCTL_INITIATE_MST_ACT,
 			   FIELD_PREP(DPTX_CCTL_INITIATE_MST_ACT, 1));
 
 	ret = regmap_read_poll_timeout(dp->regmap, DPTX_CCTL, val,
-				       !FIELD_GET(DPTX_CCTL_INITIATE_MST_ACT, val), 200, 100000);
-	/* if hardware not auto clear this bit until timeout, manual clear it */
-	if (ret)
-		regmap_update_bits(dp->regmap, DPTX_CCTL, DPTX_CCTL_INITIATE_MST_ACT,
+				       !FIELD_GET(DPTX_CCTL_INITIATE_MST_ACT, val),
+				       200, 10000);
+	/*
+	 * if hardware not auto clear this bit until timeout, something may be
+	 * wrong with the act, it should be cleared manually and retry again
+	 */
+	if (ret) {
+		for (retries = 0; retries < 3; retries++) {
+			regmap_update_bits(dp->regmap, DPTX_CCTL, DPTX_CCTL_INITIATE_MST_ACT,
 				   FIELD_PREP(DPTX_CCTL_INITIATE_MST_ACT, 0));
+			usleep_range(2000, 2010);
+			dev_info(dp->dev, "act auto clear timeout, retry do it again\n");
+
+			regmap_update_bits(dp->regmap, DPTX_CCTL, DPTX_CCTL_INITIATE_MST_ACT,
+					   FIELD_PREP(DPTX_CCTL_INITIATE_MST_ACT, 1));
+
+			ret = regmap_read_poll_timeout(dp->regmap, DPTX_CCTL, val,
+						       !FIELD_GET(DPTX_CCTL_INITIATE_MST_ACT, val),
+						       200, 10000);
+			if (!ret)
+				break;
+		}
+	}
 
 	return ret;
 }
@@ -3561,6 +3586,32 @@ static void dw_dp_enable_vop_gate(struct dw_dp *dp, struct drm_crtc *crtc,
 		rockchip_drm_crtc_output_pre_disable(crtc, output_if);
 }
 
+/*
+ * When DPTX controller config 2 pixe mode and work in sst mode,
+ * and a low pixel clock image transmit in high link rate(HBR3),
+ * some monitor may display flicker. To avoid this issue appear, use
+ * lower link rate(HBR2) when transmit a low pixel clock image.
+ */
+static void dw_dp_limit_max_link_rate(struct dw_dp *dp)
+{
+	struct dw_dp_link *link = &dp->link;
+	struct dw_dp_video *video = &dp->video;
+
+	link->rate = link->max_rate;
+
+	if (dp->is_mst)
+		return;
+
+	if (dp->pixel_mode != DPTX_MP_DUAL_PIXEL)
+		return;
+
+	if (video->mode.clock > 50000)
+		return;
+
+	if (link->max_rate > 540000)
+		link->rate = 540000;
+}
+
 static void dw_dp_mst_encoder_atomic_enable(struct drm_encoder *encoder,
 					    struct drm_atomic_state *state)
 {
@@ -3597,6 +3648,8 @@ static void dw_dp_mst_encoder_atomic_enable(struct drm_encoder *encoder,
 	mst_enc->mst_conn = mst_conn;
 
 	if (first_mst_stream) {
+		dw_dp_limit_max_link_rate(dp);
+
 		ret = phy_power_on(dp->phy);
 		if (ret)
 			dev_err(dp->dev, "phy power on failed: %d\n", ret);
@@ -4155,6 +4208,8 @@ static int dw_dp_link_enable(struct dw_dp *dp)
 {
 	int ret;
 
+	dw_dp_limit_max_link_rate(dp);
+
 	ret = phy_power_on(dp->phy);
 	if (ret)
 		return ret;
@@ -4412,7 +4467,7 @@ static u32 *dw_dp_bridge_atomic_get_output_bus_fmts(struct drm_bridge *bridge,
 		    fmt->color_format != DRM_COLOR_FORMAT_YCBCR420)
 			continue;
 
-		if (!dw_dp_bandwidth_ok(dp, &mode, fmt->bpp, link->lanes, link->rate))
+		if (!dw_dp_bandwidth_ok(dp, &mode, fmt->bpp, link->lanes, link->max_rate))
 			continue;
 
 		if (dp_state->bpc != 0) {
@@ -4536,7 +4591,7 @@ static void dw_dp_handle_test_request(struct dw_dp *dp)
 
 	switch (request) {
 	case DP_TEST_LINK_PHY_TEST_PATTERN:
-		dev_dbg(dp->dev, "PHY_PATTERN test requested\n");
+		dev_info(dp->dev, "PHY_PATTERN test requested\n");
 		response = dw_dp_autotest_phy_pattern(dp);
 		break;
 	default:
@@ -4589,13 +4644,13 @@ static void dw_dp_phy_pattern_update(struct dw_dp *dp)
 
 	switch (data->phy_pattern) {
 	case DP_PHY_TEST_PATTERN_NONE:
-		dev_dbg(dp->dev, "Disable Phy Test Pattern\n");
+		dev_info(dp->dev, "Disable Phy Test Pattern\n");
 		regmap_update_bits(dp->regmap, DPTX_CCTL, SCRAMBLE_DIS,
 				   FIELD_PREP(SCRAMBLE_DIS, 1));
 		dw_dp_phy_set_pattern(dp, DPTX_PHY_PATTERN_NONE);
 		break;
 	case DP_PHY_TEST_PATTERN_D10_2:
-		dev_dbg(dp->dev, "Set D10.2 Phy Test Pattern\n");
+		dev_info(dp->dev, "Set D10.2 Phy Test Pattern\n");
 		regmap_update_bits(dp->regmap, DPTX_CCTL, SCRAMBLE_DIS,
 				   FIELD_PREP(SCRAMBLE_DIS, 1));
 		dw_dp_phy_set_pattern(dp, DPTX_PHY_PATTERN_TPS_1);
@@ -4603,17 +4658,17 @@ static void dw_dp_phy_pattern_update(struct dw_dp *dp)
 	case DP_PHY_TEST_PATTERN_ERROR_COUNT:
 		regmap_update_bits(dp->regmap, DPTX_CCTL, SCRAMBLE_DIS,
 				   FIELD_PREP(SCRAMBLE_DIS, 0));
-		dev_dbg(dp->dev, "Set Error Count Phy Test Pattern\n");
+		dev_info(dp->dev, "Set Error Count Phy Test Pattern\n");
 		dw_dp_phy_set_pattern(dp, DPTX_PHY_PATTERN_SERM);
 		break;
 	case DP_PHY_TEST_PATTERN_PRBS7:
-		dev_dbg(dp->dev, "Set PRBS7 Phy Test Pattern\n");
+		dev_info(dp->dev, "Set PRBS7 Phy Test Pattern\n");
 		regmap_update_bits(dp->regmap, DPTX_CCTL, SCRAMBLE_DIS,
 				   FIELD_PREP(SCRAMBLE_DIS, 1));
 		dw_dp_phy_set_pattern(dp, DPTX_PHY_PATTERN_PBRS7);
 		break;
 	case DP_PHY_TEST_PATTERN_80BIT_CUSTOM:
-		dev_dbg(dp->dev, "Set 80Bit Custom Phy Test Pattern\n");
+		dev_info(dp->dev, "Set 80Bit Custom Phy Test Pattern\n");
 		regmap_update_bits(dp->regmap, DPTX_CCTL, SCRAMBLE_DIS,
 				   FIELD_PREP(SCRAMBLE_DIS, 1));
 		regmap_write(dp->regmap, DPTX_CUSTOMPAT0, 0x3e0f83e0);
@@ -4622,13 +4677,13 @@ static void dw_dp_phy_pattern_update(struct dw_dp *dp)
 		dw_dp_phy_set_pattern(dp, DPTX_PHY_PATTERN_CUSTOM_80BIT);
 		break;
 	case DP_PHY_TEST_PATTERN_CP2520:
-		dev_dbg(dp->dev, "Set HBR2 compliance Phy Test Pattern\n");
+		dev_info(dp->dev, "Set HBR2 compliance Phy Test Pattern\n");
 		regmap_update_bits(dp->regmap, DPTX_CCTL, SCRAMBLE_DIS,
 				   FIELD_PREP(SCRAMBLE_DIS, 0));
 		dw_dp_phy_set_pattern(dp, DPTX_PHY_PATTERN_CP2520_1);
 		break;
 	case DP_PHY_TEST_PATTERN_SEL_MASK:
-		dev_dbg(dp->dev, "Set TPS4  Phy Test Pattern\n");
+		dev_info(dp->dev, "Set TPS4  Phy Test Pattern\n");
 		regmap_update_bits(dp->regmap, DPTX_CCTL, SCRAMBLE_DIS,
 				   FIELD_PREP(SCRAMBLE_DIS, 0));
 		dw_dp_phy_set_pattern(dp, DPTX_PHY_PATTERN_TPS_4);
@@ -4663,7 +4718,7 @@ static void dw_dp_process_phy_request(struct dw_dp *dp)
 	dw_dp_phy_pattern_update(dp);
 	drm_dp_set_phy_test_pattern(&dp->aux, data, link_status[DP_DPCD_REV]);
 
-	dev_dbg(dp->dev, "phy test rate:%d, lane count:%d, ssc:%d, vs:%d, pe: %d\n",
+	dev_info(dp->dev, "phy test rate:%d, lane count:%d, ssc:%d, vs:%d, pe: %d\n",
 		 data->link_rate, data->num_lanes, spread, dp->link.train.adjust.voltage_swing[0],
 		 dp->link.train.adjust.pre_emphasis[0]);
 }
@@ -5073,6 +5128,128 @@ static void dw_dp_unregister_audio_driver(void *data)
 	}
 }
 
+static int dw_dp_single_audio_init(struct dw_dp *dp, struct dw_dp_audio *audio)
+{
+	int ret;
+
+	audio->extcon = devm_extcon_dev_allocate(dp->dev, dw_dp_cable);
+		if (IS_ERR(audio->extcon))
+			return dev_err_probe(dp->dev, PTR_ERR(audio->extcon),
+			       "failed to allocate extcon device\n");
+
+	ret = devm_extcon_dev_register(dp->dev, audio->extcon);
+	if (ret)
+		return dev_err_probe(dp->dev, ret, "failed to register extcon device\n");
+
+	ret = dw_dp_register_audio_driver(dp, audio);
+	if (ret)
+		return ret;
+
+	ret = devm_add_action_or_reset(dp->dev, dw_dp_unregister_audio_driver, audio);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+static int dw_dp_audio_init(struct dw_dp *dp)
+{
+	struct dw_dp_audio *audio;
+	int i, ret;
+
+	audio = dp->audio;
+	ret = dw_dp_single_audio_init(dp, audio);
+	if (ret)
+		return ret;
+
+	if (!dp->support_mst)
+		return 0;
+
+	for (i = 1; i < dp->mst_port_num; i++) {
+		if (!of_device_is_available(dp->mst_enc[i].port_node))
+			continue;
+
+		audio = dp->mst_enc[i].audio;
+		ret = dw_dp_single_audio_init(dp, audio);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+static int dw_dp_get_audio_clk(struct dw_dp *dp)
+{
+	struct dw_dp_audio *audio;
+	char clk_name[10];
+	int i;
+
+	audio = devm_kzalloc(dp->dev, sizeof(*audio), GFP_KERNEL);
+	if (!audio)
+		return -ENOMEM;
+
+	audio->id = 0;
+	dp->audio = audio;
+
+	audio->i2s_clk = devm_clk_get_optional(dp->dev, "i2s");
+	if (IS_ERR(audio->i2s_clk))
+		return dev_err_probe(dp->dev, PTR_ERR(audio->i2s_clk),
+				     "failed to get i2s clock\n");
+
+	audio->spdif_clk = devm_clk_get_optional(dp->dev, "spdif");
+	if (IS_ERR(audio->spdif_clk))
+		return dev_err_probe(dp->dev, PTR_ERR(audio->spdif_clk),
+				     "failed to get spdif clock\n");
+
+	if (!dp->support_mst)
+		return 0;
+
+	dp->mst_enc[0].audio = audio;
+
+	for (i = 1; i < dp->mst_port_num; i++) {
+		if (!of_device_is_available(dp->mst_enc[i].port_node))
+			continue;
+
+		audio = devm_kzalloc(dp->dev, sizeof(*audio), GFP_KERNEL);
+		if (!audio)
+			return -ENOMEM;
+
+		audio->id = i;
+
+		snprintf(clk_name, sizeof(clk_name), "i2s%d", i);
+		audio->i2s_clk = devm_clk_get_optional(dp->dev, clk_name);
+		if (IS_ERR(audio->i2s_clk))
+			return dev_err_probe(dp->dev, PTR_ERR(audio->i2s_clk),
+					     "failed to get i2s clock\n");
+
+		snprintf(clk_name, sizeof(clk_name), "spdif%d", i);
+		audio->spdif_clk = devm_clk_get_optional(dp->dev, clk_name);
+		if (IS_ERR(audio->spdif_clk))
+			return dev_err_probe(dp->dev, PTR_ERR(audio->spdif_clk),
+					     "failed to get spdif clock\n");
+		dp->mst_enc[i].audio = audio;
+	}
+
+	return 0;
+}
+
+static int dw_dp_encoder_late_register(struct drm_encoder *encoder)
+{
+	struct dw_dp *dp = encoder_to_dp(encoder);
+	int ret;
+
+	ret = dw_dp_audio_init(dp);
+	if (ret)
+		dev_warn(dp->dev, "audio init failed\n");
+
+	return 0;
+}
+
+static const struct drm_encoder_funcs dw_dp_encoder_funcs = {
+	.destroy = drm_encoder_cleanup,
+	.late_register = dw_dp_encoder_late_register,
+};
+
 static int dw_dp_bind(struct device *dev, struct device *master, void *data)
 {
 	struct dw_dp *dp = dev_get_drvdata(dev);
@@ -5096,7 +5273,8 @@ static int dw_dp_bind(struct device *dev, struct device *master, void *data)
 			port_node = dp->mst_enc[0].port_node;
 		else
 			port_node = dev->of_node;
-		drm_simple_encoder_init(drm_dev, encoder, DRM_MODE_ENCODER_TMDS);
+		drm_encoder_init(drm_dev, encoder, &dw_dp_encoder_funcs,
+				 DRM_MODE_ENCODER_TMDS, NULL);
 		drm_encoder_helper_add(encoder, &dw_dp_encoder_helper_funcs);
 
 		encoder->possible_crtcs =
@@ -5270,91 +5448,6 @@ static int dw_dp_get_port_node(struct dw_dp *dp)
 	return 0;
 }
 
-static int dw_dp_single_audio_init(struct dw_dp *dp, struct dw_dp_audio *audio)
-{
-	int ret;
-
-	audio->extcon = devm_extcon_dev_allocate(dp->dev, dw_dp_cable);
-		if (IS_ERR(audio->extcon))
-			return dev_err_probe(dp->dev, PTR_ERR(audio->extcon),
-			       "failed to allocate extcon device\n");
-
-	ret = devm_extcon_dev_register(dp->dev, audio->extcon);
-	if (ret)
-		return dev_err_probe(dp->dev, ret, "failed to register extcon device\n");
-
-	ret = dw_dp_register_audio_driver(dp, audio);
-	if (ret)
-		return ret;
-
-	ret = devm_add_action_or_reset(dp->dev, dw_dp_unregister_audio_driver, audio);
-	if (ret)
-		return ret;
-
-	return 0;
-}
-
-static int dw_dp_audio_init(struct dw_dp *dp)
-{
-	struct dw_dp_audio *audio;
-	char clk_name[10];
-	int i, ret;
-
-	audio = devm_kzalloc(dp->dev, sizeof(*audio), GFP_KERNEL);
-	if (!audio)
-		return -ENOMEM;
-
-	audio->id = 0;
-	ret = dw_dp_single_audio_init(dp, audio);
-	if (ret)
-		return ret;
-	dp->audio = audio;
-
-	audio->i2s_clk = devm_clk_get_optional(dp->dev, "i2s");
-	if (IS_ERR(audio->i2s_clk))
-		return dev_err_probe(dp->dev, PTR_ERR(audio->i2s_clk),
-				     "failed to get i2s clock\n");
-
-	audio->spdif_clk = devm_clk_get_optional(dp->dev, "spdif");
-	if (IS_ERR(audio->spdif_clk))
-		return dev_err_probe(dp->dev, PTR_ERR(audio->spdif_clk),
-				     "failed to get spdif clock\n");
-
-	if (!dp->support_mst)
-		return 0;
-
-	dp->mst_enc[0].audio = audio;
-
-	for (i = 1; i < dp->mst_port_num; i++) {
-		if (!of_device_is_available(dp->mst_enc[i].port_node))
-			continue;
-
-		audio = devm_kzalloc(dp->dev, sizeof(*audio), GFP_KERNEL);
-		if (!audio)
-			return -ENOMEM;
-
-		audio->id = i;
-		ret = dw_dp_single_audio_init(dp, audio);
-		if (ret)
-			return ret;
-
-		snprintf(clk_name, sizeof(clk_name), "i2s%d", i);
-		audio->i2s_clk = devm_clk_get_optional(dp->dev, clk_name);
-		if (IS_ERR(audio->i2s_clk))
-			return dev_err_probe(dp->dev, PTR_ERR(audio->i2s_clk),
-					     "failed to get i2s clock\n");
-
-		snprintf(clk_name, sizeof(clk_name), "spdif%d", i);
-		audio->spdif_clk = devm_clk_get_optional(dp->dev, clk_name);
-		if (IS_ERR(audio->spdif_clk))
-			return dev_err_probe(dp->dev, PTR_ERR(audio->spdif_clk),
-					     "failed to get spdif clock\n");
-		dp->mst_enc[i].audio = audio;
-	}
-
-	return 0;
-}
-
 static int dw_dp_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -5472,6 +5565,10 @@ static int dw_dp_probe(struct platform_device *pdev)
 		}
 	}
 
+	ret = dw_dp_get_audio_clk(dp);
+	if (ret)
+		return ret;
+
 	dp->irq = platform_get_irq(pdev, 0);
 	if (dp->irq < 0)
 		return dp->irq;
@@ -5483,10 +5580,6 @@ static int dw_dp_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to request irq: %d\n", ret);
 		return ret;
 	}
-
-	ret = dw_dp_audio_init(dp);
-	if (ret)
-		return ret;
 
 	dp->bridge.of_node = dp->support_mst ? dp->mst_enc[0].port_node : dev->of_node;
 	dp->bridge.funcs = &dw_dp_bridge_funcs;

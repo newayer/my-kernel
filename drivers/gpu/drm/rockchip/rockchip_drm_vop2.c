@@ -2224,12 +2224,21 @@ static enum vop2_wb_format vop2_convert_wb_format(uint32_t format)
 	}
 }
 
-static void vop2_set_system_status(struct vop2 *vop2)
+static void vop2_set_system_status(struct vop2 *vop2, bool is_enabled)
 {
-	if (hweight8(vop2->active_vp_mask) > 1)
-		rockchip_set_system_status(SYS_STATUS_DUALVIEW);
-	else
-		rockchip_clear_system_status(SYS_STATUS_DUALVIEW);
+	unsigned int nports = hweight8(vop2->active_vp_mask);
+
+	if (is_enabled) {
+		if (nports == 2)
+			rockchip_set_system_status(SYS_STATUS_MULTIVP);
+		else if (nports == 1)
+			rockchip_set_system_status(SYS_STATUS_SINGLEVP);
+	} else {
+		if (nports == 0)
+			rockchip_clear_system_status(SYS_STATUS_SINGLEVP);
+		else if (nports == 1)
+			rockchip_clear_system_status(SYS_STATUS_MULTIVP);
+	}
 }
 
 static bool vop2_win_rb_swap(uint32_t format)
@@ -4963,7 +4972,7 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
 	memset(&vp->active_tv_state, 0, sizeof(vp->active_tv_state));
 	vop2_unlock(vop2);
 
-	vop2_set_system_status(vop2);
+	vop2_set_system_status(vop2, false);
 	if (!vop2->active_vp_mask)
 		rockchip_request_early_suspend();
 
@@ -5949,7 +5958,8 @@ static void vop2_win_atomic_update(struct vop2_win *win, struct drm_rect *src, s
 		if (!win->parent && !vop2_cluster_window(win))
 			VOP_WIN_SET(vop2, win, scale_engine_num, win->scale_engine_num);
 
-		if (!win->parent) {
+		/* Only esmart win0 and cluster win0 need to enter config vp id and win dly num */
+		if (!win->parent && !vop2_cluster_sub_window(win)) {
 			VOP_CTRL_SET(vop2, win_vp_id[win->phys_id], vp->id);
 			VOP_CTRL_SET(vop2, win_dly[win->phys_id], win->dly_num);
 		}
@@ -6959,7 +6969,7 @@ static int vop2_crtc_loader_protect(struct drm_crtc *crtc, bool on, void *data)
 	if (on) {
 		vp->loader_protect = true;
 		vop2->active_vp_mask |= BIT(vp->id);
-		vop2_set_system_status(vop2);
+		vop2_set_system_status(vop2, true);
 		vop2_initial(crtc);
 		if (crtc->primary) {
 			win = to_vop2_win(crtc->primary);
@@ -7136,6 +7146,10 @@ static int vop2_crtc_debugfs_dump(struct drm_crtc *crtc, struct seq_file *s)
 		    mode->hsync_end, mode->htotal);
 	DEBUG_PRINT("\tV: %d %d %d %d\n", mode->vdisplay, mode->vsync_start,
 		    mode->vsync_end, mode->vtotal);
+	DEBUG_PRINT("\tFixed H: %d %d %d %d\n", mode->crtc_hdisplay, mode->crtc_hsync_start,
+		    mode->crtc_hsync_end, mode->crtc_htotal);
+	DEBUG_PRINT("\tFixed V: %d %d %d %d\n", mode->crtc_vdisplay, mode->crtc_vsync_start,
+		    mode->crtc_vsync_end, mode->crtc_vtotal);
 
 	drm_atomic_crtc_for_each_plane(plane, crtc) {
 		vop2_plane_info_dump(s, plane);
@@ -7826,36 +7840,34 @@ static bool vop2_crtc_mode_fixup(struct drm_crtc *crtc,
 	struct drm_crtc_state *new_crtc_state = container_of(mode, struct drm_crtc_state, mode);
 	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(new_crtc_state);
 
+	drm_mode_set_crtcinfo(adj_mode, CRTC_INTERLACE_HALVE_V | CRTC_STEREO_DOUBLE);
 	/*
 	 * For RK3568 and RK3588, the hactive of video timing must
 	 * be 4-pixel aligned.
 	 */
 	if (vop2->version == VOP_VERSION_RK3568 || vop2->version == VOP_VERSION_RK3588) {
-		if (adj_mode->hdisplay % 4) {
-			u16 old_hdisplay = adj_mode->hdisplay;
+		if (adj_mode->crtc_hdisplay % 4) {
+			u16 old_hdisplay = adj_mode->crtc_hdisplay;
 			u16 align;
 
-			align = 4 - (adj_mode->hdisplay % 4);
-			adj_mode->hdisplay += align;
-			adj_mode->hsync_start += align;
-			adj_mode->hsync_end += align;
-			adj_mode->htotal += align;
+			align = 4 - (adj_mode->crtc_hdisplay % 4);
+			adj_mode->crtc_hdisplay += align;
+			adj_mode->crtc_hsync_start += align;
+			adj_mode->crtc_hsync_end += align;
+			adj_mode->crtc_htotal += align;
 
 			DRM_WARN("VP%d: hactive need to be aligned with 4-pixel, %d -> %d\n",
-				 vp->id, old_hdisplay, adj_mode->hdisplay);
+				 vp->id, old_hdisplay, adj_mode->crtc_hdisplay);
 		}
 	}
-
 	/*
 	 * For RK3576 YUV420 output, hden signal introduce one cycle delay,
 	 * so we need to adjust hfp and hbp to compatible with this design.
 	 */
 	if (vop2->version == VOP_VERSION_RK3576 && vcstate->output_mode == ROCKCHIP_OUT_MODE_YUV420) {
-		adj_mode->hsync_start += 2;
-		adj_mode->hsync_end += 2;
+		adj_mode->crtc_hsync_start += 2;
+		adj_mode->crtc_hsync_end += 2;
 	}
-
-	drm_mode_set_crtcinfo(adj_mode, CRTC_INTERLACE_HALVE_V | CRTC_STEREO_DOUBLE);
 
 	if (mode->flags & DRM_MODE_FLAG_DBLCLK || vcstate->output_if & VOP_OUTPUT_IF_BT656)
 		adj_mode->crtc_clock *= 2;
@@ -8964,7 +8976,7 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc, struct drm_atomic_sta
 	}
 
 	vop2->active_vp_mask |= BIT(vp->id);
-	vop2_set_system_status(vop2);
+	vop2_set_system_status(vop2, true);
 	rockchip_request_late_resume();
 
 	vop2_lock(vop2);
@@ -10149,12 +10161,23 @@ static void vop2_setup_alpha(struct vop2_video_port *vp,
 		pixel_alpha_en = is_alpha_support(fb->format->format);
 
 		alpha_config.src_premulti_en = premulti_en;
-		if (bottom_layer_alpha_en && i == 1) {/* Cd = Cs + (1 - As) * Cd * Agd */
+		if (bottom_layer_alpha_en && i == 1) {
+			/**
+			 * The data from cluster mix is always premultiplied alpha;
+			 * cluster layer or esmart layer[premulti_en = 1]
+			 *	Cd = Cs + (1 - As) * Cd * Agd
+			 * esmart layer[premulti_en = 0]
+			 *	Cd = As * Cs + (1 - As) * Cd * Agd
+			 **/
+			if (vop2_cluster_window(win))
+				alpha_config.src_premulti_en = true;
 			alpha_config.dst_premulti_en = false;
 			alpha_config.src_pixel_alpha_en = pixel_alpha_en;
 			alpha_config.src_glb_alpha_value =  vpstate->global_alpha;
 			alpha_config.dst_glb_alpha_value = dst_global_alpha;
 		} else if (vop2_cluster_window(win)) {/* Mix output data only have pixel alpha */
+			/* The data from cluster mix is always premultiplied alpha */
+			alpha_config.src_premulti_en = true;
 			alpha_config.dst_premulti_en = true;
 			alpha_config.src_pixel_alpha_en = true;
 			alpha_config.src_glb_alpha_value = 0xff;
@@ -10379,12 +10402,23 @@ static void vop3_setup_alpha(struct vop2_video_port *vp,
 		pixel_alpha_en = is_alpha_support(fb->format->format);
 
 		alpha_config.src_premulti_en = premulti_en;
-		if (bottom_layer_alpha_en && i == 1) {/* Cd = Cs + (1 - As) * Cd * Agd */
+		if (bottom_layer_alpha_en && i == 1) {
+			/**
+			 * The data from cluster mix is always premultiplied alpha;
+			 * cluster layer or esmart layer[premulti_en = 1]
+			 *	Cd = Cs + (1 - As) * Cd * Agd
+			 * esmart layer[premulti_en = 0]
+			 *	Cd = As * Cs + (1 - As) * Cd * Agd
+			 **/
+			if (vop2_cluster_window(win))
+				alpha_config.src_premulti_en = true;
 			alpha_config.dst_premulti_en = false;
 			alpha_config.src_pixel_alpha_en = pixel_alpha_en;
 			alpha_config.src_glb_alpha_value =  vpstate->global_alpha;
 			alpha_config.dst_glb_alpha_value = dst_global_alpha;
 		} else if (vop2_cluster_window(win)) {/* Mix output data only have pixel alpha */
+			/* The data from cluster mix is always premultiplied alpha */
+			alpha_config.src_premulti_en = true;
 			alpha_config.dst_premulti_en = true;
 			alpha_config.src_pixel_alpha_en = true;
 			alpha_config.src_glb_alpha_value = 0xff;
@@ -11541,6 +11575,8 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc, struct drm_atomic_stat
 	struct drm_atomic_state *old_state = old_cstate->state;
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
 	struct vop2 *vop2 = vp->vop2;
+	const struct vop2_data *vop2_data = vop2->data;
+	const struct vop2_video_port_data *vp_data = &vop2_data->vp[vp->id];
 	struct drm_plane_state *old_pstate;
 	struct drm_plane *plane;
 	unsigned long flags;
@@ -11612,7 +11648,8 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc, struct drm_atomic_stat
 		VOP_MODULE_SET(vop2, vp, cubic_lut_update_en, 0);
 	}
 
-	vop2_post_sharp_config(crtc);
+	if (vp_data->feature & VOP_FEATURE_POST_SHARP)
+		vop2_post_sharp_config(crtc);
 
 	if (vcstate->line_flag)
 		vop2_crtc_enable_line_flag_event(crtc, vcstate->line_flag);
@@ -11706,14 +11743,14 @@ static void vop2_crtc_reset(struct drm_crtc *crtc)
 
 static struct drm_crtc_state *vop2_crtc_duplicate_state(struct drm_crtc *crtc)
 {
-	struct rockchip_crtc_state *vcstate, *old_vcstate;
+	struct rockchip_crtc_state *vcstate;
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
 
 	if (WARN_ON(!crtc->state))
 		return NULL;
 
-	old_vcstate = to_rockchip_crtc_state(crtc->state);
-	vcstate = kmemdup(old_vcstate, sizeof(*old_vcstate), GFP_KERNEL);
+	vcstate = kmemdup(to_rockchip_crtc_state(crtc->state),
+			  sizeof(*vcstate), GFP_KERNEL);
 	if (!vcstate)
 		return NULL;
 

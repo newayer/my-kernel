@@ -2729,18 +2729,19 @@ static int rkvenc2_iommu_fault_handle(struct iommu_domain *iommu,
 			}
 		}
 	}
-	mpp_task = mpp->cur_task;
-	dev_info(mpp->dev, "core %d page fault found dchs %08x\n",
-		 mpp->core_id, mpp_read_relaxed(&enc->mpp, DCHS_REG_OFFSET));
-
-	if (mpp_task)
-		mpp_task_dump_mem_region(mpp, mpp_task);
 
 	/*
 	 * Mask iommu irq, in order for iommu not repeatedly trigger pagefault.
 	 * Until the pagefault task finish by hw timeout.
 	 */
 	rockchip_iommu_mask_irq(mpp->dev);
+
+	mpp_task = mpp->cur_task;
+	dev_info(mpp->dev, "core %d page fault found dchs %08x\n",
+		 mpp->core_id, mpp_read_relaxed(&enc->mpp, DCHS_REG_OFFSET));
+
+	if (mpp_task)
+		mpp_task_dump_mem_region(mpp, mpp_task);
 
 	return 0;
 }
@@ -2784,7 +2785,7 @@ static int rkvenc_core_probe(struct platform_device *pdev)
 
 	ret = devm_request_threaded_irq(dev, mpp->irq,
 					mpp_dev_irq,
-					mpp_dev_isr_sched,
+					NULL,
 					IRQF_ONESHOT,
 					dev_name(dev), mpp);
 	if (ret) {
@@ -2833,7 +2834,7 @@ static int rkvenc_probe_default(struct platform_device *pdev)
 
 	ret = devm_request_threaded_irq(dev, mpp->irq,
 					mpp_dev_irq,
-					mpp_dev_isr_sched,
+					NULL,
 					IRQF_SHARED,
 					dev_name(dev), mpp);
 	if (ret) {

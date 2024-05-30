@@ -243,7 +243,6 @@ struct dw_mipi_dsi2 {
 	struct clk *pclk;
 	struct clk *sys_clk;
 	bool phy_enabled;
-	bool phy_request_clkhs;
 	struct phy *dcphy;
 	union phy_configure_opts phy_opts;
 
@@ -753,14 +752,14 @@ static void dw_mipi_dsi2_ipi_set(struct dw_mipi_dsi2 *dsi2)
 	if (!(dsi2->mode_flags & MIPI_DSI_MODE_VIDEO))
 		return;
 
-	vact = mode->vdisplay;
-	vsa = mode->vsync_end - mode->vsync_start;
-	vfp = mode->vsync_start - mode->vdisplay;
-	vbp = mode->vtotal - mode->vsync_end;
-	hact = mode->hdisplay;
-	hsa = mode->hsync_end - mode->hsync_start;
-	hbp = mode->htotal - mode->hsync_end;
-	hline = mode->htotal;
+	vact = mode->crtc_vdisplay;
+	vsa = mode->crtc_vsync_end - mode->crtc_vsync_start;
+	vfp = mode->crtc_vsync_start - mode->crtc_vdisplay;
+	vbp = mode->crtc_vtotal - mode->crtc_vsync_end;
+	hact = mode->crtc_hdisplay;
+	hsa = mode->crtc_hsync_end - mode->crtc_hsync_start;
+	hbp = mode->crtc_htotal - mode->crtc_hsync_end;
+	hline = mode->crtc_htotal;
 
 	pixel_clk = mode->crtc_clock * MSEC_PER_SEC;
 
@@ -832,10 +831,9 @@ static void dw_mipi_dsi2_pre_enable(struct dw_mipi_dsi2 *dsi2)
 		dw_mipi_dsi2_pre_enable(dsi2->slave);
 }
 
-static void dw_mipi_dsi2_enable(struct dw_mipi_dsi2 *dsi2)
+static void dw_mipi_dsi2_clk_management(struct dw_mipi_dsi2 *dsi2)
 {
-	u32 clk_type, mode;
-	int ret;
+	u32 clk_type;
 
 	/*
 	 * initial deskew calibration is send after phy_power_on,
@@ -848,7 +846,14 @@ static void dw_mipi_dsi2_enable(struct dw_mipi_dsi2 *dsi2)
 
 	regmap_update_bits(dsi2->regmap, DSI2_PHY_CLK_CFG,
 			   CLK_TYPE_MASK, clk_type);
+}
 
+static void dw_mipi_dsi2_enable(struct dw_mipi_dsi2 *dsi2)
+{
+	u32 mode;
+	int ret;
+
+	dw_mipi_dsi2_clk_management(dsi2);
 	dw_mipi_dsi2_ipi_set(dsi2);
 
 	if (dsi2->auto_calc_mode) {
@@ -1577,12 +1582,19 @@ static int dw_mipi_dsi2_host_attach(struct mipi_dsi_host *host,
 	dsi2->format = device->format;
 	dsi2->mode_flags = device->mode_flags;
 
-	return 0;
+	return component_add(dsi2->dev, &dw_mipi_dsi2_ops);
 }
 
 static int dw_mipi_dsi2_host_detach(struct mipi_dsi_host *host,
 				   struct mipi_dsi_device *device)
 {
+	struct dw_mipi_dsi2 *dsi2 = host_to_dsi2(host);
+
+	if (dsi2->master)
+		return 0;
+
+	component_del(dsi2->dev, &dw_mipi_dsi2_ops);
+
 	return 0;
 }
 
@@ -1633,18 +1645,9 @@ static ssize_t dw_mipi_dsi2_transfer(struct dw_mipi_dsi2 *dsi2,
 	u32 val;
 	u32 mode;
 
-	if (msg->flags & MIPI_DSI_MSG_USE_LPM) {
-		regmap_update_bits(dsi2->regmap, DSI2_PHY_CLK_CFG,
-				   CLK_TYPE_MASK, dsi2->phy_request_clkhs ?
-				   CONTIUOUS_CLK : NON_CONTINUOUS_CLK);
-		regmap_update_bits(dsi2->regmap, DSI2_DSI_VID_TX_CFG,
-				   LPDT_DISPLAY_CMD_EN, LPDT_DISPLAY_CMD_EN);
-	} else {
-		regmap_update_bits(dsi2->regmap, DSI2_PHY_CLK_CFG,
-				   CLK_TYPE_MASK, CONTIUOUS_CLK);
-		regmap_update_bits(dsi2->regmap, DSI2_DSI_VID_TX_CFG,
-				   LPDT_DISPLAY_CMD_EN, 0);
-	}
+	dw_mipi_dsi2_clk_management(dsi2);
+	regmap_update_bits(dsi2->regmap, DSI2_DSI_VID_TX_CFG, LPDT_DISPLAY_CMD_EN,
+			   msg->flags & MIPI_DSI_MSG_USE_LPM ? LPDT_DISPLAY_CMD_EN : 0);
 
 	/* create a packet to the DSI protocol */
 	ret = mipi_dsi_create_packet(&packet, msg);
@@ -1731,9 +1734,6 @@ static int dw_mipi_dsi2_probe(struct platform_device *pdev)
 	dsi2->id = id;
 	dsi2->pdata = of_device_get_match_data(dev);
 	platform_set_drvdata(pdev, dsi2);
-
-	if (device_property_read_bool(dev, "phy-request-clkhs"))
-		dsi2->phy_request_clkhs = true;
 
 	if (device_property_read_bool(dev, "auto-calculation-mode"))
 		dsi2->auto_calc_mode = true;
@@ -1835,7 +1835,7 @@ static int dw_mipi_dsi2_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	return component_add(&pdev->dev, &dw_mipi_dsi2_ops);
+	return 0;
 }
 
 static int dw_mipi_dsi2_remove(struct platform_device *pdev)

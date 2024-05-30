@@ -1792,6 +1792,14 @@ static int rockchip_hdmi_parse_dt(struct rockchip_hdmi *hdmi)
 	return 0;
 }
 
+static bool is_hdmi2_mode(const struct drm_display_mode *mode)
+{
+	if (mode->clock > 340000 && mode->clock <= 600000)
+		return true;
+
+	return false;
+}
+
 static enum drm_mode_status
 dw_hdmi_rockchip_mode_valid(struct dw_hdmi *dw_hdmi, void *data,
 			    const struct drm_display_info *info,
@@ -1821,6 +1829,34 @@ dw_hdmi_rockchip_mode_valid(struct dw_hdmi *dw_hdmi, void *data,
 
 	hdmi = to_rockchip_hdmi(encoder);
 
+	if (!hdmi->skip_check_420_mode) {
+		u32 max_tmds_clock = connector->display_info.max_tmds_clock;
+
+		/* some sinks edid max_tmds_clocks are 0, we think it only support hdmi1.4 */
+		if (!connector->display_info.max_tmds_clock)
+			max_tmds_clock = 340000;
+
+		/* edid isn't support yuv420 and max_tmds_clock is less than mode pixel clk */
+		if (mode->clock < 600000 && max_tmds_clock < mode->clock &&
+		    (!drm_mode_is_420(&connector->display_info, mode) ||
+		     !connector->ycbcr_420_allowed))
+			return MODE_BAD;
+
+		/* edid isn't support yuv420 and hdmitx only support hdmi1.4 clk */
+		if (hdmi->max_tmdsclk <= 340000 && is_hdmi2_mode(mode) &&
+		    !drm_mode_is_420(&connector->display_info, mode))
+			return MODE_BAD;
+
+		/*
+		 * hdmi cts hf1-31 required filtering yuv420 mode that frequency
+		 * exceeds the max_tmds_clock of edid.
+		 */
+		if (drm_mode_is_420(&connector->display_info, mode) &&
+		    max_tmds_clock < (mode->clock / 2) &&
+		    is_hdmi2_mode(mode))
+			return MODE_BAD;
+	};
+
 	if (hdmi->is_hdmi_qp) {
 		if (!hdmi->enable_gpio && mode->clock > 600000)
 			return MODE_BAD;
@@ -1835,23 +1871,6 @@ dw_hdmi_rockchip_mode_valid(struct dw_hdmi *dw_hdmi, void *data,
 	 */
 	if (mode->clock > INT_MAX / 1000)
 		return MODE_BAD;
-
-	/*
-	 * If sink max TMDS clock < 340MHz, we should check the mode pixel
-	 * clock > 340MHz is YCbCr420 or not and whether the platform supports
-	 * YCbCr420.
-	 */
-	if (!hdmi->skip_check_420_mode) {
-		if (mode->clock > 340000 &&
-		    connector->display_info.max_tmds_clock < 340000 &&
-		    (!drm_mode_is_420(&connector->display_info, mode) ||
-		     !connector->ycbcr_420_allowed))
-			return MODE_BAD;
-
-		if (hdmi->max_tmdsclk <= 340000 && mode->clock > 340000 &&
-		    !drm_mode_is_420(&connector->display_info, mode))
-			return MODE_BAD;
-	};
 
 	if (hdmi->phy) {
 		if (hdmi->is_hdmi_qp)
@@ -3435,6 +3454,33 @@ static const struct drm_encoder_helper_funcs dw_hdmi_rockchip_encoder_helper_fun
 	.mode_set = dw_hdmi_rockchip_encoder_mode_set,
 };
 
+/*
+ * Register child devices like audio/cec/hdcp at late_register stage
+ * to avoid register these devie at probe/bind(which may cause
+ * infinite loop of .probe() if a component is always defer)
+ *
+ * As these devices are not that critical, so we don't check
+ * the register results here, just give warning in it's register
+ * function if it failed, let the drm bringup.
+ */
+static int dw_hdmi_encoder_late_register(struct drm_encoder *encoder)
+{
+	struct rockchip_hdmi *hdmi = to_rockchip_hdmi(encoder);
+
+	if (hdmi->is_hdmi_qp) {
+		dw_hdmi_qp_register_audio(hdmi->hdmi_qp);
+		dw_hdmi_qp_register_cec(hdmi->hdmi_qp);
+		dw_hdmi_qp_register_hdcp(hdmi->hdmi_qp);
+	}
+
+	return 0;
+}
+
+static const struct drm_encoder_funcs dw_hdmi_rockchip_encoder_funcs = {
+	.destroy = drm_encoder_cleanup,
+	.late_register = dw_hdmi_encoder_late_register,
+};
+
 static void
 dw_hdmi_rockchip_genphy_disable(struct dw_hdmi *dw_hdmi, void *data)
 {
@@ -4093,7 +4139,9 @@ static int dw_hdmi_rockchip_bind(struct device *dev, struct device *master,
 			return -EPROBE_DEFER;
 
 		drm_encoder_helper_add(encoder, &dw_hdmi_rockchip_encoder_helper_funcs);
-		drm_simple_encoder_init(drm, encoder, DRM_MODE_ENCODER_TMDS);
+		drm_encoder_init(drm, encoder, &dw_hdmi_rockchip_encoder_funcs,
+				 DRM_MODE_ENCODER_TMDS,
+				 NULL);
 	}
 
 	if (!plat_data->max_tmdsclk)
@@ -4340,6 +4388,8 @@ static void dw_hdmi_rockchip_unbind(struct device *dev, struct device *master,
 		regulator_disable(hdmi->avdd_1v8);
 	if (hdmi->avdd_0v9)
 		regulator_disable(hdmi->avdd_0v9);
+
+	hdmi->drm_dev = NULL;
 }
 
 static const struct component_ops dw_hdmi_rockchip_ops = {
@@ -4386,7 +4436,7 @@ static void dw_hdmi_rockchip_shutdown(struct platform_device *pdev)
 {
 	struct rockchip_hdmi *hdmi = dev_get_drvdata(&pdev->dev);
 
-	if (!hdmi)
+	if (!hdmi || !hdmi->drm_dev)
 		return;
 
 	if (hdmi->is_hdmi_qp) {
