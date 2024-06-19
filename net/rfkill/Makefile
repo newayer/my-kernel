@@ -7,5 +7,5 @@ rfkill-y			+= core.o
 rfkill-$(CONFIG_RFKILL_INPUT)	+= input.o
 obj-$(CONFIG_RFKILL)		+= rfkill.o
 obj-$(CONFIG_RFKILL_GPIO)	+= rfkill-gpio.o
-rfkill-rk-y			+= rfkill-wlan.o rfkill-bt.o
+rfkill-rk-y			+= rfkill-wlan.o rfkill-bt.o rfkill-modem.o rfkill-gps.o
 obj-$(CONFIG_RFKILL_RK)		+= rfkill-rk.o

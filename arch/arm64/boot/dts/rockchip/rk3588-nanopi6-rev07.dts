@@ -22,6 +22,35 @@
 		regulator-max-microvolt = <5000000>;
 		vin-supply = <&vcc5v0_usb>;
 	};
+
+	/* modified for gateway */
+	wireless_wlan: wireless-wlan {
+		compatible = "wlan-platdata";
+		wifi_chip_type = "rtl8812a";
+
+		WIFI,poweren_gpio = <&gpio3 RK_PC2 GPIO_ACTIVE_HIGH>;
+		WIFI,pdn_gpio = <&gpio1 RK_PA7 GPIO_ACTIVE_HIGH>;
+
+		status = "okay";
+	};
+
+	wireless_gps: wireless-gps {
+		compatible = "gps-platdata";
+
+		GPS,rst_gpio = <&gpio3 RK_PB2 GPIO_ACTIVE_LOW>;
+		GPS,stdb_gpio = <&gpio3 RK_PC2 GPIO_ACTIVE_LOW>;
+
+		status = "okay";
+	};
+
+	wireless_modem: wireless-modem {
+		compatible = "modem-platdata";
+
+		MODEM,poweren_gpio = <&gpio3 RK_PB3 GPIO_ACTIVE_LOW>;
+		MODEM,on_gpio = <&gpio3 RK_PB4 GPIO_ACTIVE_HIGH>;
+
+		status = "okay";
+	};
 };
 
 &mach {
@@ -31,4 +60,106 @@
 
 &u2phy3_host {
 	phy-supply = <&vcc5v0_host_20>;
+};
+
+/* modified for gateway */
+
+/* GPS */
+&uart4 {
+	status = "okay";
+};
+
+/* RS485-1 */
+&uart3 {
+	RE_gpio = <&gpio3 RK_PA1 GPIO_ACTIVE_LOW>;
+	DE_gpio = <&gpio3 RK_PA2 GPIO_ACTIVE_HIGH>;
+
+	status = "okay";
+};
+
+/* RS485-2 */
+&uart7 {
+	RE_gpio = <&gpio1 RK_PB0 GPIO_ACTIVE_LOW>;
+	DE_gpio = <&gpio1 RK_PA1 GPIO_ACTIVE_HIGH>;
+
+	status = "okay";
+};
+
+&gpio_leds {
+	sat_led: led-1 {
+		gpios = <&gpio3 RK_PB0 GPIO_ACTIVE_HIGH>;
+		label = "sat_led";
+		pinctrl-names = "default";
+		pinctrl-0 = <&sat_led_pin>;
+	};
+
+	wlan_led: led-2 {
+		gpios = <&gpio3 RK_PA0 GPIO_ACTIVE_HIGH>;
+		label = "wlan_led";
+		pinctrl-names = "default";
+		pinctrl-0 = <&lan1_led_pin>;
+	};
+
+	w5g_led: led-3 {
+		gpios = <&gpio0 RK_PC5 GPIO_ACTIVE_HIGH>;
+		label = "w5g_led";
+		pinctrl-names = "default";
+		pinctrl-0 = <&w5g_led_pin>;
+	};
+
+	usr1_led: led-4 {
+		gpios = <&gpio1 RK_PB1 GPIO_ACTIVE_HIGH>;
+		label = "usr1_led";
+		pinctrl-names = "default";
+		pinctrl-0 = <&usr1_led_pin>;
+	};
+
+	usr2_led: led-5 {
+		gpios = <&gpio1 RK_PA0 GPIO_ACTIVE_HIGH>;
+		label = "usr2_led";
+		pinctrl-names = "default";
+		pinctrl-0 = <&usr2_led_pin>;
+	};
+
+	usr3_led: led-6 {
+		gpios = <&gpio3 RK_PB7 GPIO_ACTIVE_HIGH>;
+		label = "usr3_led";
+		pinctrl-names = "default";
+		pinctrl-0 = <&usr3_led_pin>;
+	};
+};
+
+&pinctrl {
+	ext-gpio-leds {
+		sat_led_pin: sat-led-pin {
+			rockchip,pins =
+				<3 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		lan1_led_pin: lan1-led-pin {
+			rockchip,pins =
+				<3 RK_PA0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		w5g_led_pin: w5g-led-pin {
+			rockchip,pins =
+				<0 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		/* backup not used */
+		usr1_led_pin: usr1-led-pin {
+			rockchip,pins =
+				<1 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		usr2_led_pin: usr2-led-pin {
+			rockchip,pins =
+				<1 RK_PA0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		usr3_led_pin: usr3-led-pin {
+			rockchip,pins =
+				<3 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 };
