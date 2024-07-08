@@ -481,7 +481,7 @@ int rknpu_iommu_switch_domain(struct rknpu_device *rknpu_dev, int domain_id)
 			return -EIO;
 		}
 		// init domain iova_cookie
-		iommu_get_dma_cookie(dst_domain);
+		rknpu_iommu_get_dma_cookie(dst_domain);
 
 		iommu_detach_device(src_domain, rknpu_dev->dev);
 		ret = iommu_attach_device(dst_domain, rknpu_dev->dev);

@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0
 obj-$(CONFIG_ROCKCHIP_RKNPU) += rknpu.o
+obj-y += rknpu_iommu_stub.o
 
 ccflags-y += -I$(srctree)/$(src)/include
 ccflags-y += -I$(src)/include
