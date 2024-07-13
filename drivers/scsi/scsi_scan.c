@@ -34,6 +34,7 @@
 #include <linux/kthread.h>
 #include <linux/spinlock.h>
 #include <linux/async.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 #include <asm/unaligned.h>
 
@@ -261,6 +262,31 @@ static int scsi_realloc_sdev_budget_map(struct scsi_device *sdev,
 	return ret;
 }
 
+static void scsi_set_lun_of_node(struct scsi_device *sdev)
+{
+	struct device_node *node, *parent;
+	struct device *dev;
+	u32 reg;
+
+	dev = scsi_get_device(sdev->host);
+	if (!dev)
+		return;
+
+	node = of_get_child_by_name(dev->of_node, "scsi");
+	if (node)
+		parent = node;
+
+	for_each_child_of_node(parent, node) {
+		if (of_property_read_u32(node, "reg", &reg))
+			continue;
+
+		if (reg == sdev->lun) {
+			sdev->sdev_gendev.of_node = node;
+			return;
+		}
+	}
+}
+
 /**
  * scsi_alloc_sdev - allocate and setup a scsi_Device
  * @starget: which target to allocate a &scsi_device for
@@ -363,6 +389,7 @@ static struct scsi_device *scsi_alloc_sdev(struct scsi_target *starget,
 	scsi_change_queue_depth(sdev, depth);
 
 	scsi_sysfs_device_initialize(sdev);
+	scsi_set_lun_of_node(sdev);
 
 	if (shost->hostt->slave_alloc) {
 		ret = shost->hostt->slave_alloc(sdev);

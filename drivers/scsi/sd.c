@@ -52,6 +52,7 @@
 #include <linux/string_helpers.h>
 #include <linux/slab.h>
 #include <linux/sed-opal.h>
+#include <linux/of.h>
 #include <linux/pm_runtime.h>
 #include <linux/pr.h>
 #include <linux/t10-pi.h>
@@ -3450,6 +3451,7 @@ static int sd_probe(struct device *dev)
 	struct scsi_disk *sdkp;
 	struct gendisk *gd;
 	int index;
+	int min_idx, max_idx;
 	int error;
 
 	scsi_autopm_get_device(sdp);
@@ -3479,7 +3481,15 @@ static int sd_probe(struct device *dev)
 	if (!gd)
 		goto out_free;
 
-	index = ida_alloc(&sd_index_ida, GFP_KERNEL);
+	min_idx= of_alias_get_id(dev->of_node, "scsi");
+	if (min_idx >= 0) {
+		max_idx = min_idx + 1;
+	} else {
+		min_idx = of_alias_get_highest_id("scsi");
+		min_idx = min_idx < 0 ? 0 : (min_idx + 1);
+		max_idx = 0;
+	}
+	index = ida_simple_get(&sd_index_ida, min_idx, max_idx, GFP_KERNEL);
 	if (index < 0) {
 		sdev_printk(KERN_WARNING, sdp, "sd_probe: memory exhausted.\n");
 		goto out_put;
