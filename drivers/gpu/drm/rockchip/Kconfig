@@ -36,6 +36,14 @@ config ROCKCHIP_DRM_DIRECT_SHOW
 	help
 	  This is a quick display scheme api in kernel space.
 
+config ROCKCHIP_DRM_FBDEV
+	bool "Rockchip DRM fbdev support"
+	default n
+	help
+	  drm_fbdev_generic_setup(drm_dev, 0) register fbdev will register drm
+	  client and lead to display black screen after kernel logo, so we
+	  reintroduction rockchip drm fbdev.
+
 config ROCKCHIP_DRM_SELF_TEST
 	bool "Rockchip DRM self test case"
 	depends on ROCKCHIP_DRM_DIRECT_SHOW
