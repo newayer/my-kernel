@@ -71,6 +71,11 @@ enum hdmirx_pix_fmt {
 	HDMIRX_YUV420 = 3,
 };
 
+enum hdmirx_ycc_range {
+	HDMIRX_YCC_LIMIT,
+	HDMIRX_YCC_FULL,
+};
+
 static const char * const bus_format_str[] = {
 	"RGB",
 	"YUV422",
@@ -1698,7 +1703,6 @@ int rk628_hdmirx_get_timings(struct rk628 *rk628,
 {
 	int i, cnt = 0, ret = 0;
 	u32 last_w, last_h;
-	u32 val;
 	u8 last_fmt;
 	struct v4l2_bt_timings *bt = &timings->bt;
 
@@ -1742,30 +1746,29 @@ int rk628_hdmirx_get_timings(struct rk628 *rk628,
 		ret = -EINVAL;
 	}
 
-	if (rk628->version >= RK628F_VERSION) {
-		val = DIV_ROUND_CLOSEST_ULL(1188000000, bt->pixelclock);
-		val *= bt->pixelclock;
-		if (bt->pixelclock > 594000000) {
-			/* set pll rate according hdmirx tmds clk */
-			rk628_clk_set_rate(rk628, CGU_CLK_CPLL, val);
-			rk628_dbg(rk628, "set CPLL to %d\n", val);
-			msleep(50);
-		}
-	}
-
 	return ret;
 }
 EXPORT_SYMBOL(rk628_hdmirx_get_timings);
 
 u8 rk628_hdmirx_get_range(struct rk628 *rk628)
 {
-	u8 color_range;
-	u32 val, vic, fmt;
+	u8 color_range, yuv_range;
+	u32 val, vic, fmt, avi_hb;
 
 	rk628_i2c_read(rk628, HDMI_RX_PDEC_AVI_PB, &val);
+	rk628_i2c_read(rk628, HDMI_RX_PDEC_AVI_HB, &avi_hb);
 	color_range = (val & RGB_COLORRANGE_MASK) >> 18;
+	yuv_range = (avi_hb & YUV_COLORRANGE_MASK) >> 30;
 	vic = (val & VID_IDENT_CODE_MASK) >> 24;
 	fmt = (val & VIDEO_FORMAT_MASK) >> 5;
+	if (fmt != HDMIRX_RGB888) {
+		if (yuv_range == HDMIRX_YCC_LIMIT)
+			color_range = HDMIRX_LIMIT_RANGE;
+		else if (yuv_range == HDMIRX_YCC_FULL)
+			color_range = HDMIRX_FULL_RANGE;
+		else
+			color_range = HDMIRX_DEFAULT_RANGE;
+	}
 	if (fmt == HDMIRX_RGB888 && color_range == HDMIRX_DEFAULT_RANGE) {
 		(vic) ?
 		(color_range = HDMIRX_LIMIT_RANGE) :

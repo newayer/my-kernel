@@ -31,6 +31,7 @@
 #include "rk628_config.h"
 #include "rk628_hdmitx.h"
 #include "rk628_post_process.h"
+#include "rk628_cru.h"
 
 #include <linux/extcon.h>
 #include <linux/extcon-provider.h>
@@ -630,6 +631,33 @@ static enum drm_mode_status
 rk628_hdmi_connector_mode_valid(struct drm_connector *connector,
 				struct drm_display_mode *mode)
 {
+	struct rk628_hdmi *hdmi = connector_to_hdmi(connector);
+	struct rk628 *rk628 = hdmi->rk628;
+
+	/* rk628 hdmitx supports up to 148.5MHz frequency */
+	if (mode->clock > 148500)
+		return MODE_CLOCK_HIGH;
+
+	/*
+	 * rk628d hdmitx below (including) 40MHz clock frequency (800x600@60Hz),
+	 * hsync and vsync can only output negative polarity
+	 */
+	if (rk628->version == RK628D_VERSION && mode->clock <= 40000 &&
+	    (mode->flags & DRM_MODE_FLAG_PHSYNC ||
+	     mode->flags & DRM_MODE_FLAG_PVSYNC))
+		return MODE_BAD;
+
+	if (rk628_input_is_bt1120(rk628) || rk628_input_is_rgb(rk628)) {
+		/* rk628 bt1120rx cannot be displayed at frequencies below 40MHz. */
+		if (rk628_input_is_bt1120(rk628) && mode->clock < 40000)
+			return MODE_CLOCK_LOW;
+
+		return MODE_OK;
+	}
+
+	/*
+	 * Unverified pathway retains only 1080p and 720p resolutions
+	 */
 	if ((mode->hdisplay == 1920 && mode->vdisplay == 1080) ||
 	    (mode->hdisplay == 1280 && mode->vdisplay == 720))
 		return MODE_OK;
@@ -677,8 +705,19 @@ static void rk628_hdmi_bridge_mode_set(struct drm_bridge *bridge,
 	struct rk628_display_mode *src = rk628_display_get_src_mode(rk628);
 	struct rk628_display_mode *dst = rk628_display_get_dst_mode(rk628);
 
-	/* Store the display mode for plugin/DPMS poweron events */
+	/*
+	 * Store the display mode for plugin/DPMS poweron events. rk628d hdmitx
+	 * below (including) 40MHz clock frequency (800x600@60Hz), hsync and
+	 * vsync can only output negative polarity
+	 */
 	memcpy(&hdmi->previous_mode, mode, sizeof(hdmi->previous_mode));
+	if (rk628->version == RK628D_VERSION && mode->clock <= 40000) {
+		hdmi->previous_mode.flags &= ~(DRM_MODE_FLAG_PHSYNC |
+					       DRM_MODE_FLAG_PVSYNC);
+		hdmi->previous_mode.flags |= (DRM_MODE_FLAG_NHSYNC |
+					      DRM_MODE_FLAG_NVSYNC);
+	}
+
 	dst->clock = mode->clock;
 	dst->hdisplay = mode->hdisplay;
 	dst->hsync_start = mode->hsync_start;
@@ -1193,7 +1232,7 @@ void rk628_hdmitx_disable(struct rk628 *rk628)
 int rk628_hdmitx_enable(struct rk628 *rk628)
 {
 	struct device *dev = rk628->dev;
-	struct rk628_hdmi *hdmi;
+	struct rk628_hdmi *hdmi = NULL;
 	u32 mask = SW_OUTPUT_MODE_MASK;
 	u32 val = SW_OUTPUT_MODE(OUTPUT_MODE_HDMI);
 	int irq;
@@ -1261,7 +1300,11 @@ int rk628_hdmitx_enable(struct rk628 *rk628)
 	 * PCLK_HDMI, so we need to init the TMDS rate to PCLK rate,
 	 * and reconfigure the DDC clock.
 	 */
-	hdmi->tmds_rate = 24000 * 1000;
+	rk628_i2c_read(rk628, GRF_POST_PROC_CON, &val);
+	if (val & SW_HDMITX_VCLK_PLLREF_SEL(1))
+		hdmi->tmds_rate = rk628_cru_clk_get_rate(rk628, CGU_SCLK_VOP);
+	else
+		hdmi->tmds_rate = 24000000;
 	rk628_hdmi_i2c_init(hdmi);
 
 	rk628_hdmi_audio_codec_init(hdmi, dev);

@@ -189,7 +189,6 @@ struct vop_plane_state {
 	unsigned long offset;
 	int pdaf_data_type;
 	bool async_commit;
-	struct vop_dump_list *planlist;
 };
 
 struct vop_win {
@@ -273,6 +272,7 @@ struct vop {
 	/* physical map length of vop register */
 	uint32_t len;
 
+	struct resource *lut_res;
 	void __iomem *lut_regs;
 	u32 *lut;
 	u32 lut_len;
@@ -1464,9 +1464,6 @@ static void vop_crtc_load_lut(struct drm_crtc *crtc)
 	if (!vop->is_enabled || !vop->lut || !vop->lut_regs)
 		return;
 
-	if (WARN_ON(!drm_modeset_is_locked(&crtc->mutex)))
-		return;
-
 	if (!VOP_CTRL_SUPPORT(vop, update_gamma_lut)) {
 		spin_lock(&vop->reg_lock);
 		VOP_CTRL_SET(vop, dsp_lut_en, 0);
@@ -1976,10 +1973,6 @@ static void vop_plane_atomic_disable(struct drm_plane *plane,
 									   plane);
 	struct vop_win *win = to_vop_win(plane);
 	struct vop *vop = to_vop(old_state->crtc);
-#if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
-	struct vop_plane_state *vop_plane_state =
-					to_vop_plane_state(plane->state);
-#endif
 
 	if (!old_state->crtc)
 		return;
@@ -1999,11 +1992,6 @@ static void vop_plane_atomic_disable(struct drm_plane *plane,
 	if (VOP_MAJOR(vop->version) == 2 && VOP_MINOR(vop->version) == 5 &&
 	    win->win_id == 2)
 		VOP_WIN_SET(vop, win, yrgb_mst, 0);
-
-#if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
-	kfree(vop_plane_state->planlist);
-	vop_plane_state->planlist = NULL;
-#endif
 
 	spin_unlock(&vop->reg_lock);
 }
@@ -2096,23 +2084,6 @@ static void vop_plane_atomic_update(struct drm_plane *plane,
 	int is_yuv = fb->format->is_yuv;
 	bool afbc_en = false;
 
-#if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
-	struct vop_dump_list *planlist;
-	unsigned long num_pages;
-	struct page **pages;
-	struct drm_gem_object *obj;
-	struct rockchip_gem_object *rk_obj;
-
-	num_pages = 0;
-	pages = NULL;
-	obj = fb->obj[0];
-	rk_obj = to_rockchip_obj(obj);
-	if (rk_obj) {
-		num_pages = rk_obj->num_pages;
-		pages = rk_obj->pages;
-	}
-#endif
-
 	/*
 	 * can't update plane when vop is disabled.
 	 */
@@ -2149,7 +2120,7 @@ static void vop_plane_atomic_update(struct drm_plane *plane,
 			dsp_h = 4;
 		actual_h = dsp_h * actual_h / drm_rect_height(dest);
 	}
-	if ((vop->version == VOP_VERSION(2, 2) || vop->version == VOP_VERSION(2, 0xd)) &&
+	if ((vop->version == VOP_VERSION(2, 2) || vop->version >= VOP_VERSION(2, 0xd)) &&
 	    (adjusted_mode->flags & DRM_MODE_FLAG_INTERLACE))
 		dsp_h = dsp_h / 2;
 
@@ -2164,7 +2135,7 @@ static void vop_plane_atomic_update(struct drm_plane *plane,
 
 	dsp_stx = dest->x1 + mode->crtc_htotal - mode->crtc_hsync_start;
 	dsp_sty = dest->y1 + mode->crtc_vtotal - mode->crtc_vsync_start;
-	if ((vop->version == VOP_VERSION(2, 2) || vop->version == VOP_VERSION(2, 0xd)) &&
+	if ((vop->version == VOP_VERSION(2, 2) || vop->version >= VOP_VERSION(2, 0xd)) &&
 	    (adjusted_mode->flags & DRM_MODE_FLAG_INTERLACE))
 		dsp_sty = dest->y1 / 2 + mode->crtc_vtotal - mode->crtc_vsync_start;
 	dsp_st = dsp_sty << 16 | (dsp_stx & 0xffff);
@@ -2270,35 +2241,6 @@ static void vop_plane_atomic_update(struct drm_plane *plane,
 	 * actual_w, actual_h)
 	 */
 	vop->is_iommu_needed = true;
-#if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
-	kfree(vop_plane_state->planlist);
-	vop_plane_state->planlist = NULL;
-
-	planlist = kmalloc(sizeof(*planlist), GFP_KERNEL);
-	if (planlist) {
-		planlist->dump_info.AFBC_flag = afbc_en;
-		planlist->dump_info.area_id = win->area_id;
-		planlist->dump_info.win_id = win->win_id;
-		planlist->dump_info.yuv_format =
-			is_yuv_support(fb->format->format);
-		planlist->dump_info.num_pages = num_pages;
-		planlist->dump_info.pages = pages;
-		planlist->dump_info.offset = vop_plane_state->offset;
-		planlist->dump_info.pitches = fb->pitches[0];
-		planlist->dump_info.height = actual_h;
-		planlist->dump_info.format = fb->format;
-		list_add_tail(&planlist->entry, &vop->rockchip_crtc.vop_dump_list_head);
-		vop_plane_state->planlist = planlist;
-	} else {
-		DRM_ERROR("can't alloc a node of planlist %p\n", planlist);
-		return;
-	}
-	if (vop->rockchip_crtc.vop_dump_status == DUMP_KEEP ||
-	    vop->rockchip_crtc.vop_dump_times > 0) {
-		rockchip_drm_dump_plane_buffer(&planlist->dump_info, vop->rockchip_crtc.frame_count);
-		vop->rockchip_crtc.vop_dump_times--;
-	}
-#endif
 }
 
 static int vop_plane_atomic_async_check(struct drm_plane *plane,
@@ -2840,8 +2782,9 @@ static int vop_crtc_debugfs_dump(struct drm_crtc *crtc, struct seq_file *s)
 	DEBUG_PRINT("    Display mode: %dx%d%s%d\n",
 		    mode->hdisplay, mode->vdisplay, interlaced ? "i" : "p",
 		    drm_mode_vrefresh(mode));
-	DEBUG_PRINT("\tclk[%d] real_clk[%d] type[%x] flag[%x]\n",
-		    mode->clock, mode->crtc_clock, mode->type, mode->flags);
+	DEBUG_PRINT("\tdclk[%d kHz] real_dclk[%d kHz] aclk[%ld kHz] type[%x] flag[%x]\n",
+		    mode->clock, mode->crtc_clock, clk_get_rate(vop->aclk) / 1000,
+		    mode->type, mode->flags);
 	DEBUG_PRINT("\tH: %d %d %d %d\n", mode->hdisplay, mode->hsync_start,
 		    mode->hsync_end, mode->htotal);
 	DEBUG_PRINT("\tV: %d %d %d %d\n", mode->vdisplay, mode->vsync_start,
@@ -2880,6 +2823,35 @@ static void vop_crtc_regs_dump(struct drm_crtc *crtc, struct seq_file *s)
 			    vop_readl(vop, i), vop_readl(vop, i + 4),
 			    vop_readl(vop, i + 8), vop_readl(vop, i + 12));
 	}
+}
+
+static int vop_crtc_regs_write(struct drm_crtc *crtc, phys_addr_t address, u32 val)
+{
+	struct vop *vop = to_vop(crtc);
+	struct drm_crtc_state *crtc_state = crtc->state;
+	void __iomem *regs;
+	u32 offset = 0;
+
+	if (!crtc_state->active) {
+		DRM_DEV_ERROR(vop->dev, "VOP is disabled");
+		return -EINVAL;
+	}
+
+	if (vop->res && address >= vop->res->start &&
+	    address < vop->res->end) {
+		regs = vop->regs;
+		offset = address - vop->res->start;
+	} else if (vop->lut_res && address >= vop->lut_res->start &&
+		   address < vop->lut_res->end) {
+		regs = vop->lut_regs;
+		offset = address - vop->lut_res->start;
+	} else {
+		DRM_ERROR("unsupported address: %pa\n", &address);
+		return -ENXIO;
+	}
+	writel(val, regs + offset);
+
+	return 0;
 }
 
 static int vop_gamma_show(struct seq_file *s, void *data)
@@ -2927,6 +2899,7 @@ static int vop_crtc_debugfs_init(struct drm_minor *minor, struct drm_crtc *crtc)
 	}
 #if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
 	rockchip_drm_add_dump_buffer(crtc, vop->debugfs);
+	rockchip_drm_debugfs_add_regs_write(crtc, vop->debugfs);
 #endif
 	for (i = 0; i < ARRAY_SIZE(vop_debugfs_files); i++)
 		vop->debugfs_files[i].data = vop;
@@ -3063,27 +3036,9 @@ static size_t vop_crtc_bandwidth(struct drm_crtc *crtc,
 	u64 line_bw_mbyte = 0;
 	int cnt = 0, plane_num = 0;
 	struct drm_atomic_state *state = crtc_state->state;
-#if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
-	struct vop_dump_list *pos, *n;
-	struct vop *vop = to_vop(crtc);
-#endif
 
 	if (!htotal || !vdisplay)
 		return 0;
-
-#if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
-	if (!vop->rockchip_crtc.vop_dump_list_init_flag) {
-		INIT_LIST_HEAD(&vop->rockchip_crtc.vop_dump_list_head);
-		vop->rockchip_crtc.vop_dump_list_init_flag = true;
-	}
-	list_for_each_entry_safe(pos, n, &vop->rockchip_crtc.vop_dump_list_head, entry) {
-		list_del(&pos->entry);
-	}
-	if (vop->rockchip_crtc.vop_dump_status == DUMP_KEEP ||
-	    vop->rockchip_crtc.vop_dump_times > 0) {
-		vop->rockchip_crtc.frame_count++;
-	}
-#endif
 
 	drm_atomic_crtc_state_for_each_plane(plane, crtc_state)
 		plane_num++;
@@ -3221,7 +3176,7 @@ static void vop_crtc_send_mcu_cmd(struct drm_crtc *crtc,  u32 type, u32 value)
 	vop = to_vop(crtc);
 	adjusted_mode = &crtc->state->adjusted_mode;
 
-	if (vop->version == VOP_VERSION(2, 0xd)) {
+	if (vop->version >= VOP_VERSION(2, 0xd)) {
 		/*
 		 * 1.set mcu bypass mode timing.
 		 * 2.set dclk rate to 150M.
@@ -3253,7 +3208,7 @@ static void vop_crtc_send_mcu_cmd(struct drm_crtc *crtc,  u32 type, u32 value)
 	}
 	mutex_unlock(&vop->vop_lock);
 
-	if (vop->version == VOP_VERSION(2, 0xd)) {
+	if (vop->version >= VOP_VERSION(2, 0xd)) {
 		/*
 		 * 1.restore mcu data mode timing.
 		 * 2.restore dclk rate to crtc_clock.
@@ -3299,6 +3254,19 @@ out:
 	return ret;
 }
 
+static void vop_crtc_te_handler(struct drm_crtc *crtc)
+{
+	struct vop *vop;
+
+	if (!crtc)
+		return;
+
+	vop = to_vop(crtc);
+
+	if (vop->mcu_timing.mcu_pix_total)
+		VOP_CTRL_SET(vop, mcu_frame_st, 1);
+}
+
 static const struct rockchip_crtc_funcs private_crtc_funcs = {
 	.loader_protect = vop_crtc_loader_protect,
 	.cancel_pending_vblank = vop_crtc_cancel_pending_vblank,
@@ -3306,10 +3274,12 @@ static const struct rockchip_crtc_funcs private_crtc_funcs = {
 	.debugfs_dump = vop_crtc_debugfs_dump,
 	.active_regs_dump = vop_crtc_regs_dump,
 	.regs_dump = vop_crtc_regs_dump,
+	.regs_write = vop_crtc_regs_write,
 	.bandwidth = vop_crtc_bandwidth,
 	.crtc_close = vop_crtc_close,
 	.crtc_send_mcu_cmd = vop_crtc_send_mcu_cmd,
 	.wait_vact_end = vop_crtc_wait_vact_end,
+	.te_handler = vop_crtc_te_handler,
 };
 
 static bool vop_crtc_mode_fixup(struct drm_crtc *crtc,
@@ -3574,7 +3544,7 @@ static void vop_crtc_atomic_enable(struct drm_crtc *crtc,
 		vop_crtc_load_lut(crtc);
 
 	if (vop->mcu_timing.mcu_pix_total) {
-		if (vop->version == VOP_VERSION(2, 0xd))
+		if (vop->version >= VOP_VERSION(2, 0xd))
 			vop_set_out_mode(vop, s->output_mode);
 		else
 			vop_set_out_mode(vop, ROCKCHIP_OUT_MODE_P888);
@@ -4297,6 +4267,14 @@ static void vop_crtc_atomic_flush(struct drm_crtc *crtc,
 	struct rockchip_crtc_state *s =
 		to_rockchip_crtc_state(crtc->state);
 
+#if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
+	if (vop->rockchip_crtc.vop_dump_status == DUMP_KEEP ||
+	    vop->rockchip_crtc.vop_dump_times > 0) {
+		rockchip_drm_crtc_dump_plane_buffer(crtc);
+		vop->rockchip_crtc.vop_dump_times--;
+	}
+#endif
+
 	vop_cfg_update(crtc, old_crtc_state);
 
 	if (!vop->is_iommu_enabled && vop->is_iommu_needed) {
@@ -4342,7 +4320,7 @@ static void vop_crtc_atomic_flush(struct drm_crtc *crtc,
 	} else {
 		VOP_CTRL_SET(vop, reg_done_frm, 0);
 	}
-	if (vop->mcu_timing.mcu_pix_total)
+	if (vop->mcu_timing.mcu_pix_total && !s->soft_te)
 		VOP_CTRL_SET(vop, mcu_hold_mode, 0);
 
 	spin_unlock_irqrestore(&vop->irq_lock, flags);
@@ -4354,7 +4332,7 @@ static void vop_crtc_atomic_flush(struct drm_crtc *crtc,
 	 */
 	vop_wait_for_irq_handler(vop);
 
-	spin_lock_irq(&crtc->dev->event_lock);
+	spin_lock_irqsave(&crtc->dev->event_lock, flags);
 	if (crtc->state->event) {
 		WARN_ON(drm_crtc_vblank_get(crtc) != 0);
 		WARN_ON(vop->event);
@@ -4362,7 +4340,7 @@ static void vop_crtc_atomic_flush(struct drm_crtc *crtc,
 		vop->event = crtc->state->event;
 		crtc->state->event = NULL;
 	}
-	spin_unlock_irq(&crtc->dev->event_lock);
+	spin_unlock_irqrestore(&crtc->dev->event_lock, flags);
 
 	for_each_old_plane_in_state(old_state, plane, old_plane_state, i) {
 		if (!old_plane_state->fb)
@@ -5314,6 +5292,7 @@ static int vop_bind(struct device *dev, struct device *master, void *data)
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "gamma_lut");
 	if (res) {
+		vop->lut_res = res;
 		vop->lut_len = resource_size(res) / sizeof(*vop->lut);
 		if (vop->lut_len != 256 && vop->lut_len != 1024) {
 			dev_err(vop->dev, "unsupported lut sizes %d\n",

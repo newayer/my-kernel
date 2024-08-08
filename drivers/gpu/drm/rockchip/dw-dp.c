@@ -39,6 +39,8 @@
 #include <linux/mfd/syscon.h>
 #include <linux/rockchip/rockchip_sip.h>
 #include <linux/soc/rockchip/rk_vendor_storage.h>
+#include <linux/usb/typec_dp.h>
+#include <linux/usb/typec_mux.h>
 
 #include <sound/hdmi-codec.h>
 
@@ -46,6 +48,7 @@
 
 #include "rockchip_drm_drv.h"
 #include "rockchip_drm_vop.h"
+#include "rockchip_dp_mst_aux_client.h"
 
 #define DPTX_VERSION_NUMBER			0x0000
 #define DPTX_VERSION_TYPE			0x0004
@@ -418,12 +421,14 @@ struct dw_dp_mst_enc {
 	struct dw_dp_video video;
 	struct dw_dp_audio *audio;
 	struct device_node *port_node;
+	struct drm_bridge *next_bridge;
 
 	DECLARE_BITMAP(sdp_reg_bank, SDP_REG_BANK_SIZE);
 
 	struct dw_dp_mst_conn *mst_conn;
 	struct dw_dp *dp;
 	int stream_id;
+	int fix_port_num;
 	bool active;
 };
 
@@ -446,6 +451,8 @@ struct dw_dp {
 	struct work_struct hpd_work;
 	struct gpio_desc *hpd_gpio;
 	bool force_hpd;
+	bool usbdp_hpd;
+	bool dynamic_pd_ctrl;
 	struct dw_dp_hotplug hotplug;
 	struct mutex irq_lock;
 
@@ -488,13 +495,16 @@ struct dw_dp {
 	bool is_loader_protect;
 	bool support_mst;
 	bool is_mst;
+	bool is_fix_port;
 	int mst_port_num;
 	int active_mst_links;
 	struct drm_dp_mst_topology_mgr mst_mgr;
 	struct dw_dp_mst_enc mst_enc[DPTX_MAX_STREAMS];
 	struct list_head mst_conn_list;
+	struct rockchip_dp_aux_client *aux_client;
 
 	struct drm_info_list *debugfs_files;
+	struct typec_mux_dev *mux;
 };
 
 struct dw_dp_state {
@@ -1121,13 +1131,19 @@ static bool dw_dp_bandwidth_ok(struct dw_dp *dp,
 	return true;
 }
 
-static bool dw_dp_detect(struct dw_dp *dp)
+static bool dw_dp_detect_no_power(struct dw_dp *dp)
 {
 	u32 value;
 	int ret;
 
 	if (dp->hpd_gpio)
 		return gpiod_get_value_cansleep(dp->hpd_gpio);
+
+	if (dp->usbdp_hpd)
+		return dp->hotplug.status;
+
+	if (dp->force_hpd)
+		return true;
 
 	ret = regmap_read_poll_timeout(dp->regmap, DPTX_HPD_STATUS, value,
 				       FIELD_GET(HPD_STATE, value) != SOURCE_STATE_UNPLUG,
@@ -1138,6 +1154,20 @@ static bool dw_dp_detect(struct dw_dp *dp)
 	}
 
 	return FIELD_GET(HPD_STATE, value) == SOURCE_STATE_PLUG;
+}
+
+static bool dw_dp_detect(struct dw_dp *dp)
+{
+	bool detected;
+
+	pm_runtime_get_sync(dp->dev);
+
+	detected = dw_dp_detect_no_power(dp);
+
+	pm_runtime_mark_last_busy(dp->dev);
+	pm_runtime_put_autosuspend(dp->dev);
+
+	return detected;
 }
 
 static enum drm_connector_status
@@ -1306,6 +1336,7 @@ static int dw_dp_mst_info_dump(struct seq_file *s, void *data)
 	struct dw_dp *dp = node->info_ent->data;
 	struct dw_dp_mst_conn *mst_conn;
 	struct drm_property_blob *path_blob;
+	int i;
 
 	if (dp->mst_mgr.cbs) {
 		drm_dp_mst_dump_topology(s, &dp->mst_mgr);
@@ -1321,6 +1352,17 @@ static int dw_dp_mst_info_dump(struct seq_file *s, void *data)
 				   (char *)path_blob->data);
 		}
 		seq_puts(s, "\n");
+		if (dp->is_fix_port) {
+			seq_puts(s, "\n*** Fix port info ***\n");
+			seq_puts(s, "stream id | port num\n");
+
+			for (i = 0; i < dp->mst_port_num; i++) {
+				if (!dp->mst_enc[i].dp)
+					continue;
+				seq_printf(s, "%-16d %d\n", dp->mst_enc[i].stream_id,
+					   dp->mst_enc[i].fix_port_num);
+			}
+		}
 	}
 
 	return 0;
@@ -2421,9 +2463,11 @@ static bool dw_dp_video_need_vsc_sdp(struct dw_dp *dp, int stream_id)
 	return false;
 }
 
-static int dw_dp_video_set_msa(struct dw_dp *dp, int stream_id, u8 color_format, u8 bpc,
-			       u16 vstart, u16 hstart)
+static int dw_dp_video_set_msa(struct dw_dp *dp, struct drm_display_mode *mode, int stream_id,
+			       u8 color_format, u8 bpc)
 {
+	u32 vstart = mode->crtc_vtotal - mode->crtc_vsync_start;
+	u32 hstart = mode->crtc_htotal - mode->crtc_hsync_start;
 	u16 misc = 0;
 
 	if (dw_dp_video_need_vsc_sdp(dp, stream_id))
@@ -2464,6 +2508,9 @@ static int dw_dp_video_set_msa(struct dw_dp *dp, int stream_id, u8 color_format,
 	default:
 		return -EINVAL;
 	}
+
+	if ((mode->flags & DRM_MODE_FLAG_INTERLACE) && !(mode->vtotal % 2))
+		misc |= DP_MSA_MISC_INTERLACE_VTOTAL_EVEN;
 
 	regmap_write(dp->regmap, DPTX_VIDEO_MSA1_N(stream_id),
 		     FIELD_PREP(VSTART, vstart) | FIELD_PREP(HSTART, hstart));
@@ -2657,8 +2704,6 @@ static int dw_dp_video_enable(struct dw_dp *dp, struct dw_dp_video *video, int s
 	u8 vic;
 	u32 hactive, hblank, h_sync_width, h_front_porch;
 	u32 vactive, vblank, v_sync_width, v_front_porch;
-	u32 vstart = mode->crtc_vtotal - mode->crtc_vsync_start;
-	u32 hstart = mode->crtc_htotal - mode->crtc_hsync_start;
 	u32 hblank_interval;
 	u32 value;
 	int ret;
@@ -2667,7 +2712,7 @@ static int dw_dp_video_enable(struct dw_dp *dp, struct dw_dp_video *video, int s
 	if (ret)
 		return ret;
 
-	ret = dw_dp_video_set_msa(dp, stream_id, color_format, bpc, vstart, hstart);
+	ret = dw_dp_video_set_msa(dp, mode, stream_id, color_format, bpc);
 	if (ret)
 		return ret;
 
@@ -2820,9 +2865,9 @@ static irqreturn_t dw_dp_hpd_irq_handler(int irq, void *arg)
 
 static void dw_dp_hpd_init(struct dw_dp *dp)
 {
-	dp->hotplug.status = dw_dp_detect(dp);
+	dp->hotplug.status = dw_dp_detect_no_power(dp);
 
-	if (dp->hpd_gpio || dp->force_hpd) {
+	if (dp->hpd_gpio || dp->force_hpd || dp->usbdp_hpd) {
 		regmap_update_bits(dp->regmap, DPTX_CCTL, FORCE_HPD,
 				   FIELD_PREP(FORCE_HPD, 1));
 		return;
@@ -3057,19 +3102,23 @@ static ssize_t dw_dp_aux_transfer(struct drm_dp_aux *aux,
 	if (WARN_ON(msg->size > 16))
 		return -E2BIG;
 
+	pm_runtime_get_sync(dp->dev);
+	phy_set_mode_ext(dp->phy, PHY_MODE_DP, 0);
+
 	switch (msg->request & ~DP_AUX_I2C_MOT) {
 	case DP_AUX_NATIVE_WRITE:
 	case DP_AUX_I2C_WRITE:
 	case DP_AUX_I2C_WRITE_STATUS_UPDATE:
 		ret = dw_dp_aux_write_data(dp, msg->buffer, msg->size);
 		if (ret < 0)
-			return ret;
+			goto out;
 		break;
 	case DP_AUX_NATIVE_READ:
 	case DP_AUX_I2C_READ:
 		break;
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
+		goto out;
 	}
 
 	if (msg->size > 0)
@@ -3083,12 +3132,15 @@ static ssize_t dw_dp_aux_transfer(struct drm_dp_aux *aux,
 	status = wait_for_completion_timeout(&dp->complete, timeout);
 	if (!status) {
 		dev_dbg(dp->dev, "timeout waiting for AUX reply\n");
-		return -ETIMEDOUT;
+		ret = -ETIMEDOUT;
+		goto out;
 	}
 
 	regmap_read(dp->regmap, DPTX_AUX_STATUS, &value);
-	if (value & AUX_TIMEOUT)
-		return -ETIMEDOUT;
+	if (value & AUX_TIMEOUT) {
+		ret = -ETIMEDOUT;
+		goto out;
+	}
 
 	msg->reply = FIELD_GET(AUX_STATUS, value);
 
@@ -3096,16 +3148,33 @@ static ssize_t dw_dp_aux_transfer(struct drm_dp_aux *aux,
 		if (msg->request & DP_AUX_I2C_READ) {
 			size_t count = FIELD_GET(AUX_BYTES_READ, value) - 1;
 
-			if (count != msg->size)
-				return -EBUSY;
+			if (count != msg->size) {
+				ret = -EBUSY;
+				goto out;
+			}
 
 			ret = dw_dp_aux_read_data(dp, msg->buffer, count);
 			if (ret < 0)
-				return ret;
+				goto out;
 		}
 	}
 
+out:
+	pm_runtime_mark_last_busy(dp->dev);
+	pm_runtime_put_autosuspend(dp->dev);
+
 	return ret;
+}
+
+static ssize_t dw_dp_sim_aux_transfer(struct drm_dp_aux *aux,
+				      struct drm_dp_aux_msg *msg)
+{
+	struct dw_dp *dp = container_of(aux, struct dw_dp, aux);
+
+	if (dp->aux_client && dp->aux_client->transfer)
+		return dp->aux_client->transfer(dp->aux_client, aux, msg);
+	else
+		return dw_dp_aux_transfer(aux, msg);
 }
 
 static enum drm_mode_status
@@ -3140,6 +3209,9 @@ dw_dp_bridge_mode_valid(struct drm_bridge *bridge,
 
 	if (!dw_dp_bandwidth_ok(dp, &m, min_bpp, link->lanes, link->max_rate))
 		return MODE_CLOCK_HIGH;
+
+	if (m.flags & DRM_MODE_FLAG_DBLCLK)
+		return MODE_H_ILLEGAL;
 
 	return MODE_OK;
 }
@@ -3250,13 +3322,38 @@ static const struct drm_connector_funcs dw_dp_mst_connector_funcs = {
 	.early_unregister	= dw_dp_mst_connector_early_unregister,
 };
 
+static struct drm_bridge *dw_dp_mst_connector_get_bridge(struct dw_dp_mst_conn *mst_conn)
+{
+	struct dw_dp *dp = mst_conn->dp;
+	int i;
+
+	if (!dp->is_fix_port)
+		return NULL;
+
+	for (i = 0; i < dp->mst_port_num; i++)
+		if (dp->mst_enc[i].fix_port_num == mst_conn->port->port_num)
+			return dp->mst_enc[i].next_bridge;
+
+	return NULL;
+}
+
 static int dw_dp_mst_connector_get_modes(struct drm_connector *connector)
 {
 	struct dw_dp_mst_conn *mst_conn = container_of(connector,
 					  struct dw_dp_mst_conn, connector);
 	struct dw_dp *dp = mst_conn->dp;
+	struct drm_bridge *bridge;
 	struct edid *edid;
 	int num_modes = 0;
+
+	if (dp->is_fix_port) {
+		bridge = dw_dp_mst_connector_get_bridge(mst_conn);
+		if (bridge) {
+			num_modes = drm_bridge_get_modes(bridge, connector);
+			if (num_modes)
+				return num_modes;
+		}
+	}
 
 	edid = drm_dp_mst_get_edid(connector, &dp->mst_mgr, mst_conn->port);
 	if (edid) {
@@ -3329,7 +3426,8 @@ static void dw_dp_mst_assigned_encoder(struct dw_dp *dp, struct drm_atomic_state
 		if (!connector->state->crtc && new_con_state->crtc) {
 			availble_encoders = encoder_mask ^ connector->possible_encoders;
 			for (i = 0; i < dp->mst_port_num; i++) {
-				if (drm_encoder_crtc_ok(&dp->mst_enc[i].encoder, crtc) &&
+				if (drm_encoder_crtc_ok(&dp->mst_enc[i].encoder,
+							new_con_state->crtc) &&
 				    (availble_encoders &
 				     drm_encoder_mask(&dp->mst_enc[i].encoder))) {
 					mst_conn->mst_enc = &dp->mst_enc[i];
@@ -3628,6 +3726,8 @@ static void dw_dp_mst_encoder_atomic_enable(struct drm_encoder *encoder,
 	int ret;
 	bool first_mst_stream;
 
+	pm_runtime_get_sync(dp->dev);
+
 	drm_mode_copy(m, &crtc_state->adjusted_mode);
 
 	first_mst_stream = dp->active_mst_links == 0;
@@ -3786,6 +3886,8 @@ static void dw_dp_mst_encoder_atomic_disable(struct drm_encoder *encoder,
 		dw_dp_reset(dp);
 	}
 
+	pm_runtime_mark_last_busy(dp->dev);
+	pm_runtime_put_autosuspend(dp->dev);
 }
 
 static int dw_dp_mst_encoder_atomic_check(struct drm_encoder *encoder,
@@ -3804,6 +3906,7 @@ static int dw_dp_mst_encoder_atomic_check(struct drm_encoder *encoder,
 	struct dw_dp_mst_conn *mst_conn = container_of(connector,
 						       struct dw_dp_mst_conn, connector);
 	struct drm_dp_mst_topology_state *mst_state;
+	struct drm_dp_mst_atomic_payload *payload;
 	int pbn, slot;
 
 	mst_state = drm_atomic_get_mst_topology_state(crtc_state->state, &dp->mst_mgr);
@@ -3864,6 +3967,14 @@ static int dw_dp_mst_encoder_atomic_check(struct drm_encoder *encoder,
 
 	drm_dp_mst_update_slots(mst_state, DP_CAP_ANSI_8B10B);
 
+	payload = drm_atomic_get_mst_payload_state(mst_state, mst_conn->port);
+	if (dp->aux_client && !payload->vcpi) {
+		payload->vcpi = mst_enc->stream_id + 1;
+		dev_info(dp->dev, "[MST PORT:%p] assigned VCPI #%d\n",
+			 payload->port, payload->vcpi);
+		mst_state->payload_mask |= BIT(payload->vcpi - 1);
+	}
+
 	return 0;
 }
 
@@ -3923,6 +4034,8 @@ dw_dp_add_mst_connector(struct drm_dp_mst_topology_mgr *mgr, struct drm_dp_mst_p
 	for (i = 0; i < dp->mst_port_num; i++) {
 		if (!of_device_is_available(dp->mst_enc[i].port_node))
 			continue;
+		if (dp->is_fix_port && dp->mst_enc[i].fix_port_num != port->port_num)
+			continue;
 		ret = drm_connector_attach_encoder(&mst_conn->connector, &dp->mst_enc[i].encoder);
 		if (ret)
 			goto err;
@@ -3978,6 +4091,57 @@ dw_dp_create_fake_mst_encoders(struct dw_dp *dp)
 	return true;
 }
 
+static int dw_dp_mst_get_fix_port(struct dw_dp *dp)
+{
+	char *prop_name = "rockchip,mst-fixed-ports";
+	int elem_len, ret, i;
+	int elem_data[DPTX_MAX_STREAMS];
+
+	if (!device_property_present(dp->dev, prop_name))
+		return 0;
+
+	elem_len = device_property_count_u32(dp->dev, prop_name);
+	if (dp->mst_port_num != elem_len)
+		return -EINVAL;
+
+	ret = device_property_read_u32_array(dp->dev, prop_name, elem_data, elem_len);
+	if (ret)
+		return -EINVAL;
+
+	dp->is_fix_port = true;
+
+	for (i = 0; i < dp->mst_port_num; i++)
+		dp->mst_enc[i].fix_port_num = elem_data[i];
+
+	return 0;
+}
+
+static int dw_dp_mst_find_ext_bridges(struct dw_dp *dp)
+{
+	struct dw_dp_mst_enc *mst_enc;
+	int i, ret;
+
+	for (i = 0; i < dp->mst_port_num; i++) {
+		mst_enc = &dp->mst_enc[i];
+		if (!of_device_is_available(dp->mst_enc[i].port_node))
+			continue;
+		ret = drm_of_find_panel_or_bridge(mst_enc->port_node, 2, -1, NULL,
+						  &mst_enc->next_bridge);
+		if (ret < 0 && ret != -ENODEV)
+			return ret;
+
+		if (mst_enc->next_bridge) {
+			ret = drm_bridge_attach(&mst_enc->encoder, mst_enc->next_bridge, NULL, 0);
+			if (ret) {
+				DRM_DEV_ERROR(dp->dev, "failed to attach next bridge: %d\n", ret);
+				return ret;
+			}
+		}
+	}
+
+	return 0;
+}
+
 static int dw_dp_mst_encoder_init(struct dw_dp *dp, int conn_base_id)
 {
 	int ret;
@@ -3988,6 +4152,13 @@ static int dw_dp_mst_encoder_init(struct dw_dp *dp, int conn_base_id)
 	INIT_LIST_HEAD(&dp->mst_conn_list);
 	dp->mst_mgr.cbs = &mst_cbs;
 	dw_dp_create_fake_mst_encoders(dp);
+	ret = dw_dp_mst_get_fix_port(dp);
+	if (ret)
+		return ret;
+
+	ret = dw_dp_mst_find_ext_bridges(dp);
+	if (ret)
+		return ret;
 	ret = drm_dp_mst_topology_mgr_init(&dp->mst_mgr, dp->encoder.dev,
 					   &dp->aux, 16, dp->mst_port_num, conn_base_id);
 	if (ret)
@@ -4010,6 +4181,7 @@ static int dw_dp_connector_init(struct dw_dp *dp)
 		connector->polled = DRM_CONNECTOR_POLL_CONNECT |
 				    DRM_CONNECTOR_POLL_DISCONNECT;
 	connector->ycbcr_420_allowed = true;
+	connector->interlace_allowed = true;
 
 	ret = drm_connector_init(bridge->dev, connector,
 				 &dw_dp_connector_funcs,
@@ -4024,7 +4196,9 @@ static int dw_dp_connector_init(struct dw_dp *dp)
 
 	drm_connector_attach_encoder(connector, bridge->encoder);
 
-	dw_dp_mst_encoder_init(dp, connector->base.id);
+	ret = dw_dp_mst_encoder_init(dp, connector->base.id);
+	if (ret)
+		return ret;
 	prop = drm_property_create_enum(connector->dev, 0, RK_IF_PROP_COLOR_DEPTH,
 					color_depth_enum_list,
 					ARRAY_SIZE(color_depth_enum_list));
@@ -4170,6 +4344,8 @@ static void dw_dp_bridge_atomic_pre_enable(struct drm_bridge *bridge,
 	struct drm_crtc_state *crtc_state = bridge->encoder->crtc->state;
 	struct drm_display_mode *m = &video->mode;
 
+	pm_runtime_get_sync(dp->dev);
+
 	drm_mode_copy(m, &crtc_state->adjusted_mode);
 
 	if (dp->split_mode || dp->dual_connector_split)
@@ -4187,6 +4363,9 @@ dw_dp_bridge_atomic_post_disable(struct drm_bridge *bridge,
 
 	if (dp->panel)
 		drm_panel_unprepare(dp->panel);
+
+	pm_runtime_mark_last_busy(dp->dev);
+	pm_runtime_put_autosuspend(dp->dev);
 }
 
 static bool dw_dp_needs_link_retrain(struct dw_dp *dp)
@@ -4949,6 +5128,7 @@ static int dw_dp_audio_hw_params(struct device *dev, void *data,
 	clk_prepare_enable(audio->spdif_clk);
 	clk_prepare_enable(audio->i2s_clk);
 
+	pm_runtime_get_sync(dp->dev);
 	regmap_update_bits(dp->regmap, DPTX_AUD_CONFIG1_N(audio->id),
 			   AUDIO_DATA_IN_EN | NUM_CHANNELS | AUDIO_DATA_WIDTH |
 			   AUDIO_INF_SELECT,
@@ -4956,6 +5136,8 @@ static int dw_dp_audio_hw_params(struct device *dev, void *data,
 			   FIELD_PREP(NUM_CHANNELS, num_channels) |
 			   FIELD_PREP(AUDIO_DATA_WIDTH, params->sample_width) |
 			   FIELD_PREP(AUDIO_INF_SELECT, audio_inf_select));
+	pm_runtime_mark_last_busy(dp->dev);
+	pm_runtime_put_autosuspend(dp->dev);
 
 	/* Wait for inf switch */
 	usleep_range(20, 40);
@@ -5016,7 +5198,9 @@ static int dw_dp_audio_startup(struct device *dev, void *data)
 {
 	struct dw_dp *dp = dev_get_drvdata(dev);
 	struct dw_dp_audio *audio = (struct dw_dp_audio *)data;
+	int ret = 0;
 
+	pm_runtime_get_sync(dp->dev);
 	regmap_update_bits(dp->regmap, DPTX_SDP_VERTICAL_CTRL_N(audio->id),
 			   EN_AUDIO_STREAM_SDP | EN_AUDIO_TIMESTAMP_SDP,
 			   FIELD_PREP(EN_AUDIO_STREAM_SDP, 1) |
@@ -5024,8 +5208,11 @@ static int dw_dp_audio_startup(struct device *dev, void *data)
 	regmap_update_bits(dp->regmap, DPTX_SDP_HORIZONTAL_CTRL_N(audio->id),
 			   EN_AUDIO_STREAM_SDP,
 			   FIELD_PREP(EN_AUDIO_STREAM_SDP, 1));
+	ret =  dw_dp_audio_infoframe_send(dp, audio);
+	pm_runtime_mark_last_busy(dp->dev);
+	pm_runtime_put_autosuspend(dp->dev);
 
-	return dw_dp_audio_infoframe_send(dp, audio);
+	return ret;
 }
 
 static void dw_dp_audio_shutdown(struct device *dev, void *data)
@@ -5033,8 +5220,11 @@ static void dw_dp_audio_shutdown(struct device *dev, void *data)
 	struct dw_dp *dp = dev_get_drvdata(dev);
 	struct dw_dp_audio *audio = (struct dw_dp_audio *)data;
 
+	pm_runtime_get_sync(dp->dev);
 	regmap_update_bits(dp->regmap, DPTX_AUD_CONFIG1_N(audio->id), AUDIO_DATA_IN_EN,
 			   FIELD_PREP(AUDIO_DATA_IN_EN, 0));
+	pm_runtime_mark_last_busy(dp->dev);
+	pm_runtime_put_autosuspend(dp->dev);
 
 	if (audio->format == AFMT_SPDIF)
 		clk_disable_unprepare(audio->spdif_clk);
@@ -5250,6 +5440,17 @@ static const struct drm_encoder_funcs dw_dp_encoder_funcs = {
 	.late_register = dw_dp_encoder_late_register,
 };
 
+static void dw_dp_mst_poll_hpd_irq(void *data)
+{
+	struct dw_dp *dp = data;
+
+	mutex_lock(&dp->irq_lock);
+	dp->hotplug.long_hpd = false;
+	mutex_unlock(&dp->irq_lock);
+
+	schedule_work(&dp->hpd_work);
+}
+
 static int dw_dp_bind(struct device *dev, struct device *master, void *data)
 {
 	struct dw_dp *dp = dev_get_drvdata(dev);
@@ -5299,8 +5500,19 @@ static int dw_dp_bind(struct device *dev, struct device *master, void *data)
 			goto error_unregister_aux;
 	}
 
+	if (dp->aux_client) {
+		dp->aux_client->register_hpd_irq(dp->aux_client, dw_dp_mst_poll_hpd_irq, dp);
+		dp->aux_client->register_transfer(dp->aux_client, dw_dp_aux_transfer);
+		dp->aux.transfer = dw_dp_sim_aux_transfer;
+	}
+
+	pm_runtime_use_autosuspend(dp->dev);
+	pm_runtime_set_autosuspend_delay(dp->dev, 500);
 	pm_runtime_enable(dp->dev);
-	pm_runtime_get_sync(dp->dev);
+	if (!dp->dynamic_pd_ctrl)
+		pm_runtime_get_sync(dp->dev);
+	else
+		phy_set_mode_ext(dp->phy, PHY_MODE_DP, 1);
 
 	enable_irq(dp->irq);
 	if (dp->hpd_gpio)
@@ -5323,7 +5535,9 @@ static void dw_dp_unbind(struct device *dev, struct device *master, void *data)
 		disable_irq(dp->hpd_irq);
 	disable_irq(dp->irq);
 
-	pm_runtime_put(dp->dev);
+	if (!dp->dynamic_pd_ctrl)
+		pm_runtime_put(dp->dev);
+	pm_runtime_dont_use_autosuspend(dp->dev);
 	pm_runtime_disable(dp->dev);
 
 	drm_encoder_cleanup(&dp->encoder);
@@ -5448,6 +5662,65 @@ static int dw_dp_get_port_node(struct dw_dp *dp)
 	return 0;
 }
 
+static int dw_dp_typec_mux_set(struct typec_mux_dev *mux, struct typec_mux_state *state)
+{
+	struct dw_dp *dp = typec_mux_get_drvdata(mux);
+
+	mutex_lock(&dp->irq_lock);
+	if (state->alt && state->alt->svid == USB_TYPEC_DP_SID) {
+		struct typec_displayport_data *data = state->data;
+
+		if (!data) {
+			dev_dbg(dp->dev, "hotunplug from the usbdp\n");
+			dp->hotplug.long_hpd = true;
+			dp->hotplug.status = false;
+			schedule_work(&dp->hpd_work);
+		} else if (data->status & DP_STATUS_IRQ_HPD) {
+			dev_dbg(dp->dev, "IRQ from the usbdp\n");
+			dp->hotplug.long_hpd = false;
+			dp->hotplug.status = true;
+			schedule_work(&dp->hpd_work);
+		} else if (data->status & DP_STATUS_HPD_STATE) {
+			dev_dbg(dp->dev, "hotplug from the usbdp\n");
+			dp->hotplug.long_hpd = true;
+			dp->hotplug.status = true;
+			schedule_work(&dp->hpd_work);
+		} else {
+			dev_dbg(dp->dev, "hotunplug from the usbdp\n");
+			dp->hotplug.long_hpd = true;
+			dp->hotplug.status = false;
+			schedule_work(&dp->hpd_work);
+		}
+	}
+	mutex_unlock(&dp->irq_lock);
+
+	return 0;
+}
+
+static int dw_dp_setup_typec_mux(struct dw_dp *dp)
+{
+	struct typec_mux_desc mux_desc = {};
+
+	mux_desc.drvdata = dp;
+	mux_desc.fwnode = dev_fwnode(dp->dev);
+	mux_desc.set = dw_dp_typec_mux_set;
+
+	dp->mux = typec_mux_register(dp->dev, &mux_desc);
+	if (IS_ERR(dp->mux)) {
+		dev_err(dp->dev, "Error register typec mux: %ld\n", PTR_ERR(dp->mux));
+		return PTR_ERR(dp->mux);
+	}
+
+	return 0;
+}
+
+static void dw_dp_typec_mux_unregister(void *data)
+{
+	struct dw_dp *dp = data;
+
+	typec_mux_unregister(dp->mux);
+}
+
 static int dw_dp_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -5569,6 +5842,20 @@ static int dw_dp_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+	if (device_property_present(dev, "svid")) {
+		ret = dw_dp_setup_typec_mux(dp);
+		if (ret)
+			return ret;
+
+		ret = devm_add_action_or_reset(dev, dw_dp_typec_mux_unregister, dp);
+		if (ret)
+			return ret;
+		dp->usbdp_hpd = true;
+	}
+
+	if (dp->hpd_gpio || dp->force_hpd || dp->usbdp_hpd)
+		dp->dynamic_pd_ctrl = true;
+
 	dp->irq = platform_get_irq(pdev, 0);
 	if (dp->irq < 0)
 		return dp->irq;
@@ -5580,6 +5867,11 @@ static int dw_dp_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to request irq: %d\n", ret);
 		return ret;
 	}
+
+	dp->aux_client = rockchip_dp_get_aux_client(dev->of_node, "rockchip,mst-sim");
+	if (IS_ERR(dp->aux_client))
+		return dev_err_probe(dev, PTR_ERR(dp->aux_client),
+				     "failed to get dp aux_client\n");
 
 	dp->bridge.of_node = dp->support_mst ? dp->mst_enc[0].port_node : dev->of_node;
 	dp->bridge.funcs = &dw_dp_bridge_funcs;

@@ -41,6 +41,7 @@
 
 #include "rockchip_drm_drv.h"
 #include "rockchip_drm_fb.h"
+#include "rockchip_drm_fbdev.h"
 #include "rockchip_drm_gem.h"
 #include "rockchip_drm_logo.h"
 
@@ -134,6 +135,28 @@ bool rockchip_drm_is_rfbc(struct drm_plane *plane, u64 modifier)
 	return (i < plane->modifier_count) ? true : false;
 }
 EXPORT_SYMBOL(rockchip_drm_is_rfbc);
+
+const char *rockchip_drm_modifier_to_string(uint64_t modifier)
+{
+	switch (modifier) {
+	case DRM_FORMAT_MOD_ROCKCHIP_TILED(ROCKCHIP_TILED_BLOCK_SIZE_8x8):
+		return "_TILE-8x8";
+	case DRM_FORMAT_MOD_ROCKCHIP_TILED(ROCKCHIP_TILED_BLOCK_SIZE_4x4_MODE0):
+		return "_TILE-4x4-M0";
+	case DRM_FORMAT_MOD_ROCKCHIP_TILED(ROCKCHIP_TILED_BLOCK_SIZE_4x4_MODE1):
+		return "_TILE-4x4-M1";
+	case DRM_FORMAT_MOD_ROCKCHIP_RFBC(ROCKCHIP_RFBC_BLOCK_SIZE_64x4):
+		return "_RFBC-64x4";
+	default:
+		if (modifier & AFBC_FORMAT_MOD_BLOCK_SIZE_32x8)
+			return "_AFBC-32x8";
+		else if (modifier & AFBC_FORMAT_MOD_BLOCK_SIZE_16x16)
+			return "_AFBC-16x16";
+		else
+			return "";
+	}
+}
+EXPORT_SYMBOL(rockchip_drm_modifier_to_string);
 
 /**
  * rockchip_drm_wait_vact_end
@@ -1722,11 +1745,19 @@ static int rockchip_drm_bind(struct device *dev)
 	if (ret)
 		goto err_kms_helper_poll_fini;
 
-	drm_fbdev_generic_setup(drm_dev, 0);
+	ret = rockchip_drm_fbdev_init(drm_dev);
+	if (ret)
+		goto err_drm_dev_unregister;
 
-	rockchip_drm_sysfs_init(drm_dev);
+	ret = rockchip_drm_sysfs_init(drm_dev);
+	if (ret)
+		goto err_drm_fbdev_fini;
 
 	return 0;
+err_drm_fbdev_fini:
+	rockchip_drm_fbdev_fini(drm_dev);
+err_drm_dev_unregister:
+	drm_dev_unregister(drm_dev);
 err_kms_helper_poll_fini:
 	rockchip_gem_pool_destroy(drm_dev);
 	drm_kms_helper_poll_fini(drm_dev);
@@ -1747,6 +1778,7 @@ static void rockchip_drm_unbind(struct device *dev)
 	struct drm_device *drm_dev = dev_get_drvdata(dev);
 
 	rockchip_drm_sysfs_fini(drm_dev);
+	rockchip_drm_fbdev_fini(drm_dev);
 	drm_dev_unregister(drm_dev);
 
 	rockchip_gem_pool_destroy(drm_dev);

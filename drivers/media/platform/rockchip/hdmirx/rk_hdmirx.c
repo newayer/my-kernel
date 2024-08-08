@@ -796,8 +796,8 @@ static void hdmirx_get_color_space(struct rk_hdmirx_dev *hdmirx_dev)
 	 */
 	hdmirx_readl(hdmirx_dev, PKTDEC_AVIIF_PH2_1);
 	val = hdmirx_readl(hdmirx_dev, PKTDEC_AVIIF_PB3_0);
-	EC2_0 = (val & EXTEND_COLORIMETRY) >> 20;
-	C1_C0 = (val & COLORIMETRY_MASK) >> 14;
+	EC2_0 = (val & EXTEND_COLORIMETRY) >> 28;
+	C1_C0 = (val & COLORIMETRY_MASK) >> 22;
 	if (hdmirx_dev->pix_fmt == HDMIRX_RGB888) {
 		if (EC2_0 == HDMIRX_ADOBE_RGB ||
 		    EC2_0 == HDMIRX_BT2020_RGB_OR_YCC)
@@ -827,14 +827,14 @@ static void hdmirx_get_color_space(struct rk_hdmirx_dev *hdmirx_dev)
 
 static bool IsColorRangeLimitFormat(uint32_t width, uint32_t height, bool interlace)
 {
-	if (((width == 720) && (height == 240) && (interlace == false)) \
-	 || ((width == 720) && (height == 1201) && (interlace == false)) \
-	 || ((width == 720) && (height == 480) && (interlace == true)) \
-	 || ((width == 720) && (height == 576) && (interlace == true)) \
-	 || ((width == 1440) && (height == 480) && (interlace == true)) \
-	 || ((width == 1440) && (height == 576) && (interlace == true)) \
-	 || ((width == 1920) && (height == 1080) && (interlace == true)) \
-	 || ((width == 2880) && (height == 480) && (interlace == true)) \
+	if (((width == 720) && (height == 240) && (interlace == false))
+	 || ((width == 720) && (height == 1201) && (interlace == false))
+	 || ((width == 720) && (height == 480) && (interlace == true))
+	 || ((width == 720) && (height == 576) && (interlace == true))
+	 || ((width == 1440) && (height == 480) && (interlace == true))
+	 || ((width == 1440) && (height == 576) && (interlace == true))
+	 || ((width == 1920) && (height == 1080) && (interlace == true))
+	 || ((width == 2880) && (height == 480) && (interlace == true))
 	 || ((width == 3840) && (height == 2160) && (interlace == false))) {
 		return true;
 	} else {
@@ -2195,6 +2195,7 @@ static void hdmirx_free_fence(struct rk_hdmirx_dev *hdmirx_dev)
 	unsigned long lock_flags = 0;
 	struct hdmirx_fence *vb_fence, *done_fence;
 	struct v4l2_device *v4l2_dev = &hdmirx_dev->v4l2_dev;
+	struct files_struct *files = current->files;
 	LIST_HEAD(local_list);
 
 	spin_lock_irqsave(&hdmirx_dev->fence_lock, lock_flags);
@@ -2216,7 +2217,8 @@ static void hdmirx_free_fence(struct rk_hdmirx_dev *hdmirx_dev)
 		v4l2_dbg(2, debug, v4l2_dev, "%s: free qbuf_fence fd:%d\n",
 			 __func__, vb_fence->fence_fd);
 		dma_fence_put(vb_fence->fence);
-		put_unused_fd(vb_fence->fence_fd);
+		if (files)
+			put_unused_fd(vb_fence->fence_fd);
 		kfree(vb_fence);
 	}
 
@@ -2229,7 +2231,8 @@ static void hdmirx_free_fence(struct rk_hdmirx_dev *hdmirx_dev)
 		v4l2_dbg(2, debug, v4l2_dev, "%s: free done_fence fd:%d\n",
 			 __func__, done_fence->fence_fd);
 		dma_fence_put(done_fence->fence);
-		put_unused_fd(done_fence->fence_fd);
+		if (files)
+			put_unused_fd(done_fence->fence_fd);
 		kfree(done_fence);
 	}
 }

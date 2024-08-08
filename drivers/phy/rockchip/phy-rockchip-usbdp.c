@@ -181,8 +181,10 @@ struct rockchip_udphy {
 	u32 dp_aux_din_sel;
 	bool dp_sink_hpd_sel;
 	bool dp_sink_hpd_cfg;
+	bool dp_hpd_disabled;
 	u8 bw;
 	int id;
+	int dp_lanes;
 
 	/* PHY const config */
 	const struct rockchip_udphy_cfg *cfgs;
@@ -336,7 +338,8 @@ static const struct reg_sequence udphy_24m_refclk_cfg[] = {
 	{0x0a64, 0xa8}, {0x1a3c, 0xd0},
 	{0x1a44, 0xd0}, {0x1a48, 0x01},
 	{0x1a4c, 0x0d}, {0x1a54, 0xe0},
-	{0x1a5c, 0xe0}, {0x1a64, 0xa8}
+	{0x1a5c, 0xe0}, {0x1a64, 0xa8},
+	{0x00D4, 0x30}
 };
 
 static const struct reg_sequence udphy_26m_refclk_cfg[] = {
@@ -363,7 +366,7 @@ static const struct reg_sequence udphy_26m_refclk_cfg[] = {
 	{0x0c30, 0x0E}, {0x0C48, 0x06},
 	{0x1C30, 0x0E}, {0x1C48, 0x06},
 	{0x028C, 0x18}, {0x0AF0, 0x00},
-	{0x1AF0, 0x00}
+	{0x1AF0, 0x00}, {0x00D4, 0x33}
 };
 
 static const struct reg_sequence udphy_init_sequence[] = {
@@ -398,8 +401,7 @@ static const struct reg_sequence udphy_init_sequence[] = {
 	{0x0070, 0x7D}, {0x0074, 0x68},
 	{0x0AF4, 0x1A}, {0x1AF4, 0x1A},
 	{0x0440, 0x3F}, {0x10D4, 0x08},
-	{0x20D4, 0x08}, {0x00D4, 0x30},
-	{0x0024, 0x6e},
+	{0x20D4, 0x08}, {0x0024, 0x6e}
 };
 
 static inline int grfreg_write(struct regmap *base,
@@ -533,7 +535,7 @@ static void udphy_usb_bvalid_enable(struct rockchip_udphy *udphy, u8 enable)
  * B(Flip    )  dpln1         dpln0       usbrx         usbtx
  * ---------------------------------------------------------------------------
  *
- * 2 Mapping the lanes in dtsi
+ * 3 Mapping the lanes in dtsi
  * if all 4 lane assignment for dp function, define rockchip,dp-lane-mux = <x x x x>;
  * sample as follow:
  * ---------------------------------------------------------------------------
@@ -550,6 +552,13 @@ static void udphy_usb_bvalid_enable(struct rockchip_udphy *udphy, u8 enable)
  * <0 1>                  dpln0         dpln1       usbrx         usbtx
  * <2 3>                  usbrx         usbtx       dpln0         dpln1
  * ---------------------------------------------------------------------------
+ * if 1 lane for dp function, 2 lane for usb function, define rockchip,dp-lane-mux = <x>;
+ * sample as follow:
+ * ---------------------------------------------------------------------------
+ *                        B11-B10       A2-A3       A11-A10       B2-B3
+ * rockchip,dp-lane-mux   ln0(tx/rx)    ln1(tx)     ln2(tx/rx)    ln3(tx)
+ * <0>                    dpln0         \           usbrx         usbtx
+ * ---------------------------------------------------------------------------
  */
 
 static int udphy_dplane_select(struct rockchip_udphy *udphy)
@@ -557,48 +566,37 @@ static int udphy_dplane_select(struct rockchip_udphy *udphy)
 	const struct rockchip_udphy_cfg *cfg = udphy->cfgs;
 	u32 value = 0;
 
-	switch (udphy->mode) {
-	case UDPHY_MODE_DP:
+	switch (udphy->dp_lanes) {
+	case 4:
 		value |= 2 << udphy->dp_lane_sel[2] * 2;
 		value |= 3 << udphy->dp_lane_sel[3] * 2;
 		fallthrough;
-	case UDPHY_MODE_DP_USB:
-		value |= 0 << udphy->dp_lane_sel[0] * 2;
+	case 2:
 		value |= 1 << udphy->dp_lane_sel[1] * 2;
-		break;
-	case UDPHY_MODE_USB:
+		fallthrough;
+	case 1:
+		value |= 0 << udphy->dp_lane_sel[0] * 2;
 		break;
 	default:
 		break;
 	}
 
 	regmap_write(udphy->vogrf, cfg->vogrfcfg[udphy->id].dp_lane_reg,
-		     ((DP_AUX_DIN_SEL | DP_AUX_DOUT_SEL | DP_LANE_SEL_ALL) << 16) |
-		     FIELD_PREP(DP_AUX_DIN_SEL, udphy->dp_aux_din_sel) |
-		     FIELD_PREP(DP_AUX_DOUT_SEL, udphy->dp_aux_dout_sel) | value);
+		     (DP_LANE_SEL_ALL << 16) | value);
 
 	return 0;
 }
 
-static int udphy_dplane_get(struct rockchip_udphy *udphy)
+static int udphy_dpaux_select(struct rockchip_udphy *udphy)
 {
-	int dp_lanes;
+	const struct rockchip_udphy_cfg *cfg = udphy->cfgs;
 
-	switch (udphy->mode) {
-	case UDPHY_MODE_DP:
-		dp_lanes = 4;
-		break;
-	case UDPHY_MODE_DP_USB:
-		dp_lanes = 2;
-		break;
-	case UDPHY_MODE_USB:
-		fallthrough;
-	default:
-		dp_lanes = 0;
-		break;
-	}
+	regmap_write(udphy->vogrf, cfg->vogrfcfg[udphy->id].dp_lane_reg,
+		     ((DP_AUX_DIN_SEL | DP_AUX_DOUT_SEL) << 16) |
+		     FIELD_PREP(DP_AUX_DIN_SEL, udphy->dp_aux_din_sel) |
+		     FIELD_PREP(DP_AUX_DOUT_SEL, udphy->dp_aux_dout_sel));
 
-	return dp_lanes;
+	return 0;
 }
 
 static int udphy_dplane_enable(struct rockchip_udphy *udphy, int dp_lanes)
@@ -628,7 +626,8 @@ static int udphy_dp_hpd_event_trigger(struct rockchip_udphy *udphy, bool hpd)
 	udphy->dp_sink_hpd_sel = true;
 	udphy->dp_sink_hpd_cfg = hpd;
 
-	grfreg_write(udphy->vogrf, &cfg->vogrfcfg[udphy->id].hpd_trigger, hpd);
+	if (!udphy->dp_hpd_disabled)
+		grfreg_write(udphy->vogrf, &cfg->vogrfcfg[udphy->id].hpd_trigger, hpd);
 
 	return 0;
 }
@@ -664,6 +663,7 @@ static int udphy_set_typec_default_mapping(struct rockchip_udphy *udphy)
 	}
 
 	udphy->mode = UDPHY_MODE_DP_USB;
+	udphy->dp_lanes = 2;
 
 	return 0;
 }
@@ -779,6 +779,11 @@ static int udphy_status_check(struct rockchip_udphy *udphy)
 						       200, 100000);
 			if (ret)
 				dev_notice(udphy->dev, "trsv ln2 mon rx cdr lock timeout\n");
+		}
+
+		if (ret) {
+			udphy_u3_port_disable(udphy, true);
+			dev_warn(udphy->dev, "disable u3 port because udphy not ready\n");
 		}
 	}
 
@@ -907,7 +912,7 @@ static int udphy_parse_lane_mux_data(struct rockchip_udphy *udphy, struct device
 
 	num_lanes = len / sizeof(u32);
 
-	if (num_lanes != 2 && num_lanes != 4) {
+	if (num_lanes != 1 && num_lanes != 2 && num_lanes != 4) {
 		dev_err(dev, "invalid number of lane mux\n");
 		return -EINVAL;
 	}
@@ -937,7 +942,8 @@ static int udphy_parse_lane_mux_data(struct rockchip_udphy *udphy, struct device
 	}
 
 	udphy->mode = UDPHY_MODE_DP;
-	if (num_lanes == 2) {
+	udphy->dp_lanes = num_lanes;
+	if (num_lanes == 1 || num_lanes == 2) {
 		udphy->mode |= UDPHY_MODE_USB;
 		udphy->flip = udphy->lane_mux_sel[0] == PHY_LANE_MUX_DP ? true : false;
 	}
@@ -1115,22 +1121,19 @@ static int udphy_power_off(struct rockchip_udphy *udphy, u8 mode)
 static int rockchip_dp_phy_power_on(struct phy *phy)
 {
 	struct rockchip_udphy *udphy = phy_get_drvdata(phy);
-	int ret, dp_lanes;
+	int ret;
 
 	mutex_lock(&udphy->mutex);
 
-	dp_lanes = udphy_dplane_get(udphy);
-	phy_set_bus_width(phy, dp_lanes);
+	phy_set_bus_width(phy, udphy->dp_lanes);
 
 	ret = udphy_power_on(udphy, UDPHY_MODE_DP);
 	if (ret)
 		goto unlock;
 
-	ret = udphy_dplane_enable(udphy, dp_lanes);
+	ret = udphy_dplane_enable(udphy, udphy->dp_lanes);
 	if (ret)
 		goto unlock;
-
-	ret = udphy_dplane_select(udphy);
 
 unlock:
 	mutex_unlock(&udphy->mutex);
@@ -1252,6 +1255,8 @@ static int rockchip_dp_phy_configure(struct phy *phy,
 	if (ret)
 		return ret;
 
+	udphy_dplane_select(udphy);
+
 	if (dp->set_rate) {
 		regmap_update_bits(udphy->pma_regmap, CMN_DP_RSTN_OFFSET,
 				   CMN_DP_CMN_RSTN, FIELD_PREP(CMN_DP_CMN_RSTN, 0x0));
@@ -1318,10 +1323,30 @@ static int rockchip_dp_phy_configure(struct phy *phy,
 	return 0;
 }
 
+static int rockchip_dp_phy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
+{
+	struct rockchip_udphy *udphy = phy_get_drvdata(phy);
+	int ret = 0;
+
+	switch (submode) {
+	case 0:
+		ret = udphy_dpaux_select(udphy);
+		break;
+	case 1:
+		udphy->dp_hpd_disabled = true;
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
+
 static const struct phy_ops rockchip_dp_phy_ops = {
 	.power_on	= rockchip_dp_phy_power_on,
 	.power_off	= rockchip_dp_phy_power_off,
 	.configure	= rockchip_dp_phy_configure,
+	.set_mode	= rockchip_dp_phy_set_mode,
 	.owner		= THIS_MODULE,
 };
 
@@ -1386,6 +1411,7 @@ static int usbdp_typec_mux_set(struct typec_mux_dev *mux,
 		udphy->lane_mux_sel[2] = PHY_LANE_MUX_DP;
 		udphy->lane_mux_sel[3] = PHY_LANE_MUX_DP;
 		mode = UDPHY_MODE_DP;
+		udphy->dp_lanes = 4;
 		break;
 	case TYPEC_DP_STATE_D:
 		fallthrough;
@@ -1402,6 +1428,7 @@ static int usbdp_typec_mux_set(struct typec_mux_dev *mux,
 			udphy->lane_mux_sel[3] = PHY_LANE_MUX_DP;
 		}
 		mode = UDPHY_MODE_DP_USB;
+		udphy->dp_lanes = 2;
 		break;
 	}
 
@@ -1561,7 +1588,7 @@ static int rockchip_udphy_probe(struct platform_device *pdev)
 				goto put_child;
 			}
 
-			phy_set_bus_width(phy, udphy_dplane_get(udphy));
+			phy_set_bus_width(phy, udphy->dp_lanes);
 			phy->attrs.max_link_rate = udphy_dp_get_max_link_rate(udphy, child_np);
 		} else if (of_node_name_eq(child_np, "u3-port")) {
 			phy = devm_phy_create(dev, child_np, &rockchip_u3phy_ops);

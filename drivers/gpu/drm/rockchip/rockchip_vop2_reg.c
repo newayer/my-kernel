@@ -917,6 +917,7 @@ static const struct vop2_wb_regs rk3576_vop_wb_regs = {
 	.r2y_en = VOP_REG(RK3576_WB_CTRL, 0x1, 5),
 	.scale_x_en = VOP_REG(RK3576_WB_CTRL, 0x1, 7),
 	.scale_y_en = VOP_REG(RK3576_WB_CTRL, 0x1, 8),
+	.post_empty_stop_en = VOP_REG(RK3576_WB_CTRL, 0x1, 11),
 	.one_frame_mode = VOP_REG(RK3576_WB_CTRL, 0x1, 12),
 	.axi_yrgb_id = VOP_REG(RK3576_WB_CTRL, 0xff, 20),
 	.axi_uv_id = VOP_REG(RK3576_WB_CTRL, 0x1f, 24),
@@ -1234,7 +1235,7 @@ static const struct vop2_video_port_data rk3562_vop_video_ports[] = {
 	 .cubic_lut_len = 729, /* 9x9x9 */
 	 .dclk_max = 200000000,
 	 .max_output = { 2048, 4096 },
-	 .win_dly = 8,
+	 .win_dly = 6,
 	 .layer_mix_dly = 8,
 	 .intr = &rk3568_vp0_intr,
 	 .regs = &rk3562_vop_vp0_regs,
@@ -3657,6 +3658,25 @@ static const struct vop2_win_regs rk3576_cluster1_win_data = {
  * * After prescale down:
  *	* nearest-neighbor/bilinear/bicubic for scale up
  *	* nearest-neighbor/bilinear for scale down
+ *
+ * AXI config::
+ *
+ * * Cluster0 win0: 0xa,  0xb       [AXI0]
+ * * Cluster0 win1: 0xc,  0xd       [AXI0]
+ * * Cluster1 win0: 0x6,  0x7       [AXI0]
+ * * Cluster1 win1: 0x8,  0x9       [AXI0]
+ * * Esmart0:       0x10, 0x11      [AXI0]
+ * * Esmart1:       0x12, 0x13      [AXI0]
+ * * Esmart2:       0xa,  0xb       [AXI1]
+ * * Esmart3:       0xc,  0xd       [AXI1]
+ * * Lut dma rid:   0x1,  0x2,  0x3 [AXI0]
+ * * DCI dma rid:   0x4             [AXI0]
+ * * Metadata rid:  0x5             [AXI0]
+ *
+ * * Limit:
+ * * (1) 0x0 and 0xf can't be used;
+ * * (2) cluster and lut/dci/metadata rid must smaller than 0xf, If Cluster rid is bigger than 0xf,
+ * * VOP will dead at the system bandwidth very terrible scene.
  */
 static const struct vop2_win_data rk3576_vop_win_data[] = {
 	{
@@ -3680,8 +3700,8 @@ static const struct vop2_win_data rk3576_vop_win_data[] = {
 	  .pd_id = VOP2_PD_ESMART,
 	  .type = DRM_PLANE_TYPE_PRIMARY,
 	  .axi_id = 0,
-	  .axi_yrgb_id = 0x0a,
-	  .axi_uv_id = 0x0b,
+	  .axi_yrgb_id = 0x10,
+	  .axi_uv_id = 0x11,
 	  .possible_vp_mask = BIT(ROCKCHIP_VOP_VP0) | BIT(ROCKCHIP_VOP_VP2),
 	  .max_upscale_factor = 8,
 	  .max_downscale_factor = 8,
@@ -3709,8 +3729,8 @@ static const struct vop2_win_data rk3576_vop_win_data[] = {
 	  .pd_id = VOP2_PD_ESMART,
 	  .type = DRM_PLANE_TYPE_PRIMARY,
 	  .axi_id = 0,
-	  .axi_yrgb_id = 0x0c,
-	  .axi_uv_id = 0x0d,
+	  .axi_yrgb_id = 0x12,
+	  .axi_uv_id = 0x13,
 	  .possible_vp_mask = BIT(ROCKCHIP_VOP_VP1) | BIT(ROCKCHIP_VOP_VP2),
 	  .max_upscale_factor = 8,
 	  .max_downscale_factor = 8,
@@ -3792,8 +3812,8 @@ static const struct vop2_win_data rk3576_vop_win_data[] = {
 	  .vsd_pre_filter_mode = VOP3_PRE_SCALE_DOWN_AVG,/* gt or avg */
 	  .regs = &rk3576_cluster0_win_data,
 	  .pd_id = VOP2_PD_CLUSTER,
-	  .axi_yrgb_id = 0x10,
-	  .axi_uv_id = 0x11,
+	  .axi_yrgb_id = 0x0a,
+	  .axi_uv_id = 0x0b,
 	  .dci_rid_id = 0x4,/* dci axi id length is 4 bits */
 	  .possible_vp_mask = BIT(ROCKCHIP_VOP_VP0) | BIT(ROCKCHIP_VOP_VP1),
 	  .max_upscale_factor = 8,
@@ -3819,8 +3839,8 @@ static const struct vop2_win_data rk3576_vop_win_data[] = {
 	  .hsd_pre_filter_mode = VOP3_PRE_SCALE_DOWN_AVG,/* gt or avg */
 	  .vsd_pre_filter_mode = VOP3_PRE_SCALE_DOWN_AVG,/* gt or avg */
 	  .regs = &rk3576_cluster0_win_data,
-	  .axi_yrgb_id = 0x12,
-	  .axi_uv_id = 0x13,
+	  .axi_yrgb_id = 0x0c,
+	  .axi_uv_id = 0x0d,
 	  .possible_vp_mask = BIT(ROCKCHIP_VOP_VP0) | BIT(ROCKCHIP_VOP_VP1),
 	  .max_upscale_factor = 8,
 	  .max_downscale_factor = 8,
@@ -4902,7 +4922,9 @@ static const struct vop_dump_regs rk3576_dump_regs[] = {
 	{ RK3568_ESMART1_CTRL0, "Esmart1", VOP_REG(RK3568_ESMART1_REGION0_CTRL, 0x1, 0), 1, 0x100 },
 	{ RK3568_SMART0_CTRL0, "Esmart2", VOP_REG(RK3568_SMART0_REGION0_CTRL, 0x1, 0), 1, 0x100 },
 	{ RK3568_SMART1_CTRL0, "Esmart3", VOP_REG(RK3568_SMART1_REGION0_CTRL, 0x1, 0), 1, 0x100 },
-	{ RK3528_HDR_LUT_CTRL, "HDR", {0}, 0, 0x100 },
+	{ RK3528_HDR_LUT_CTRL, "HDR", {0}, 0, 0x240 },
+	{ RK3528_ACM_CTRL, "ACM", VOP_REG(RK3528_ACM_CTRL, 0x1, 0), 1, 0x7d8 },
+	{ RK3576_SHARP_CTRL, "SHARP", VOP_REG(RK3576_SHARP_CTRL, 0x1, 0), 1, 0x2b4 },
 };
 
 static const struct vop_dump_regs rk3588_dump_regs[] = {
