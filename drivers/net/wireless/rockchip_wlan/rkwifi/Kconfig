@@ -30,6 +30,10 @@ config BCMDHD_PCIE
 
 endchoice
 
+config AP6275S
+	bool "AP6275S wireless cards support"
+	depends on AP6XXX
+
 config PCIEASPM_ROCKCHIP_WIFI_EXTENSION
 	bool "Extend ASPM function"
 	depends on BCMDHD_PCIE && PCIEASPM_EXT

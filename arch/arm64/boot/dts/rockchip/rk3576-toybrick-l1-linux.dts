@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
+ *
+ */
+
+/dts-v1/;
+#include "rk3576.dtsi"
+#include "rk3576-toybrick-l1.dtsi"
+#include "rk3576-linux.dtsi"
+#include "rk3576-toybrick-cam-l1.dtsi"
+
+/ {
+	model = "Rockchip RK3576 TOYBRICK L1 Board";
+	compatible = "rockchip,rk3576-toybrick-l1", "rockchip,rk3576";
+};
