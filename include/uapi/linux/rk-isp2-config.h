@@ -12,7 +12,7 @@
 #include <linux/v4l2-controls.h>
 #include <linux/rk-camera-module.h>
 
-#define RKISP_API_VERSION		KERNEL_VERSION(2, 6, 0)
+#define RKISP_API_VERSION		KERNEL_VERSION(2, 6, 1)
 
 /****************ISP SUBDEV IOCTL*****************************/
 
@@ -71,6 +71,15 @@
 #define RKISP_CMD_AIISP_RD_START \
 	_IO('V', BASE_VIDIOC_PRIVATE + 18)
 
+/* BASE_VIDIOC_PRIVATE + 19 for RKISP_CMD_GET_TB_HEAD_V33 */
+/* BASE_VIDIOC_PRIVATE + 20 for RKISP_CMD_SET_TB_HEAD_V33 */
+
+#define RKISP_CMD_SET_OFFLINE_RAW_BUFCNT \
+	_IOW('V', BASE_VIDIOC_PRIVATE + 21, int)
+
+#define RKISP_CMD_GET_OFFLINE_RAW_BUFCNT \
+	_IOR('V', BASE_VIDIOC_PRIVATE + 22, int)
+
 /****************ISP VIDEO IOCTL******************************/
 
 #define RKISP_CMD_GET_CSI_MEMORY_MODE \
@@ -117,6 +126,9 @@
 
 #define RKISP_CMD_SET_EXPANDER \
 	_IOW('V', BASE_VIDIOC_PRIVATE + 114, struct rkmodule_hdr_cfg)
+
+/* BASE_VIDIOC_PRIVATE + 115 for RKISP_CMD_GET_PARAMS_V39 */
+/* BASE_VIDIOC_PRIVATE + 116 for RKISP_CMD_GET_PARAMS_V33 */
 
 /**********************EVENT_PRIVATE***************************/
 #define RKISP_V4L2_EVENT_AIISP_LINECNT (V4L2_EVENT_PRIVATE_START + 1)

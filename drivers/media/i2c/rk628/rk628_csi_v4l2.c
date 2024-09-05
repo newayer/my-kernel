@@ -62,12 +62,6 @@ enum tx_mode_type {
 	DSI_MODE,
 };
 
-enum output_color_range {
-	OUT_RANGE_AUTO = 0,
-	OUT_RANGE_LIMIT = 1,
-	OUT_RANGE_FULL = 2,
-};
-
 struct rk628_plat_data {
 	int bus_fmt;
 	int tx_mode;
@@ -138,7 +132,7 @@ struct rk628_csi {
 	bool is_streaming;
 	bool csi_ints_en;
 	bool dual_mipi_use;
-	int output_range;
+	enum user_color_range user_color_range;
 };
 
 struct rk628_csi_mode {
@@ -479,6 +473,7 @@ static void rk628_csi_hdmirx_reset(struct v4l2_subdev *sd)
 {
 	struct rk628_csi *csi = to_csi(sd);
 
+	rk628_hdmirx_audio_cancel_work_audio(csi->audio_info, true);
 	disable_irq(csi->plugin_irq);
 	disable_irq(csi->hdmirx_irq);
 	rk628_hdmirx_controller_reset(csi->rk628);
@@ -500,6 +495,7 @@ static void rk628_hdmirx_plugout(struct v4l2_subdev *sd)
 	rk628_hdmirx_hpd_ctrl(sd, false);
 	rk628_hdmirx_inno_phy_power_off(sd);
 	rk628_hdmirx_verisyno_phy_power_off(csi->rk628);
+	mipi_dphy_power_off(csi);
 }
 
 static void rk628_hdmirx_config_all(struct v4l2_subdev *sd)
@@ -816,13 +812,13 @@ static void rk628_dsi_set_scs(struct rk628_csi *csi)
 
 		color_range = rk628_hdmirx_get_range(csi->rk628);
 		rk628_i2c_write(csi->rk628, GRF_CSC_CTRL_CON, SW_YUV2VYU_SWP(0));
-		if (csi->output_range == OUT_RANGE_AUTO)
+		if (csi->user_color_range == COLOR_RANGE_AUTO)
 			rk628_post_process_csc_en(csi->rk628,
-					color_range == HDMIRX_LIMIT_RANGE ? false : true);
-		else if (csi->output_range == OUT_RANGE_LIMIT)
-			rk628_post_process_csc_en(csi->rk628, false);
+					color_range == HDMIRX_LIMIT_RANGE ? false : true, true);
+		else if (csi->user_color_range == COLOR_RANGE_LIMIT)
+			rk628_post_process_csc_en(csi->rk628, false, true);
 		else
-			rk628_post_process_csc_en(csi->rk628, true);
+			rk628_post_process_csc_en(csi->rk628, true, true);
 	}
 
 	/* if avi packet is not stable, reset ctrl*/
@@ -1173,13 +1169,13 @@ static void rk628_csi_set_csi(struct v4l2_subdev *sd)
 
 		color_range = rk628_hdmirx_get_range(csi->rk628);
 		rk628_i2c_write(csi->rk628, GRF_CSC_CTRL_CON, SW_YUV2VYU_SWP(1));
-		if (csi->output_range == OUT_RANGE_AUTO)
+		if (csi->user_color_range == COLOR_RANGE_AUTO)
 			rk628_post_process_csc_en(csi->rk628,
-					color_range == HDMIRX_LIMIT_RANGE ? false : true);
-		else if (csi->output_range == OUT_RANGE_LIMIT)
-			rk628_post_process_csc_en(csi->rk628, false);
+					color_range == HDMIRX_LIMIT_RANGE ? false : true, true);
+		else if (csi->user_color_range == COLOR_RANGE_LIMIT)
+			rk628_post_process_csc_en(csi->rk628, false, true);
 		else
-			rk628_post_process_csc_en(csi->rk628, true);
+			rk628_post_process_csc_en(csi->rk628, true, true);
 	}
 	/* if avi packet is not stable, reset ctrl*/
 	if (!avi_rdy) {
@@ -1464,9 +1460,6 @@ static void rk628_csi_initial_setup(struct v4l2_subdev *sd)
 	}
 
 	csi->rk628->dphy_lane_en = 0x1f;
-	if (csi->plat_data->tx_mode == CSI_MODE)
-		mipi_dphy_power_on(csi);
-
 	csi->txphy_pwron = true;
 	if (tx_5v_power_present(sd))
 		schedule_delayed_work(&csi->delayed_work_enable_hotplug, msecs_to_jiffies(4000));
@@ -2456,6 +2449,21 @@ static void rk628_csi_reset_streaming(struct v4l2_subdev *sd, int on)
 				fps_calc(&csi->timings.bt));
 }
 
+static void rk628_csi_set_color_range(struct v4l2_subdev *sd)
+{
+	struct rk628_csi *csi = to_csi(sd);
+	u8 color_range;
+
+	color_range = rk628_hdmirx_get_range(csi->rk628);
+	if (csi->user_color_range == COLOR_RANGE_AUTO)
+		rk628_post_process_csc_en(csi->rk628,
+				color_range == HDMIRX_LIMIT_RANGE ? false : true, true);
+	else if (csi->user_color_range == COLOR_RANGE_LIMIT)
+		rk628_post_process_csc_en(csi->rk628, false, true);
+	else
+		rk628_post_process_csc_en(csi->rk628, true, true);
+}
+
 static long rk628_csi_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	struct rk628_csi *csi = to_csi(sd);
@@ -2540,9 +2548,19 @@ static long rk628_csi_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	case RKMODULE_GET_DSI_MODE:
 		*(int *)arg = csi->dsi.vid_mode;
 		break;
-	case RK_HDMIRX_CMD_SET_OUTPUT_RANGE:
-		csi->output_range = *((int *)arg);
-		v4l2_dbg(1, debug, sd, "set output_range: %d\n", csi->output_range);
+	case RK_HDMIRX_CMD_SET_COLOR_RANGE:
+		csi->user_color_range = *((int *)arg);
+		if (csi->user_color_range > COLOR_RANGE_FULL ||
+		    csi->user_color_range < COLOR_RANGE_AUTO)
+			csi->user_color_range = COLOR_RANGE_AUTO;
+		v4l2_info(sd, "user set color range: %d\n", csi->user_color_range);
+		rk628_csi_set_color_range(sd);
+		break;
+	case RKMODULE_GET_SKIP_FRAME:
+		if (csi->plat_data->tx_mode == DSI_MODE)
+			*(int *)arg = CSI_SKIP_FRAME_NORMAL;
+		else
+			*(int *)arg = 0;
 		break;
 	default:
 		ret = -ENOIOCTLCMD;
@@ -2887,7 +2905,7 @@ static long rk628_csi_compat_ioctl32(struct v4l2_subdev *sd,
 		}
 		kfree(seq);
 		break;
-	case RK_HDMIRX_CMD_SET_OUTPUT_RANGE:
+	case RK_HDMIRX_CMD_SET_COLOR_RANGE:
 		ret = copy_from_user(&is_full_range, up, sizeof(int));
 		if (!ret)
 			ret = rk628_csi_ioctl(sd, cmd, &is_full_range);
@@ -3216,7 +3234,7 @@ static int rk628_csi_probe_of(struct rk628_csi *csi)
 	csi->nosignal = true;
 	csi->stream_state = 0;
 	csi->avi_rcv_rdy = false;
-	csi->output_range = OUT_RANGE_AUTO;
+	csi->user_color_range = COLOR_RANGE_AUTO;
 
 	ret = 0;
 
@@ -3421,9 +3439,14 @@ static int rk628_csi_probe(struct i2c_client *client,
 
 	rk628_csi_power_on(csi);
 	rk628_cru_initialize(csi->rk628);
-	rk628_clk_set_rate(rk628, CGU_CLK_CPLL, CPLL_REF_CLK);
 
 	rk628_version_parse(rk628);
+	if (rk628->version == RK628_UNKNOWN) {
+		v4l2_err(sd, "can't get rk628 version\n");
+		err = -ENODEV;
+		goto power_off;
+	}
+	rk628_clk_set_rate(rk628, CGU_CLK_CPLL, CPLL_REF_CLK);
 
 	if (rk628->version >= RK628F_VERSION) {
 		err = rk628_csi_get_multi_dev_info(csi);

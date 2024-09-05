@@ -136,8 +136,8 @@ PNAME(mclk_sai_asrc_parents_p)			= { "xin24m_gate", "clk_int_voice_matrix0", "cl
 PNAME(lrck_asrc_parents_p)			= { "mclk_asrc0", "mclk_asrc1", "mclk_asrc2", "mclk_asrc3", "mclk_spdiftx", "clk_spdifrx_to_asrc", "clkout_pdm",
 						    "sai0_fs", "sai1_fs", "sai2_fs", "sai3_fs", "sai4_fs" };
 PNAME(cclk_src_sdmmc_parents_p)			= { "xin24m_gate", "gpll", "clk_v0pll_gate", "clk_v1pll_gate" };
-PNAME(dclk_vop_parents_p)			= { "xin24m_gate", "clk_gpll_gate", "clk_v0pll_gate", "clk_v1pll_gate", "clk_frac_voice_matrix1",
-						    "clk_frac_common_matrix0", "clk_frac_common_matrix1", "clk_frac_common_matrix2" };
+PNAME(dclk_vop_parents_p)			= { "xin24m_gate", "clk_gpll_gate", "clk_v0pll_gate", "clk_v1pll_gate", "dummy_vop_dclk",
+						    "dummy_vop_dclk", "dummy_vop_dclk", "dummy_vop_dclk" };
 PNAME(dbclk_gpio0_parents_p)			= { "xin24m", "clk_rc", "clk_32k_pmu" };
 PNAME(clk_pmu_hp_timer_parents_p)		= { "xin24m", "gpll_div_100m", "clk_core_pvtpll" };
 PNAME(clk_ref_out_parents_p)			= { "xin24m", "gpll", "v0pll", "v1pll" };
@@ -648,7 +648,7 @@ static struct rockchip_clk_branch rk3506_clk_branches[] __initdata = {
 	COMPOSITE(SCLK_UART5, "sclk_uart5", sclk_uart_parents_p, 0,
 			RK3506_CLKSEL_CON(54), 11, 3, MFLAGS, 6, 5, DFLAGS,
 			RK3506_CLKGATE_CON(19), 7, GFLAGS),
-	GATE(PCLK_GPIO234_IOC, "pclk_gpio234_ioc", "pclk_hsperi_root", CLK_IGNORE_UNUSED,
+	GATE(PCLK_GPIO234_IOC, "pclk_gpio234_ioc", "pclk_hsperi_root", CLK_IS_CRITICAL,
 			RK3506_CLKGATE_CON(19), 8, GFLAGS),
 	COMPOSITE(CLK_MAC_PTP_ROOT, "clk_mac_ptp_root", clk_mac_ptp_root_parents_p, 0,
 			RK3506_CLKSEL_CON(55), 5, 2, MFLAGS, 0, 5, DFLAGS,
@@ -691,7 +691,7 @@ static struct rockchip_clk_branch rk3506_clk_branches[] __initdata = {
 	COMPOSITE_NOMUX(CLK_TSADC_TSEN, "clk_tsadc_tsen", "xin24m_gate", 0,
 			RK3506_CLKSEL_CON(61), 8, 3, DFLAGS,
 			RK3506_CLKGATE_CON(22), 0, GFLAGS),
-	GATE(PCLK_GPIO1_IOC, "pclk_gpio1_ioc", "pclk_vio_root", CLK_IGNORE_UNUSED,
+	GATE(PCLK_GPIO1_IOC, "pclk_gpio1_ioc", "pclk_vio_root", CLK_IS_CRITICAL,
 			RK3506_CLKGATE_CON(22), 1, GFLAGS),
 
 	/* pmu */
@@ -703,7 +703,7 @@ static struct rockchip_clk_branch rk3506_clk_branches[] __initdata = {
 			RK3506_PMU_CLKGATE_CON(0), 4, GFLAGS),
 	GATE(PCLK_PMU_GRF, "pclk_pmu_grf", "pclk_pmu_root", CLK_IGNORE_UNUSED,
 			RK3506_PMU_CLKGATE_CON(0), 5, GFLAGS),
-	GATE(PCLK_GPIO0_IOC, "pclk_gpio0_ioc", "pclk_pmu_root", CLK_IGNORE_UNUSED,
+	GATE(PCLK_GPIO0_IOC, "pclk_gpio0_ioc", "pclk_pmu_root", CLK_IS_CRITICAL,
 			RK3506_PMU_CLKGATE_CON(0), 7, GFLAGS),
 	GATE(PCLK_GPIO0, "pclk_gpio0", "pclk_pmu_root", 0,
 			RK3506_PMU_CLKGATE_CON(0), 8, GFLAGS),

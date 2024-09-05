@@ -5,13 +5,14 @@
 
 #include <dt-bindings/display/drm_mipi_dsi.h>
 #include <dt-bindings/input/rk-input.h>
+#include <dt-bindings/suspend/rockchip-rk3506.h>
 
 / {
 	model = "Rockchip RK3506 EVB1 V10 Board";
 	compatible = "rockchip,rk3506-evb1-v10", "rockchip,rk3506";
 
 	chosen {
-		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 ubi.mtd=4 ubi.block=0,rootfs root=/dev/ubiblock0_0 rootfstype=squashfs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
+		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 ubi.mtd=5 ubi.block=0,rootfs root=/dev/ubiblock0_0 rootfstype=squashfs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
 	};
 
 	acodec_sound: acodec-sound {
@@ -715,6 +716,25 @@
 
 &rng {
 	status = "okay";
+};
+
+&rockchip_suspend {
+	rockchip,sleep-mode-config = <
+		(0
+		| RKPM_ARMOFF_DDRPD
+		| RKPM_24M_OSC_DIS
+		| RKPM_32K_CLK
+		| RKPM_32K_SRC_RC
+		| RKPM_PWM0_CH0_REGULATOR
+		)
+	>;
+
+	rockchip,apios-suspend = <
+		(0
+		| RKPM_PWREN_CORE_GPIO0A2 | RKPM_PWREN_CORE_ACT_LOW
+		| RKPM_PWREN_SLEEP_GPIO0A0 | RKPM_PWREN_SLEEP_ACT_LOW
+		)
+	>;
 };
 
 &sai1 {

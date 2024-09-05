@@ -429,7 +429,6 @@
 			495000	4
 		>;
 		intermediate-threshold-freq = <816000>;
-		rockchip,early-suspend-freq = <1800000>;
 		rockchip,reboot-freq = <1416000>;
 
 		rockchip,temp-hysteresis = <5000>;
@@ -563,7 +562,6 @@
 			495000	4
 		>;
 		intermediate-threshold-freq = <816000>;
-		rockchip,early-suspend-freq = <408000>;
 		rockchip,reboot-freq = <1608000>;
 
 		rockchip,temp-hysteresis = <5000>;
@@ -752,7 +750,8 @@
 			       <28 0x00a00045 0x7001>,
 			       <29 0x00a00045 0xb001>,
 			       <30 0x00a00045 0x7001>,
-			       <31 0x00a00045 0x7001>;
+			       <31 0x00a00045 0x7001>,
+			       <59 0x00a00043 0x7003>;
 		status = "disabled";
 	};
 
@@ -1375,7 +1374,6 @@
 		compatible = "rockchip,system-monitor";
 
 		rockchip,thermal-zone = "little-core-thermal";
-		rockchip,early-suspend-offline-cpus = "4-7";
 	};
 
 	thermal_zones: thermal-zones {
@@ -2026,13 +2024,15 @@
 		clock-names = "pdm_clk", "pdm_hclk", "pdm_clk_out";
 		dmas = <&dmac0 4>;
 		dma-names = "rx";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pdm0m0_clk0
-			     &pdm0m0_clk1
-			     &pdm0m0_sdi0
+		pinctrl-names = "default", "idle", "clk";
+		pinctrl-0 = <&pdm0m0_sdi0
 			     &pdm0m0_sdi1
 			     &pdm0m0_sdi2
 			     &pdm0m0_sdi3>;
+		pinctrl-1 = <&pdm0m0_clk0_idle
+			     &pdm0m0_clk1_idle>;
+		pinctrl-2 = <&pdm0m0_clk0
+			     &pdm0m0_clk1>;
 		#sound-dai-cells = <0>;
 		sound-name-prefix = "PDM0";
 		status = "disabled";
@@ -3761,7 +3761,7 @@
 		ranges = <0x00000800 0x0 0x20000000 0x0 0x20000000 0x0 0x00100000
 			  0x81000000 0x0 0x20100000 0x0 0x20100000 0x0 0x00100000
 			  0x82000000 0x0 0x20200000 0x0 0x20200000 0x0 0x00e00000
-			  0xc3000000 0x9 0x00000000 0x9 0x00000000 0x0 0x80000000>;
+			  0x83000000 0x9 0x00000000 0x9 0x00000000 0x0 0x80000000>;
 		reg = <0x0 0x2a200000 0x0 0x00010000>,
 		      <0x0 0x22000000 0x0 0x00400000>,
 		      <0x0 0x20000000 0x0 0x00100000>;
@@ -4041,6 +4041,7 @@
 
 		lb-slave {
 			dsmc_lb_slave0: lb-slave0 {
+				rockchip,mtr-timing = <1 0 0 0 0 0 2 2>;
 				status = "disabled";
 				dsmc_p0_region: region {
 					dsmc_p0_region0: region0 {
@@ -4078,6 +4079,7 @@
 				};
 			};
 			dsmc_lb_slave1: lb-slave1 {
+				rockchip,mtr-timing = <1 0 0 0 0 0 2 2>;
 				status = "disabled";
 				dsmc_p1_region: region {
 					dsmc_p1_region0: region0 {
@@ -4115,6 +4117,7 @@
 				};
 			};
 			dsmc_lb_slave2: lb-slave2 {
+				rockchip,mtr-timing = <1 0 0 0 0 0 2 2>;
 				status = "disabled";
 				dsmc_p2_region: region {
 					dsmc_p2_region0: region0 {
@@ -4152,6 +4155,7 @@
 				};
 			};
 			dsmc_lb_slave3: lb-slave3 {
+				rockchip,mtr-timing = <1 0 0 0 0 0 2 2>;
 				status = "disabled";
 				dsmc_p3_region: region {
 					dsmc_p3_region0: region0 {
@@ -4275,6 +4279,7 @@
 		interrupts = <GIC_SPI 255 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&cru SCLK_FSPI1_X2>, <&cru HCLK_FSPI1>;
 		clock-names = "clk_sfc", "hclk_sfc";
+		rockchip,max-dll = <0xFF>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 		status = "disabled";
@@ -4342,6 +4347,7 @@
 		interrupts = <GIC_SPI 254 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&cru SCLK_FSPI_X2>, <&cru HCLK_FSPI>;
 		clock-names = "clk_sfc", "hclk_sfc";
+		rockchip,max-dll = <0xFF>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 		status = "disabled";
@@ -4745,13 +4751,15 @@
 		assigned-clock-parents = <&cru CLK_AUDIO_INT_2>;
 		dmas = <&dmac1 4>;
 		dma-names = "rx";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pdm1m0_clk0
-			     &pdm1m0_clk1
-			     &pdm1m0_sdi0
+		pinctrl-names = "default", "idle", "clk";
+		pinctrl-0 = <&pdm1m0_sdi0
 			     &pdm1m0_sdi1
 			     &pdm1m0_sdi2
 			     &pdm1m0_sdi3>;
+		pinctrl-1 = <&pdm1m0_clk0_idle
+			     &pdm1m0_clk1_idle>;
+		pinctrl-2 = <&pdm1m0_clk0
+			     &pdm1m0_clk1>;
 		power-domains = <&power RK3576_PD_AUDIO>;
 		#sound-dai-cells = <0>;
 		sound-name-prefix = "PDM1";
@@ -4823,6 +4831,8 @@
 		clock-names = "hclk", "i3c";
 		dmas = <&dmac0 22>, <&dmac0 23>;
 		dma-names = "rx", "tx";
+		resets = <&cru SRST_I3C0>, <&cru SRST_H_I3C0>;
+		reset-names = "i3c", "ahb";
 		pinctrl-names = "default";
 		pinctrl-0 = <&i3c0m0_xfer &i3c0_sdam0_pu>;
 		status = "disabled";
@@ -4838,6 +4848,8 @@
 		clock-names = "hclk", "i3c";
 		dmas = <&dmac1 22>, <&dmac1 23>;
 		dma-names = "rx", "tx";
+		resets = <&cru SRST_I3C1>, <&cru SRST_H_I3C1>;
+		reset-names = "i3c", "ahb";
 		pinctrl-names = "default";
 		pinctrl-0 = <&i3c1m0_xfer &i3c1_sdam0_pu>;
 		status = "disabled";

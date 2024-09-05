@@ -343,11 +343,6 @@ static const uint64_t format_modifiers_afbc_tiled_for_vop3[] = {
 				AFBC_FORMAT_MOD_SPLIT),
 
 	DRM_FORMAT_MOD_ARM_AFBC(AFBC_FORMAT_MOD_BLOCK_SIZE_32x8 |
-				AFBC_FORMAT_MOD_YTR |
-				AFBC_FORMAT_MOD_SPARSE |
-				AFBC_FORMAT_MOD_SPLIT),
-
-	DRM_FORMAT_MOD_ARM_AFBC(AFBC_FORMAT_MOD_BLOCK_SIZE_32x8 |
 				AFBC_FORMAT_MOD_CBR |
 				AFBC_FORMAT_MOD_SPARSE |
 				AFBC_FORMAT_MOD_SPLIT),
@@ -2459,7 +2454,6 @@ static const struct vop2_cluster_regs rk3576_vop_cluster0 = {
 	.afbc_enable = VOP_REG(RK3568_CLUSTER0_CTRL, 0x1, 1),
 	.enable = VOP_REG(RK3568_CLUSTER0_CTRL, 1, 0),
 	.lb_mode = VOP_REG(RK3568_CLUSTER0_CTRL, 0xf, 4),
-	.scl_lb_mode = VOP_REG(RK3568_CLUSTER0_CTRL, 0x3, 9),
 	.dma_stride_4k_disable = VOP_REG(RK3568_CLUSTER0_CTRL, 1, 29),
 	.frm_reset_en = VOP_REG(RK3568_CLUSTER0_CTRL, 1, 31),
 	.blk_size_h = VOP_REG(RK3576_CLUSTER0_DCI_BLK_SIZE, 0x1ff, 0),
@@ -2493,7 +2487,6 @@ static const struct vop2_cluster_regs rk3576_vop_cluster1 = {
 	.afbc_enable = VOP_REG(RK3568_CLUSTER1_CTRL, 0x1, 1),
 	.enable = VOP_REG(RK3568_CLUSTER1_CTRL, 1, 0),
 	.lb_mode = VOP_REG(RK3568_CLUSTER1_CTRL, 0xf, 4),
-	.scl_lb_mode = VOP_REG(RK3568_CLUSTER1_CTRL, 0x3, 9),
 	.dma_stride_4k_disable = VOP_REG(RK3568_CLUSTER1_CTRL, 1, 29),
 	.frm_reset_en = VOP_REG(RK3568_CLUSTER1_CTRL, 1, 31),
 	.src_color_ctrl = VOP_REG(RK3576_CLUSTER1_MIX_SRC_COLOR_CTRL, 0xffffffff, 0),

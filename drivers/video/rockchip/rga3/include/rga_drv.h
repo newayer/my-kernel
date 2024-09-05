@@ -69,6 +69,7 @@
 
 /* load interval: 1000ms */
 #define RGA_LOAD_INTERVAL_US 1000000
+#define RGA_LOAD_ACTIVE_MAX_US 5000000
 
 /* timer interval: 1000ms */
 #define RGA_TIMER_INTERVAL_NS 1000000000
@@ -236,6 +237,8 @@ struct rga_session {
 	pid_t tgid;
 
 	char *pname;
+
+	ktime_t last_active;
 };
 
 struct rga_job_buffer {
@@ -262,6 +265,17 @@ struct rga_job_buffer {
 	int page_count;
 };
 
+struct rga_job_timestamp {
+	ktime_t init;
+	ktime_t insert;
+	ktime_t hw_execute;
+	ktime_t hw_done;
+	ktime_t done;
+
+	/* The time only for hrtimer to calculate the load */
+	ktime_t hw_recode;
+};
+
 struct rga_job {
 	struct list_head head;
 
@@ -284,11 +298,8 @@ struct rga_job {
 	struct mm_struct *mm;
 
 	/* job time stamp */
-	ktime_t timestamp;
-	/* The time when the job is actually executed on the hardware */
-	ktime_t hw_running_time;
-	/* The time only for hrtimer to calculate the load */
-	ktime_t hw_recoder_time;
+	struct rga_job_timestamp timestamp;
+
 	unsigned int flags;
 	int request_id;
 	int priority;
@@ -366,6 +377,7 @@ struct rga_request {
 	int32_t release_fence_fd;
 	struct dma_fence *release_fence;
 	spinlock_t fence_lock;
+	struct work_struct fence_work;
 
 	wait_queue_head_t finished_wq;
 

@@ -682,7 +682,7 @@ void rkisp_trigger_read_back(struct rkisp_device *dev, u8 dma2frm, u32 mode, boo
 		if (dev->isp_ver >= ISP_V21) {
 			val = rkisp_read_reg_cache(dev, ISP_ACQ_H_OFFS);
 			val |= ISP21_SENSOR_INDEX(dev->multi_index);
-			if (dev->isp_ver == ISP_V32_L)
+			if (dev->isp_ver >= ISP_V32_L)
 				val |= ISP32L_SENSOR_MODE(dev->multi_mode);
 			else
 				val |= ISP21_SENSOR_MODE(dev->multi_mode);
@@ -825,7 +825,9 @@ run_next:
 	if (is_upd) {
 		val = rkisp_read(dev, ISP_CTRL, false);
 		val |= CIF_ISP_CTRL_ISP_CFG_UPD;
-		rkisp_unite_write(dev, ISP_CTRL, val, true);
+		writel(val, hw->base_addr + ISP_CTRL);
+		if (hw->unite == ISP_UNITE_TWO)
+			writel(val, hw->base_next_addr + ISP_CTRL);
 		/* bayer pat after ISP_CFG_UPD for multi sensor to read lsc r/g/b table */
 		rkisp_update_regs(dev, ISP3X_ISP_CTRL1, ISP3X_ISP_CTRL1);
 		/* fix ldch multi sensor case:
@@ -1241,6 +1243,8 @@ static int rkisp_reset_handle(struct rkisp_device *dev)
 	u32 val;
 
 	dev_info(dev->dev, "%s enter\n", __func__);
+	if (dev->isp_ver == ISP_V39 && dev->sditf_dev && dev->sditf_dev->is_on)
+		rkisp_sditf_reset_notify_vpss(dev);
 	rkisp_hw_reg_save(dev->hw_dev);
 
 	rkisp_soft_reset(dev->hw_dev, true);
@@ -1818,6 +1822,7 @@ static int rkisp_config_isp(struct rkisp_device *dev)
 		rkisp_update_regs(dev, CIF_ISP_OUT_H_SIZE, CIF_ISP_OUT_V_SIZE);
 	}
 
+	dev->is_aiisp_upd = dev->is_aiisp_en;
 	rkisp_config_cmsk(dev);
 	rkisp_config_aiisp(dev);
 	return 0;
@@ -2616,6 +2621,7 @@ static int rkisp_isp_sd_set_fmt(struct v4l2_subdev *sd,
 	}
 
 	if (fmt->pad == RKISP_ISP_PAD_SINK) {
+		struct v4l2_pix_format_mplane pixm = { 0 };
 		const struct ispsd_in_fmt *in_fmt;
 
 		in_fmt = find_in_fmt(mf->code);
@@ -2626,6 +2632,14 @@ static int rkisp_isp_sd_set_fmt(struct v4l2_subdev *sd,
 
 		isp_sd->in_fmt = *in_fmt;
 		isp_sd->in_frm = *mf;
+		/* rawrd video format with isp input format change */
+		pixm.width = mf->width;
+		pixm.height = mf->height;
+		pixm.pixelformat = rkisp_mbus_pixelcode_to_v4l2(mf->code);
+		rkisp_dmarx_set_fmt(&isp_dev->dmarx_dev.stream[RKISP_STREAM_RAWRD0], pixm);
+		rkisp_dmarx_set_fmt(&isp_dev->dmarx_dev.stream[RKISP_STREAM_RAWRD2], pixm);
+		if (isp_dev->isp_ver == ISP_V20 || isp_dev->isp_ver == ISP_V30)
+			rkisp_dmarx_set_fmt(&isp_dev->dmarx_dev.stream[RKISP_STREAM_RAWRD1], pixm);
 	} else if (fmt->pad == RKISP_ISP_PAD_SOURCE_PATH) {
 		const struct ispsd_out_fmt *out_fmt;
 
@@ -3728,6 +3742,32 @@ static void rkisp_aiisp_rd_start(struct rkisp_device *dev)
 		 "%s 0x%x:0x%x\n", __func__, ISP39_AIISP_LINE_CNT, val);
 }
 
+static int rkisp_set_offline_raw_buf_cnt(struct rkisp_device *dev, int *cnt)
+{
+	if (dev->isp_inp & (INP_RAWRD0 | INP_RAWRD2)) {
+		v4l2_warn(&dev->v4l2_dev,
+			  "offline raw to user, buf count no set by this\n");
+		return -EINVAL;
+	}
+	dev->vicap_buf_cnt = *cnt;
+	rkisp_vicap_buf[dev->dev_id] = *cnt;
+	return 0;
+}
+
+static int rkisp_get_offline_raw_buf_cnt(struct rkisp_device *dev, int *cnt)
+{
+	if (dev->isp_inp & (INP_RAWRD0 | INP_RAWRD2)) {
+		v4l2_warn(&dev->v4l2_dev,
+			  "offline raw to user, buf count no get by this\n");
+		return -EINVAL;
+	}
+	if (!dev->vicap_buf_cnt)
+		*cnt = RKISP_VICAP_BUF_CNT;
+	else
+		*cnt = dev->vicap_buf_cnt;
+	return 0;
+}
+
 static long rkisp_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	struct rkisp_device *isp_dev = sd_to_isp_dev(sd);
@@ -3881,6 +3921,12 @@ static long rkisp_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	case RKISP_CMD_AIISP_RD_START:
 		rkisp_aiisp_rd_start(isp_dev);
 		break;
+	case RKISP_CMD_SET_OFFLINE_RAW_BUFCNT:
+		ret = rkisp_set_offline_raw_buf_cnt(isp_dev, arg);
+		break;
+	case RKISP_CMD_GET_OFFLINE_RAW_BUFCNT:
+		ret = rkisp_get_offline_raw_buf_cnt(isp_dev, arg);
+		break;
 	default:
 		ret = -ENOIOCTLCMD;
 	}
@@ -3968,6 +4014,14 @@ static long rkisp_compat_ioctl32(struct v4l2_subdev *sd,
 		break;
 	case RKISP_CMD_GET_AIISP_LINECNT:
 		size = sizeof(struct rkisp_aiisp_cfg);
+		cp_t_us = true;
+		break;
+	case RKISP_CMD_SET_OFFLINE_RAW_BUFCNT:
+		size = sizeof(int);
+		cp_f_us = true;
+		break;
+	case RKISP_CMD_GET_OFFLINE_RAW_BUFCNT:
+		size = sizeof(int);
 		cp_t_us = true;
 		break;
 	default:
