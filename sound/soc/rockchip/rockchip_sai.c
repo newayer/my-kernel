@@ -620,7 +620,14 @@ static int rockchip_sai_hw_params(struct snd_pcm_substream *substream,
 		bclk_rate = sai->fw_ratio * slot_width * ch_per_lane * params_rate(params);
 		if (sai->is_clk_auto)
 			clk_set_rate(sai->mclk, bclk_rate);
+
 		mclk_rate = clk_get_rate(sai->mclk);
+		if (mclk_rate < bclk_rate) {
+			dev_err(sai->dev, "Mismatch mclk: %u, at least %u\n",
+				mclk_rate, bclk_rate);
+			return -EINVAL;
+		}
+
 		div_bclk = DIV_ROUND_CLOSEST(mclk_rate, bclk_rate);
 		mclk_req_rate = bclk_rate * div_bclk;
 
@@ -765,7 +772,18 @@ static int rockchip_sai_path_prepare(struct rk_sai_dev *sai,
 static int rockchip_sai_parse_paths(struct rk_sai_dev *sai,
 				    struct device_node *np)
 {
+	unsigned int val;
 	int ret;
+
+	if (!device_property_read_u32(sai->dev, "rockchip,tdm-tx-lanes", &val)) {
+		if ((val >= 1) && (val <= 4))
+			sai->tx_lanes = val;
+	}
+
+	if (!device_property_read_u32(sai->dev, "rockchip,tdm-rx-lanes", &val)) {
+		if ((val >= 1) && (val <= 4))
+			sai->rx_lanes = val;
+	}
 
 	ret = rockchip_sai_path_prepare(sai, np, 0);
 	if (ret < 0) {

@@ -19,10 +19,10 @@
 	rockchip,data-sync-bypass;
 	pinctrl-names = "default";
 	/*
-	 * rgb3x8_rgb2x8_m0_pins/rgb3x8_rgb2x8_m1_pins for RGB3x8(8bit)/RGB565(8bit)
-	 * rgb565_pins for RGB565(16bit)
+	 * mcu_rgb3x8_rgb2x8_m0_pins/mcu_rgb3x8_rgb2x8_m1_pins for RGB3x8(8bit)/RGB565(8bit)
+	 * mcu_rgb565_pins for RGB565(16bit)
 	 */
-	pinctrl-0 = <&rgb565_pins>;
+	pinctrl-0 = <&mcu_rgb565_pins>;
 
 	/*
 	 * 320x480 RGB/MCU screen K350C4516T
@@ -49,6 +49,14 @@
 		// type:0 is cmd, 1 is data
 		panel-init-sequence = [
 			//type delay num val1 val2 val3
+			  00   00  01  d3
+			  02   00  01  d3
+			  02   00  01  d3
+			  02   00  01  d3
+			  02   00  01  d3 /*
+					   * As the datasheet, read four times
+					   * to get the panel ID.
+					   */
 			  00   00  01  e0
 			  01   00  01  00
 			  01   00  01  07
@@ -148,8 +156,8 @@
 
 		panel-exit-sequence = [
 			//type delay num val1 val2 val3
-			00   0a  01  28
-			00   78  01  10
+			  00   0a  01  28
+			  00   78  01  10
 		];
 
 		display-timings {
@@ -208,11 +216,21 @@
 
 &vop {
 	mcu-timing {
-		mcu-pix-total = <5>;
+		mcu-pix-total = <6>;
 		mcu-cs-pst = <1>;
-		mcu-cs-pend = <4>;
+		mcu-cs-pend = <5>;
 		mcu-rw-pst = <2>;
-		mcu-rw-pend = <3>;
+		mcu-rw-pend = <4>;
+
+		mcu-hold-mode = <0>;
+	};
+
+	mcu-bypass-timing {
+		mcu-pix-total = <9>;
+		mcu-cs-pst = <1>;
+		mcu-cs-pend = <8>;
+		mcu-rw-pst = <2>;
+		mcu-rw-pend = <7>;
 
 		mcu-hold-mode = <0>;
 	};
