@@ -23,6 +23,19 @@
 		pinctrl-names = "default";
 		reset-gpios = <&gpio1 RK_PA2 GPIO_ACTIVE_LOW>;
 	};
+
+	spi3: spi@gpiol {
+		compatible = "spi-gpio";
+		#address-cells = <1>;
+		gpio-sck = <&gpio1 RK_PD3 GPIO_ACTIVE_LOW>;
+		gpio-miso = <&gpio1 RK_PC6 GPIO_ACTIVE_LOW>;
+		gpio-mosi = <&gpio1 RK_PD2 GPIO_ACTIVE_LOW>;
+		cs-gpios = <&gpio1 RK_PD1 GPIO_ACTIVE_LOW>;
+		num-chipselects = <1>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&spi3gpio_pins>;
+		status = "disabled";
+	};
 };
 
 /**********EMMC**********/
@@ -84,4 +97,36 @@
 
 &vop {
 	status = "disabled";
+};
+
+&spi0 {
+	status = "okay";
+	spi-slave;
+	slave {
+		compatible ="rockchip,spidev";
+		reg = <0>;
+		id = <0>;
+	};
+};
+
+&pinctrl {
+	spi3 {
+		spi3gpio_pins: spi3gpio_pins {
+			rockchip,pins =
+				<1 RK_PD3 0 &pcfg_pull_none>,
+				<1 RK_PC6 0 &pcfg_pull_none>,
+				<1 RK_PD2 0 &pcfg_pull_none>,
+				<1 RK_PD1 0 &pcfg_pull_none>;
+		};
+	};
+};
+
+&spi3 {
+	status = "okay";
+	spidev@0 {
+		compatible = "rockchip,spidev";
+		spi-max-frequency = <50000000>;
+		reg = <0>;
+		status = "okay";
+	};
 };
