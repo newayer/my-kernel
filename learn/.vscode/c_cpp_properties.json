@@ -17,7 +17,7 @@
             ],
             "cStandard": "c11",
             "intelliSenseMode": "linux-gcc-arm",
-            "compilerPath": "/home/newayer/buildroot/output/host/bin/arm-buildroot-linux-gnueabihf-gcc",
+            "compilerPath": "/data/buildroot/luckfox_pico_ultra_storage-output/host/bin/arm-rockchip830-linux-uclibcgnueabihf-gcc",
             "compilerArgs": [
                 "-nostdinc",
                 "-D__KERNEL__",
