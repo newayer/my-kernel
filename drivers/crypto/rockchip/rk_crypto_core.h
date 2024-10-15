@@ -95,7 +95,7 @@ struct rk_crypto_dev {
 
 	struct timer_list		timer;
 	bool				busy;
-	void (*request_crypto)(struct rk_crypto_dev *rk_dev, const char *name);
+	int (*request_crypto)(struct rk_crypto_dev *rk_dev, const char *name);
 	void (*release_crypto)(struct rk_crypto_dev *rk_dev, const char *name);
 	int (*load_data)(struct rk_crypto_dev *rk_dev,
 			 struct scatterlist *sg_src,
@@ -438,6 +438,11 @@ enum rk_cipher_mode {
 		} \
 	} \
 }
+
+#define CRYPTO_MAJOR_VER(ver)	((ver) & 0x0f000000)
+
+#define CRYPTO_MAJOR_VER_3	0x03000000
+#define CRYPTO_MAJOR_VER_4	0x04000000
 
 #define IS_TYPE_HMAC(type) ((type) == ALG_TYPE_HMAC)
 

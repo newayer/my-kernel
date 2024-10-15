@@ -70,6 +70,8 @@ struct multicodecs_data {
 	u32 num_keys;
 	u32 last_key;
 	u32 keyup_voltage;
+	u32 pre_poweron_delayms;
+	u32 post_powerdown_delayms;
 	const struct adc_keys_button *map;
 	struct input_dev *input;
 	struct input_dev_poller *poller;
@@ -274,10 +276,14 @@ static int mc_hp_event(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
+		if (mc_data->pre_poweron_delayms)
+			msleep(mc_data->pre_poweron_delayms);
 		gpiod_set_value_cansleep(mc_data->hp_ctl_gpio, 1);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
 		gpiod_set_value_cansleep(mc_data->hp_ctl_gpio, 0);
+		if (mc_data->post_powerdown_delayms)
+			msleep(mc_data->post_powerdown_delayms);
 		break;
 	default:
 		return 0;
@@ -295,10 +301,14 @@ static int mc_spk_event(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
+		if (mc_data->pre_poweron_delayms)
+			msleep(mc_data->pre_poweron_delayms);
 		gpiod_set_value_cansleep(mc_data->spk_ctl_gpio, 1);
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
 		gpiod_set_value_cansleep(mc_data->spk_ctl_gpio, 0);
+		if (mc_data->post_powerdown_delayms)
+			msleep(mc_data->post_powerdown_delayms);
 		break;
 	default:
 		return 0;
@@ -309,24 +319,39 @@ static int mc_spk_event(struct snd_soc_dapm_widget *w,
 }
 
 static const struct snd_soc_dapm_widget mc_dapm_widgets[] = {
-
-	SND_SOC_DAPM_HP("Headphone", NULL),
-	SND_SOC_DAPM_SPK("Speaker", NULL),
+	SND_SOC_DAPM_HP("Headphone", mc_hp_event),
+	SND_SOC_DAPM_SPK("Speaker", mc_spk_event),
 	SND_SOC_DAPM_MIC("Main Mic", NULL),
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
-	SND_SOC_DAPM_SUPPLY("Speaker Power",
-			    SND_SOC_NOPM, 0, 0,
-			    mc_spk_event,
-			    SND_SOC_DAPM_POST_PMU |
-			    SND_SOC_DAPM_PRE_PMD),
-	SND_SOC_DAPM_SUPPLY("Headphone Power",
-			    SND_SOC_NOPM, 0, 0,
-			    mc_hp_event,
-			    SND_SOC_DAPM_POST_PMU |
-			    SND_SOC_DAPM_PRE_PMD),
+	SND_SOC_DAPM_SUPPLY("Speaker Power", SND_SOC_NOPM, 0, 0, NULL, 0),
+	SND_SOC_DAPM_SUPPLY("Headphone Power", SND_SOC_NOPM, 0, 0, NULL, 0),
 };
 
+static int mc_switch_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct multicodecs_data *mc_data = snd_soc_card_get_drvdata(card);
+	struct soc_mixer_control *mc = (struct soc_mixer_control *)kcontrol->private_value;
+	struct gpio_desc *gpio = mc->reg == 1 ? mc_data->hp_ctl_gpio : mc_data->spk_ctl_gpio;
+
+	ucontrol->value.integer.value[0] = gpiod_get_value_cansleep(gpio);
+	return 0;
+}
+
+static int mc_switch_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct multicodecs_data *mc_data = snd_soc_card_get_drvdata(card);
+	struct soc_mixer_control *mc = (struct soc_mixer_control *)kcontrol->private_value;
+	struct gpio_desc *gpio = mc->reg == 1 ? mc_data->hp_ctl_gpio : mc_data->spk_ctl_gpio;
+
+	gpiod_set_value_cansleep(gpio, ucontrol->value.integer.value[0] ? 1 : 0);
+	return 0;
+}
+
 static const struct snd_kcontrol_new mc_controls[] = {
+	SOC_SINGLE_EXT("spk switch", 0, 0, 1, 0, mc_switch_get, mc_switch_put),
+	SOC_SINGLE_EXT("hp switch", 1, 0, 1, 0, mc_switch_get, mc_switch_put),
 	SOC_DAPM_PIN_SWITCH("Headphone"),
 	SOC_DAPM_PIN_SWITCH("Speaker"),
 	SOC_DAPM_PIN_SWITCH("Main Mic"),
@@ -684,6 +709,10 @@ static int rk_multicodecs_probe(struct platform_device *pdev)
 	mc_data->mclk_fs = DEFAULT_MCLK_FS;
 	if (!of_property_read_u32(np, "rockchip,mclk-fs", &val))
 		mc_data->mclk_fs = val;
+	if (!of_property_read_u32(np, "rockchip,pre-power-on-delay-ms", &val))
+		mc_data->pre_poweron_delayms = val;
+	if (!of_property_read_u32(np, "rockchip,post-power-down-delay-ms", &val))
+		mc_data->post_powerdown_delayms = val;
 
 	mc_data->codec_hp_det =
 		of_property_read_bool(np, "rockchip,codec-hp-det");
@@ -691,10 +720,13 @@ static int rk_multicodecs_probe(struct platform_device *pdev)
 	mc_data->adc = devm_iio_channel_get(&pdev->dev, "adc-detect");
 
 	if (IS_ERR(mc_data->adc)) {
-		if (PTR_ERR(mc_data->adc) != -EPROBE_DEFER) {
-			mc_data->adc = NULL;
-			dev_warn(&pdev->dev, "Failed to get ADC channel");
+		if (PTR_ERR(mc_data->adc) == -EPROBE_DEFER) {
+			dev_warn(&pdev->dev, "deferred by saradc not ready\n");
+			return -EPROBE_DEFER;
 		}
+
+		mc_data->adc = NULL;
+		dev_warn(&pdev->dev, "Has no ADC channel\n");
 	} else {
 		if (mc_data->adc->channel->type != IIO_VOLTAGE)
 			return -EINVAL;

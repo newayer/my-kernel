@@ -76,6 +76,7 @@ struct pvtpll_opp_table {
  * @volt_rm_tbl:	Pointer to voltage to memory read margin conversion table.
  * @grf:		General Register Files regmap.
  * @dsu_grf:		DSU General Register Files regmap.
+ * @cci_grf:		CCI General Register Files regmap.
  * @clocks:		Pvtpll clocks.
  * @nclocks:		Number of pvtpll clock.
  * @intermediate_threshold_freq: The frequency threshold of intermediate rate.
@@ -103,13 +104,17 @@ struct rockchip_opp_info {
 	struct mutex dvfs_mutex;
 	const struct rockchip_opp_data *data;
 	struct pvtpll_opp_table *opp_table;
+	struct regmap *pvtpll_base;
 	unsigned int pvtpll_avg_offset;
 	unsigned int pvtpll_min_rate;
 	unsigned int pvtpll_volt_step;
 
 	struct volt_rm_table *volt_rm_tbl;
 	struct regmap *grf;
-	struct regmap *dsu_grf;
+	union {
+		struct regmap *dsu_grf;
+		struct regmap *cci_grf;
+	};
 	struct clk_bulk_data *clocks;
 	int nclocks;
 	unsigned long intermediate_threshold_freq;
@@ -161,6 +166,8 @@ int rockchip_set_intermediate_rate(struct device *dev,
 				   struct clk *clk, unsigned long old_freq,
 				   unsigned long new_freq, bool is_scaling_up,
 				   bool is_set_clk);
+int rockchip_opp_set_low_length(struct device *dev, struct device_node *np,
+				struct rockchip_opp_info *opp_info);
 int rockchip_opp_config_regulators(struct device *dev,
 				     struct dev_pm_opp *old_opp,
 				     struct dev_pm_opp *new_opp,
@@ -244,6 +251,13 @@ rockchip_set_intermediate_rate(struct device *dev,
 			       struct clk *clk, unsigned long old_freq,
 			       unsigned long new_freq, bool is_scaling_up,
 			       bool is_set_clk)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline int
+rockchip_opp_set_low_length(struct device *dev, struct device_node *np,
+			    struct rockchip_opp_info *opp_info)
 {
 	return -EOPNOTSUPP;
 }
