@@ -91,6 +91,10 @@
 	pinctrl-0 = <&uart3m0_xfer>;
 };
 
+&display_subsystem {
+	status = "disabled";
+};
+
 &rgb {
 	status = "disabled";
 };
@@ -136,4 +140,36 @@
 
 &work_led{
 	gpios = <&gpio2 RK_PA1 GPIO_ACTIVE_HIGH>;
+};
+
+&csi2_dphy_hw {
+	status = "disabled";
+};
+
+&csi2_dphy0 {
+	status = "disabled";
+};
+
+&mipi0_csi2 {
+	status = "disabled";
+};
+
+&rkcif {
+	status = "disabled";
+};
+
+&rkcif_mipi_lvds {
+	status = "disabled";
+};
+
+&rkcif_mipi_lvds_sditf {
+	status = "disabled";
+};
+
+&rkisp {
+	status = "disabled";
+};
+
+&rkisp_vir0 {
+	status = "disabled";
 };
