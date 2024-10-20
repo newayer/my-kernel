@@ -107,7 +107,7 @@
 };
 
 &spi0 {
-	status = "disabled";
+	status = "okay";
 	spi-slave;
 	slave {
 		compatible ="rockchip,spidev";
@@ -128,7 +128,7 @@
 };
 
 &spi3 {
-	status = "disabled";
+	status = "okay";
 	spidev@0 {
 		compatible = "rockchip,spidev";
 		spi-max-frequency = <50000000>;
