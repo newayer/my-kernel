@@ -191,6 +191,7 @@ static int rkcif_scale_set_fmt(struct rkcif_scale_vdev *scale_vdev,
 		scale_times = 32;
 	}
 	//source resolution align (scale_times * 2)
+	width = ALIGN(width, scale_times * 2);
 	pixm->width = width  / (scale_times * 2) * 2;
 	pixm->height = height / (scale_times * 2) * 2;
 	pixm->num_planes = fmt->mplanes;
@@ -199,6 +200,7 @@ static int rkcif_scale_set_fmt(struct rkcif_scale_vdev *scale_vdev,
 
 	bpp = rkcif_scale_align_bits_per_pixel(cif_dev, fmt, 0);
 	bpl = pixm->width * bpp / CIF_RAW_STORED_BIT_WIDTH_RV1126;
+	bpl = ALIGN(bpl, 8);
 	size = bpl * pixm->height;
 	imagesize += size;
 
@@ -215,7 +217,7 @@ static int rkcif_scale_set_fmt(struct rkcif_scale_vdev *scale_vdev,
 		scale_vdev->scale_out_fmt = fmt;
 		scale_vdev->pixm = *pixm;
 
-		v4l2_dbg(3, rkcif_debug, &stream->cifdev->v4l2_dev,
+		v4l2_info(&stream->cifdev->v4l2_dev,
 			 "%s: req(%d, %d) src out(%d, %d)\n", __func__,
 			 pixm->width, pixm->height,
 			 scale_vdev->src_res.width, scale_vdev->src_res.height);
@@ -553,7 +555,6 @@ static int rkcif_scale_stop(struct rkcif_scale_vdev *scale_vdev)
 static void rkcif_scale_vb2_stop_streaming(struct vb2_queue *vq)
 {
 	struct rkcif_scale_vdev *scale_vdev = vq->drv_priv;
-	struct rkcif_stream *stream = scale_vdev->stream;
 	struct rkcif_device *dev = scale_vdev->cifdev;
 	struct rkcif_buffer *buf = NULL;
 	int ret = 0;
@@ -584,7 +585,6 @@ static void rkcif_scale_vb2_stop_streaming(struct vb2_queue *vq)
 		vb2_buffer_done(&buf->vb.vb2_buf, VB2_BUF_STATE_ERROR);
 	}
 	mutex_unlock(&dev->scale_lock);
-	rkcif_do_stop_stream(stream, RKCIF_STREAM_MODE_TOSCALE);
 }
 
 static int rkcif_scale_channel_init(struct rkcif_scale_vdev *scale_vdev)
@@ -885,7 +885,6 @@ rkcif_scale_vb2_start_streaming(struct vb2_queue *queue,
 			return ret;
 	}
 
-	rkcif_do_start_stream(stream, RKCIF_STREAM_MODE_TOSCALE);
 	return 0;
 }
 
@@ -992,13 +991,13 @@ static void rkcif_scale_update_stream(struct rkcif_scale_vdev *scale_vdev, int c
 					 RKCIF_YUV_ADDR_STATE_UPDATE,
 					 ch);
 
+	scale_vdev->frame_idx = scale_vdev->stream->frame_idx;
 	if (active_buf && (!ret)) {
 		vb_done = &active_buf->vb;
 		vb_done->vb2_buf.timestamp = ktime_get_ns();
 		vb_done->sequence = scale_vdev->frame_idx;
 		rkcif_scale_vb_done_oneframe(scale_vdev, vb_done);
 	}
-	scale_vdev->frame_idx++;
 }
 
 void rkcif_irq_handle_scale(struct rkcif_device *cif_dev, unsigned int intstat_glb)
