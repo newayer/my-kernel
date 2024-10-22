@@ -574,10 +574,12 @@ static int gc2053_set_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_VBLANK:
 		vts = ctrl->val + gc2053->cur_mode->height;
+		/* Note: In master-slave mode, Galaxycore request slave sensor frame rate bigger than master. */
+		if (gc2053->sync_mode == INTERNAL_MASTER_MODE)
+			vts += 10;
 		ret = gc2053_write_reg(gc2053->client, GC2053_REG_VTS_H, (vts >> 8) & 0x3f);
 		ret |= gc2053_write_reg(gc2053->client, GC2053_REG_VTS_L, vts & 0xff);
-		if (gc2053->sync_mode == INTERNAL_MASTER_MODE)
-			gc2053_write_reg(gc2053->client, GC2053_REG_VTS_L, (vts & 0xff) + 5);
+		usleep_range(20000, 50000);
 		break;
 	case V4L2_CID_HFLIP:
 		if (ctrl->val)

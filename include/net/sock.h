@@ -2708,7 +2708,10 @@ void sk_get_meminfo(const struct sock *sk, u32 *meminfo);
  */
 #define _SK_MEM_PACKETS		256
 #define _SK_MEM_OVERHEAD	SKB_TRUESIZE(256)
-#define SK_WMEM_MAX		(_SK_MEM_OVERHEAD * _SK_MEM_PACKETS)
+/* Note: for send buffers, UDP works better if we can build two skbs at
+ * default, this value also could be set by setopt in the APPS.
+ */
+#define SK_WMEM_MAX		(2 * _SK_MEM_OVERHEAD * _SK_MEM_PACKETS)
 #define SK_RMEM_MAX		(_SK_MEM_OVERHEAD * _SK_MEM_PACKETS)
 
 extern __u32 sysctl_wmem_max;

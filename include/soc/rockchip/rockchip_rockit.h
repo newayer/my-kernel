@@ -8,11 +8,18 @@
 #include <linux/dma-buf.h>
 #include <linux/rk-isp2-config.h>
 
-#define ROCKIT_BUF_NUM_MAX	5
+#define ROCKIT_BUF_NUM_MAX	20
 #define ROCKIT_ISP_NUM_MAX	3
 #define ROCKIT_STREAM_NUM_MAX	12
 
 #define ROCKIT_VICAP_NUM_MAX	6
+
+enum {
+	RKISP_NORMAL_ONLINE,
+	RKISP_NORMAL_OFFLINE,
+	RKISP_FAST_ONLINE,
+	RKISP_FAST_OFFLINE,
+};
 
 enum function_cmd {
 	ROCKIT_BUF_QUE,
@@ -28,6 +35,7 @@ struct rkisp_stream_cfg {
 	int cur_fps;
 	u64 old_time;
 	bool is_discard;
+	struct mutex freebuf_lock;
 };
 
 struct ISP_VIDEO_FRAMES {
@@ -67,6 +75,10 @@ struct rockit_cfg {
 	int isp_num;
 	u32 nick_id;
 	u32 event;
+	u32 y_offset;
+	u32 u_offset;
+	u32 v_offset;
+	u32 vir_width;
 	void *node;
 	void *mpibuf;
 	void *vvi_dev[ROCKIT_ISP_NUM_MAX];
@@ -116,6 +128,7 @@ struct rockit_rkcif_cfg {
 
 void *rkisp_rockit_function_register(void *function, int cmd);
 int rkisp_rockit_get_ispdev(char **name);
+int rkisp_rockit_get_isp_mode(const char *name);
 int rkisp_rockit_buf_queue(struct rockit_cfg *input_rockit_cfg);
 int rkisp_rockit_pause_stream(struct rockit_cfg *input_rockit_cfg);
 int rkisp_rockit_resume_stream(struct rockit_cfg *input_rockit_cfg);
@@ -124,6 +137,7 @@ int rkisp_rockit_config_stream(struct rockit_cfg *input_rockit_cfg,
 int rkisp_rockit_get_tb_stream_info(struct rockit_cfg *input_rockit_cfg,
 				    struct rkisp_tb_stream_info *info);
 int rkisp_rockit_free_tb_stream_buf(struct rockit_cfg *input_rockit_cfg);
+int rkisp_rockit_free_stream_buf(struct rockit_cfg *input_rockit_cfg);
 
 void *rkcif_rockit_function_register(void *function, int cmd);
 int rkcif_rockit_get_cifdev(char **name);
@@ -137,6 +151,7 @@ int rkcif_rockit_pause_stream(struct rockit_rkcif_cfg *input_rockit_cfg);
 
 static inline void *rkisp_rockit_function_register(void *function, int cmd) { return NULL; }
 static inline int rkisp_rockit_get_ispdev(char **name) { return -EINVAL; }
+static inline int rkisp_rockit_get_isp_mode(const char *name) { return -EINVAL; }
 static inline int rkisp_rockit_buf_queue(struct rockit_cfg *input_rockit_cfg)
 {
 	return -EINVAL;
@@ -162,6 +177,11 @@ static inline int rkisp_rockit_get_tb_stream_info(struct rockit_cfg *input_rocki
 }
 
 static inline int rkisp_rockit_free_tb_stream_buf(struct rockit_cfg *input_rockit_cfg)
+{
+	return -EINVAL;
+}
+
+static inline int rkisp_rockit_free_stream_buf(struct rockit_cfg *input_rockit_cfg)
 {
 	return -EINVAL;
 }

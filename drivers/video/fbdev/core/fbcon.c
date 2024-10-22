@@ -88,8 +88,6 @@
 #  define DPRINTK(fmt, args...)
 #endif
 
-#define CURSOR_ENABLE 0
-#define SHOW_CENTER 1
 /*
  * FIXME: Locking
  *
@@ -367,7 +365,6 @@ static int get_color(struct vc_data *vc, struct fb_info *info,
 
 static void fb_flashcursor(struct work_struct *work)
 {
-#if CURSOR_ENABLE
 	struct fb_info *info = container_of(work, struct fb_info, queue);
 	struct fbcon_ops *ops = info->fbcon_par;
 	struct vc_data *vc = NULL;
@@ -398,7 +395,6 @@ static void fb_flashcursor(struct work_struct *work)
 	ops->cursor(vc, info, mode, get_color(vc, info, c, 1),
 		    get_color(vc, info, c, 0));
 	console_unlock();
-#endif
 }
 
 static void cursor_timer_handler(struct timer_list *t)
@@ -605,9 +601,6 @@ static void fbcon_prepare_logo(struct vc_data *vc, struct fb_info *info,
 	if (fb_get_color_depth(&info->var, &info->fix) == 1)
 		erase &= ~0x400;
 	logo_height = fb_prepare_logo(info, ops->rotate);
-#if SHOW_CENTER
-  logo_height += (info->var.yres/2) - (logo_height/2);
-#endif
 	logo_lines = DIV_ROUND_UP(logo_height, vc->vc_font.height);
 	q = (unsigned short *) (vc->vc_origin +
 				vc->vc_size_row * rows);
@@ -1338,7 +1331,6 @@ static void fbcon_clear_margins(struct vc_data *vc, int bottom_only)
 
 static void fbcon_cursor(struct vc_data *vc, int mode)
 {
-#if CURSOR_ENABLE
 	struct fb_info *info = registered_fb[con2fb_map[vc->vc_num]];
 	struct fbcon_ops *ops = info->fbcon_par;
  	int c = scr_readw((u16 *) vc->vc_pos);
@@ -1360,7 +1352,6 @@ static void fbcon_cursor(struct vc_data *vc, int mode)
 
 	ops->cursor(vc, info, mode, get_color(vc, info, c, 1),
 		    get_color(vc, info, c, 0));
-#endif
 }
 
 static int scrollback_phys_max = 0;

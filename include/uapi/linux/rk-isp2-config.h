@@ -10,7 +10,7 @@
 #include <linux/types.h>
 #include <linux/v4l2-controls.h>
 
-#define RKISP_API_VERSION		KERNEL_VERSION(2, 2, 0)
+#define RKISP_API_VERSION		KERNEL_VERSION(2, 5, 0)
 
 /****************ISP SUBDEV IOCTL*****************************/
 
@@ -51,10 +51,14 @@
 	_IOW('V', BASE_VIDIOC_PRIVATE + 11, long long)
 
 /* BASE_VIDIOC_PRIVATE + 12 for RKISP_CMD_GET_TB_HEAD_V32 */
+/* BASE_VIDIOC_PRIVATE + 14 for RKISP_CMD_SET_TB_HEAD_V32 */
 
 /* for all isp device stop and no power off but resolution change */
 #define RKISP_CMD_MULTI_DEV_FORCE_ENUM \
 	_IO('V', BASE_VIDIOC_PRIVATE + 13)
+
+#define RKISP_CMD_GET_BAY3D_BUFFD \
+	_IOR('V', BASE_VIDIOC_PRIVATE + 15, struct rkisp_bay3dbuf_info)
 
 /****************ISP VIDEO IOCTL******************************/
 
@@ -314,6 +318,23 @@ struct rkisp_meshbuf_size {
 struct isp2x_mesh_head {
 	enum isp2x_mesh_buf_stat stat;
 	u32 data_oft;
+} __attribute__ ((packed));
+
+struct rkisp_bay3dbuf_info {
+	int iir_fd;
+	int iir_size;
+	union {
+		struct {
+			int cur_fd;
+			int cur_size;
+			int ds_fd;
+			int ds_size;
+		} v30;
+		struct {
+			int ds_fd;
+			int ds_size;
+		} v32;
+	} u;
 } __attribute__ ((packed));
 
 #define RKISP_CMSK_WIN_MAX 12
@@ -1967,23 +1988,35 @@ struct rkisp_isp2x_luma_buffer {
 	struct rkisp_mipi_luma luma[ISP2X_MIPI_RAW_MAX];
 } __attribute__ ((packed));
 
+enum {
+	RKISP_RTT_MODE_NORMAL = 0,
+	RKISP_RTT_MODE_MULTI_FRAME,
+	RKISP_RTT_MODE_ONE_FRAME,
+};
+
 /**
  * struct rkisp_thunderboot_resmem_head
  */
 struct rkisp_thunderboot_resmem_head {
-	u16 enable;
-	u16 complete;
-	u16 frm_total;
-	u16 hdr_mode;
-	u16 width;
-	u16 height;
-	u16 camera_num;
-	u16 camera_index;
+	__u16 enable;
+	__u16 complete;
+	__u16 frm_total;
+	__u16 hdr_mode;
+	__u16 rtt_mode;
+	__u16 width;
+	__u16 height;
+	__u16 camera_num;
+	__u16 camera_index;
+	__u16 md_flag;
 
-	u32 exp_time[3];
-	u32 exp_gain[3];
-	u32 exp_time_reg[3];
-	u32 exp_gain_reg[3];
+	__u32 exp_time[3];
+	__u32 exp_gain[3];
+	__u32 exp_time_reg[3];
+	__u32 exp_gain_reg[3];
+	__u32 exp_isp_dgain[3];
+	__u32 dcg_mode[3];
+	__u32 nr_buf_size;
+	__u32 share_mem_size;
 } __attribute__ ((packed));
 
 /**

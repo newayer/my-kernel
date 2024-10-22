@@ -158,7 +158,6 @@ config ROCKCHIP_RAMDISK
 
 config ROCKCHIP_SUSPEND_MODE
 	tristate "Rockchip suspend mode config"
-	depends on ROCKCHIP_SIP
 	help
 	  Say Y here if you want to set the suspend mode to the ATF.
 
@@ -197,12 +196,9 @@ config ROCKCHIP_VENDOR_STORAGE_UPDATE_LOADER
 	  Say y here to enable rockchip vendor storage update loader support.
 	  The /dev/vendor_storage must set root user access only.
 
-config ROCKCHIP_FIQ_DEBUGGER
-	tristate "Rockchip FIQ Debugger"
-	depends on FIQ_DEBUGGER
-	default FIQ_DEBUGGER
-	help
-	  Say y here to enable Rockchip FIQ Debugger platform driver.
+menu "FIQ Debugger"
+source "drivers/soc/rockchip/fiq_debugger/Kconfig"
+endmenu
 
 config ROCKCHIP_DEBUG
 	tristate "Rockchip DEBUG"
