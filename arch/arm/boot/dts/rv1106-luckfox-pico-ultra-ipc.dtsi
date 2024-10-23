@@ -3,7 +3,7 @@
 /*
  * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
  */
-#include "rv1106-amp.dtsi"
+
 #include "rv1106-evb.dtsi"
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/display/media-bus-format.h>
@@ -109,6 +109,9 @@
 			size = <0xA00000>; //10M
 			linux,cma-default;
 		};
+		mmc_ecsd: mmc@3f000 {
+			reg = <0x3f000 0x00001000>;
+		};
 	};
 
 	acodec_sound: acodec-sound {
@@ -161,10 +164,10 @@
 	vdd_arm: vdd-arm {
 		compatible = "regulator-fixed";
 		regulator-name = "vdd_arm";
-		regulator-min-microvolt = <900000>;
-		regulator-max-microvolt = <900000>;
+		regulator-min-microvolt = <800000>;
+		regulator-max-microvolt = <1000000>;
+		regulator-init-microvolt = <900000>;
 		regulator-always-on;
-
 		regulator-boot-on;
 	};
 
@@ -186,7 +189,7 @@
 
 &acodec {
 	#sound-dai-cells = <0>;
-	pa-ctl-gpios = <&gpio3 RK_PD3 GPIO_ACTIVE_HIGH &pcfg_pull_up>;
+	pa-ctl-gpios = <&gpio3 RK_PD3 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 
@@ -246,17 +249,6 @@
 				data-lanes = <1 2>;
 			};
 
-			csi_dphy_input1: endpoint@1 {
-				reg = <1>;
-				remote-endpoint = <&sc4336_out>;
-				data-lanes = <1 2>;
-			};
-
-			csi_dphy_input2: endpoint@2 {
-				reg = <2>;
-				remote-endpoint = <&sc530ai_out>;
-				data-lanes = <1 2>;
-			};
 		};
 
 		port@1 {
@@ -275,8 +267,8 @@
 &i2c4 {
 	status = "okay";
 	clock-frequency = <400000>;
-	//pinctrl-names = "default";
-	//pinctrl-0 = <&i2c4m2_xfer>;
+	pinctrl-names = "default";
+	// pinctrl-0 = <&i2c4m2_xfer>;
 
 	sc3336: sc3336@30 {
 		compatible = "smartsens,sc3336";
@@ -284,7 +276,7 @@
 		reg = <0x30>;
 		clocks = <&cru MCLK_REF_MIPI0>;
 		clock-names = "xvclk";
-		pwdn-gpios = <&gpio3 RK_PC5 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio3 RK_PC5 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&mipi_refclk_out0>;
 		rockchip,camera-module-index = <0>;
@@ -294,48 +286,6 @@
 		port {
 			sc3336_out: endpoint {
 				remote-endpoint = <&csi_dphy_input0>;
-				data-lanes = <1 2>;
-			};
-		};
-	};
-
-	sc4336: sc4336@30 {
-		compatible = "smartsens,sc4336";
-		status = "okay";
-		reg = <0x30>;
-		clocks = <&cru MCLK_REF_MIPI0>;
-		clock-names = "xvclk";
-		pwdn-gpios = <&gpio3 RK_PC5 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&mipi_refclk_out0>;
-		rockchip,camera-module-index = <0>;
-		rockchip,camera-module-facing = "back";
-		rockchip,camera-module-name = "OT01";
-		rockchip,camera-module-lens-name = "40IRC_F16";
-		port {
-			sc4336_out: endpoint {
-				remote-endpoint = <&csi_dphy_input1>;
-				data-lanes = <1 2>;
-			};
-		};
-	};
-
-	sc530ai: sc530ai@30 {
-		compatible = "smartsens,sc530ai";
-		status = "okay";
-		reg = <0x30>;
-		clocks = <&cru MCLK_REF_MIPI0>;
-		clock-names = "xvclk";
-		pwdn-gpios = <&gpio3 RK_PC5 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&mipi_refclk_out0>;
-		rockchip,camera-module-index = <0>;
-		rockchip,camera-module-facing = "back";
-		rockchip,camera-module-name = "CMK-OT2115-PC1";
-		rockchip,camera-module-lens-name = "30IRC-F16";
-		port {
-			sc530ai_out: endpoint {
-				remote-endpoint = <&csi_dphy_input2>;
 				data-lanes = <1 2>;
 			};
 		};
