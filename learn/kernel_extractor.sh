@@ -69,3 +69,5 @@ do
     fi
 done
 
+rm -fr $ROOT_DIR/arch/arm/boot/dts/*
+git checkout $ROOT_DIR/arch/arm/boot/dts/
