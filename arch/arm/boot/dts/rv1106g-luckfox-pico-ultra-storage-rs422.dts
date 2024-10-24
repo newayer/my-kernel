@@ -172,3 +172,7 @@
 &rkisp_vir0 {
 	status = "disabled";
 };
+
+&wdt {
+	status = "okay";
+};
