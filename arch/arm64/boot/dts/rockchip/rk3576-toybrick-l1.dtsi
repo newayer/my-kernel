@@ -624,7 +624,7 @@
 };
 
 &usb_drd0_dwc3 {
-	dr_mode = "otg";
+	dr_mode = "peripheral";
 	usb-role-switch;
 	port {
 		usb_drd0_role_switch: endpoint {

@@ -84,12 +84,21 @@
 		cooling-levels = <0 80 170 255>;
 	};
 
-	leds: gpio-leds {
-		compatible = "gpio-leds";
-		pinctrl-names = "default";
-		pinctrl-0 =<&leds_gpio>;
+	// leds: gpio-leds {
+	// 	compatible = "gpio-leds";
+	// 	pinctrl-names = "default";
+	// 	pinctrl-0 =<&leds_gpio>;
 
-		led@1 {
+	// 	led@1 {
+	// 		gpios = <&gpio3 16 GPIO_ACTIVE_HIGH>;
+	// 		label = "heartbeat";
+	// 		linux,default-trigger = "heartbeat";
+	// 	};
+	// };
+
+	leds: leds {
+		compatible = "gpio-leds";
+		work_led: work {
 			gpios = <&gpio3 16 GPIO_ACTIVE_HIGH>;
 			label = "heartbeat";
 			linux,default-trigger = "heartbeat";
