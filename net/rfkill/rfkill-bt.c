@@ -475,8 +475,13 @@ static void rfkill_rk_pm_complete(struct device *dev)
 	}
 }
 
+static int rfkill_rk_set_block(void *data, bool blocked)
+{
+	return 0;
+}
+
 static const struct rfkill_ops rfkill_rk_ops = {
-	.set_block = rfkill_rk_set_power,
+	.set_block = rfkill_rk_set_block,
 };
 
 #define PROC_DIR "bluetooth/sleep"
@@ -819,6 +824,7 @@ static int rfkill_rk_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&rfkill->bt_sleep_delay_work,
 			  rfkill_rk_delay_sleep_bt);
 
+#if 0
 	//rfkill_rk_set_power(rfkill, BT_BLOCKED);
 	// bt turn off power
 	if (gpio_is_valid(pdata->poweron_gpio.io)) {
@@ -829,6 +835,9 @@ static int rfkill_rk_probe(struct platform_device *pdev)
 		gpio_direction_output(pdata->reset_gpio.io,
 				      !pdata->reset_gpio.enable);
 	}
+#else
+	rfkill_rk_set_power(rfkill, BT_UNBLOCK);
+#endif
 
 	platform_set_drvdata(pdev, rfkill);
 
