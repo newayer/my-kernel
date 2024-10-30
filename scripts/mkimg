@@ -23,6 +23,8 @@ while [ $# -gt 0 ]; do
 			;;
 		--keep-dtb-name)
 			DTB_ARGS="--dtbname"; shift 1;;
+		--boot)
+			GEN_BOOT_IMG="y"; shift 1;;
 		-h)
 			usage
 			exit 0
@@ -78,6 +80,8 @@ MKIMAGE_ARG="-E -p 0x800"
 
 make_boot_img()
 {
+	[ "${GEN_BOOT_IMG}" == "y" ] || return 0
+
 	RAMDISK_IMG_PATH=${objtree}/ramdisk.img
 	[ -f ${RAMDISK_IMG_PATH} ] && RAMDISK_IMG=ramdisk.img && RAMDISK_ARG="--ramdisk ${RAMDISK_IMG_PATH}"
 

@@ -258,7 +258,7 @@ ifeq ("$(CONFIG_MODULES)$(MAKE_MODULES)$(srctree)","yy$(objtree)")
 else
 	$(Q)$(MAKE) rockchip/$*.dtb Image.lz4
 endif
-	$(Q)$(srctree)/scripts/mkimg --dtb $*.dtb
+	$(Q)$(srctree)/scripts/mkimg --dtb $*.dtb --boot
 
 CLEAN_DIRS += out
 CLEAN_FILES += boot.img kernel.img resource.img zboot.img
