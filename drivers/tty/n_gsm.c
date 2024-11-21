@@ -21,6 +21,7 @@
  *	Do we need a 'which mux are you' ioctl to correlate mux and tty sets
  *
  */
+#define DEBUG
 
 #include <linux/types.h>
 #include <linux/major.h>
@@ -1866,7 +1867,7 @@ static void gsm_queue(struct gsm_mux *gsm)
 		gsm->bad_fcs++;
 		if (debug & 4)
 			pr_debug("BAD FCS %02x\n", gsm->fcs);
-		return;
+		// return;
 	}
 	address = gsm->address >> 1;
 	if (address >= NUM_DLCI)
