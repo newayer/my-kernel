@@ -1,0 +1,53 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2024 FriendlyElec Computer Tech. Co., Ltd.
+ * (http://www.friendlyelec.com)
+ */
+
+/dts-v1/;
+#include "rk3566-nanopi-r3-rev01.dts"
+
+/ {
+	model = "FriendlyElec NanoPi R3S LTS";
+	compatible = "friendlyelec,nanopi-r3s", "rockchip,rk3568";
+};
+
+&mach {
+	hwrev = <2>;
+	model = "NanoPi R3S LTS";
+};
+
+&i2s1_8ch {
+	status = "okay";
+};
+
+&rk809_codec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2s1m0_mclk>;
+	status = "okay";
+};
+
+&rk809_sound {
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&vp0 {
+	rockchip,plane-mask = <(
+				1 << ROCKCHIP_VOP2_CLUSTER0 | 1 << ROCKCHIP_VOP2_ESMART0 |
+				1 << ROCKCHIP_VOP2_SMART0)>;
+	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART0>;
+	cursor-win-id = <ROCKCHIP_VOP2_SMART0>;
+};
+
+&vp1 {
+	/delete-property/ rockchip,plane-mask;
+	/delete-property/ rockchip,primary-plane;
+	status = "disabled";
+};
+
+&vp2 {
+	/delete-property/ rockchip,plane-mask;
+	/delete-property/ rockchip,primary-plane;
+	status = "disabled";
+};
