@@ -166,6 +166,29 @@
 	status = "okay";
 };
 
+&sdhci {
+	pinctrl-names = "default";
+	pinctrl-0 = <&emmc_bus8 &emmc_cmd &emmc_clk &emmc_data_strobe>;
+};
+
+&sfc {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	spi-nor@0 {
+		compatible = "jedec,spi-nor";
+		label = "sfc_nor";
+		reg = <0>;
+		m25p,fast-read;
+		pinctrl-names = "default";
+		pinctrl-0 = <&fspim0_pins>;
+		spi-max-frequency = <20000000>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+	};
+};
+
 &pinctrl {
 	gpio-leds {
 		sys_led_pin: sys-led-pin {
