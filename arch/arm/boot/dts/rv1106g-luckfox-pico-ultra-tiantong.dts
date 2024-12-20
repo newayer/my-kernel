@@ -80,6 +80,10 @@
 	};
 };
 
+&work_led{
+	gpios = <&gpio4 RK_PC1 GPIO_ACTIVE_HIGH>;
+};
+
 &i2c4 {
 	status = "disabled";
 };
