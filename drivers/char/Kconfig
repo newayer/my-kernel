@@ -249,6 +249,8 @@ config SONYPI
 
 source "drivers/char/pcmcia/Kconfig"
 
+source "drivers/char/pcm/proslic_api/Kconfig"
+
 config MWAVE
 	tristate "ACP Modem (Mwave) support"
 	depends on X86 && TTY

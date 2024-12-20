@@ -45,6 +45,8 @@
 #error DO NOT BUILD WITH PROSLIC_DOXYGEN ENABLED
 #endif
 
+#define SI3218X
+
 /** @} PROSLIC_DRIVER_SEL*/
 
 /** @defgroup CODE_OPTS Code feature options 

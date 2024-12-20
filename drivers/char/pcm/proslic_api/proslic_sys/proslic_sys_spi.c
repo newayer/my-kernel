@@ -688,7 +688,7 @@ static int proslic_spi_probe(struct spi_device *spi)
 }
 
 /*****************************************************************************************************/
-static int proslic_spi_remove(struct spi_device *spi)
+static void proslic_spi_remove(struct spi_device *spi)
 {
   void *ptr;
 
@@ -702,7 +702,7 @@ static int proslic_spi_remove(struct spi_device *spi)
     kfree(ptr);
   }
 
-  return 0;
+  return;
 }
 
 /*****************************************************************************************************/

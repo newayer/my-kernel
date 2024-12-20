@@ -63,7 +63,7 @@ static int __init sys_init_module(void)
   return 0;
 
 }
-module_init(sys_init_module);
+late_initcall(sys_init_module);
 
 static void sys_cleanup_module(void)
 {

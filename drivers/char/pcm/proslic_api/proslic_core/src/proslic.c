@@ -1147,6 +1147,9 @@ void ProSLIC_FSKAskeySetup (int preset, int bits, int fifo_depth)
 #ifdef SI3217X
   Si3217x_FSK_Presets[preset].eightBit = eb;
   Si3217x_FSK_Presets[preset].fskdepth = fifo_depth;
+#elif SI3218X
+  Si3218x_FSK_Presets[preset].eightBit = eb;
+  Si3218x_FSK_Presets[preset].fskdepth = fifo_depth;
 #else
 #error pls code here ...
 #endif
@@ -3320,7 +3323,7 @@ int ProSLIC_PowerDownConverter (proslicChanType_ptr pProslic)
   }
   while((vbat > COMP_5V) && (timer++ < PROSLIC_TIMEOUT_DCDC_DOWN));
 
-  DEBUG_PRINT(pProslic, "%s VBAT Down = %d.%ld v\n", LOGPRINT_PREFIX,
+  DEBUG_PRINT(pProslic, "%s VBAT Down = %d.%d v\n", LOGPRINT_PREFIX,
               (int)((vbat/SCALE_V_MADC)/1000),
               SIVOICE_ABS(((vbat/SCALE_V_MADC) - (vbat/SCALE_V_MADC)/1000*1000)));
 

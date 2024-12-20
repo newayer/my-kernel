@@ -275,6 +275,8 @@ static irqreturn_t proslic_int_handler(int irq, void* data)
   proslicIntType *intData = (proslicIntType*)data;
   proslic_core_t *pports = proslic_ports;
   int i = 0;
+  unsigned char dtmf_val;
+
   if(PROSLIC_NUM_PORTS == 1)
     ProSLIC_GetInterrupts(pports->channels, intData);
 
@@ -295,9 +297,11 @@ static irqreturn_t proslic_int_handler(int irq, void* data)
 	    pr_info("proslic send cid Done\n");
           break;
 	case IRQ_DTMF:
-	//  pr_info("start dtmf detect\n");
-	//  if(!proslic_alloc_event(IRQ_DTMF, 0))
-	//    pr_err("proslic NOMEM err when interrupt: IRQ_DTMF\n");
+	  pr_info("start dtmf detect\n");
+	  ProSLIC_DTMFReadDigit(pports->channels,&dtmf_val);
+	  pr_info("dtmf detect value:%d\n", dtmf_val);
+	  if(!proslic_alloc_event(IRQ_DTMF, dtmf_val))
+	    pr_err("proslic NOMEM err when interrupt: IRQ_DTMF\n");
 	  break;
 	case IRQ_RING_T1:
 	  if(!proslic_alloc_event(IRQ_RING_T1, 0))
@@ -403,7 +407,7 @@ static int __init  core_init_module(void)
   }
   return rc;
 }
-module_init(core_init_module);
+late_initcall_sync(core_init_module);
 /*****************************************************************************************************/
 
 static void core_cleanup_module(void)
