@@ -47,6 +47,18 @@ config SI3217X_C_PBB
 	select PROSLIC
 	default n
 
+config SI3218X_A_LCCB
+	tristate "Si3218x Rev A LCCB chip"
+	depends on m
+	select PROSLIC
+	default n
+
+config SI3218X_A_LCCB110
+	tristate "Si3218x Rev A LCCB110 chip"
+	depends on m
+	select PROSLIC
+	default n
+
 menu "PROSLIC CORE"
 config PROSLIC
 	tristate "Proslic api support"
