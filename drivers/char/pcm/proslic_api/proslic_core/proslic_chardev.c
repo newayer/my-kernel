@@ -224,7 +224,7 @@ static long check_chanParam(proslic_file_dev_t *file_info, proslic_chan_if *chan
 
 /*****************************************************************************************************/
 //leaf add for cid
-#define FSKBUF_AVAILIABLE ((char)7 - cid_data.fifo_depth)
+#define FSKBUF_AVAILIABLE ((char)(7 - cid_data.fifo_depth))
 
 int proslic_send_cid(SiVoiceChanType_ptr chanPtr)
 {
@@ -277,10 +277,10 @@ static long proslic_ioctl(struct file *fp, unsigned int cmd , unsigned long ioct
   /* Make sure user has permissions */
   if( _IOC_DIR(cmd) && _IOC_READ )
   {
-   rc = !access_ok(VERIFY_WRITE, (void __user *)ioctl_params, _IOC_SIZE(cmd));
+   rc = !access_ok((void __user *)ioctl_params, _IOC_SIZE(cmd));
   } else if(_IOC_DIR(cmd) && _IOC_WRITE)
   {
-   rc = !access_ok(VERIFY_READ, (void __user *)ioctl_params, _IOC_SIZE(cmd));
+   rc = !access_ok((void __user *)ioctl_params, _IOC_SIZE(cmd));
   }
 
   if(rc)

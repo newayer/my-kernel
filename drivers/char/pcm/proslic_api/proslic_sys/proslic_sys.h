@@ -99,7 +99,7 @@ typedef struct
 /* Timer container */
 typedef struct 
 {
-  struct timespec timerObj;
+  struct timespec64 timerObj;
 } proslic_timeStamp;
 
 extern int proslic_channel_count;

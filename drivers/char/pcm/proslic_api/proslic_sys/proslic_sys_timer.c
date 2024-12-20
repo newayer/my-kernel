@@ -42,7 +42,7 @@ static int proslic_sys_getTime(void *hTimer, void *time)
 {
 	if(time != NULL)
 	{
-		((proslic_timeStamp *)time)->timerObj = current_kernel_time();
+		ktime_get_coarse_real_ts64(&(((proslic_timeStamp *)time)->timerObj));
 		return PROSLIC_SPI_OK;
 	}
 	else
@@ -56,8 +56,9 @@ static int proslic_sys_timeElapsed(void *hTimer, void *startTime, int *timeInMse
 {
 	if( (startTime != NULL) && (timeInMsec != NULL) )
 	{
-		struct timespec now = current_kernel_time();
-		struct timespec ts_delta = timespec_sub(now, ((proslic_timeStamp *) startTime)->timerObj);
+		struct timespec64 now, ts_delta;
+		ktime_get_coarse_real_ts64(&now);
+		ts_delta = timespec64_sub(now, ((proslic_timeStamp *) startTime)->timerObj);
 		*timeInMsec = ( (ts_delta.tv_sec *1000) + (ts_delta.tv_nsec / NSEC_PER_MSEC) );
 		return PROSLIC_SPI_OK;
 	}
