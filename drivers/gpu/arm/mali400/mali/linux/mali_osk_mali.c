@@ -123,8 +123,8 @@ _mali_osk_errcode_t _mali_osk_resource_initialize(void)
 {
 	mali_bool mali_is_450 = MALI_FALSE, mali_is_470 = MALI_FALSE;
 	int i, pp_core_num = 0, l2_core_num = 0;
-	const char *compatible_name = NULL;
 	int irq;
+	const char *compatible_name = NULL;
 
 	if (0 == _mali_osk_get_compatible_name(&compatible_name)) {
 		if (0 == strncmp(compatible_name, "arm,mali-450", strlen("arm,mali-450"))) {
@@ -138,11 +138,10 @@ _mali_osk_errcode_t _mali_osk_resource_initialize(void)
 
 	for (i = 0; i < MALI_OSK_RESOURCE_WITH_IRQ_NUMBER; i++) {
 		irq = platform_get_irq_byname(mali_platform_device, mali_osk_resource_bank[i].irq_name);
-		if (irq < 0) {
+		if (irq < 0)
 			mali_osk_resource_bank[i].base = MALI_OSK_INVALID_RESOURCE_ADDRESS;
-		} else {
+		else
 			mali_osk_resource_bank[i].irq = irq;
-		}
 	}
 
 	for (i = MALI_OSK_RESOURCE_PP_LOCATION_START; i <= MALI_OSK_RESOURCE_PP_LOCATION_END; i++) {

@@ -513,14 +513,22 @@ static int flexbus_cif_plat_uninit(struct flexbus_cif_device *cif_dev)
 	return 0;
 }
 
-static const struct flexbus_cif_match_data cif_match_data = {
+static const struct flexbus_cif_match_data rk3576_cif_match_data = {
 	.chip_id = RK_FLEXBUS_CIF_RK3576,
+};
+
+static const struct flexbus_cif_match_data rk3506_cif_match_data = {
+	.chip_id = RK_FLEXBUS_CIF_RK3506,
 };
 
 static const struct of_device_id flexbus_cif_plat_of_match[] = {
 	{
 		.compatible = "rockchip,flexbus-cif-rk3576",
-		.data = &cif_match_data,
+		.data = &rk3576_cif_match_data,
+	},
+	{
+		.compatible = "rockchip,flexbus-cif-rk3506",
+		.data = &rk3506_cif_match_data,
 	},
 	{},
 };
@@ -560,8 +568,7 @@ static int flexbus_cif_plat_probe(struct platform_device *pdev)
 		return ret;
 
 	cif_dev->fb_dev = rkfb;
-	rkfb->fb1_data = cif_dev;
-	rkfb->fb1_isr = flexbus_cif_irq_handler;
+	rockchip_flexbus_set_fb1(rkfb, cif_dev, flexbus_cif_irq_handler);
 
 	if (flexbus_cif_proc_init(cif_dev))
 		dev_warn(dev, "dev:%s create proc failed\n", dev_name(dev));

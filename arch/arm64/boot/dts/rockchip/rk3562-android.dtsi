@@ -36,6 +36,11 @@
 	};
 };
 
+&rockchip_suspend {
+	status = "okay";
+	rockchip,sleep-debug-en = <1>;
+};
+
 &u2phy_otg {
 	rockchip,dis-u2-susphy;
 };

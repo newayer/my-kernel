@@ -8,6 +8,7 @@
 #include <linux/thermal.h>
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
+#include <linux/version.h>
 
 #include "sy7636a.h"
 
@@ -17,11 +18,17 @@ struct sy7636a_data {
 	struct regulator *regulator;
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)
 static int sy7636a_get_temp(struct thermal_zone_device *dev, int *res)
 {
+	struct sy7636a_data *data = dev->devdata;
+#else
+static int sy7636a_get_temp(void *mdata, int *res)
+{
+	struct sy7636a_data *data = mdata;
+#endif
 	unsigned int reg_val;
 	int ret = 0;
-	struct sy7636a_data *data = dev->devdata;
 
 	ret = regulator_is_enabled(data->regulator);
 	if (ret <= 0)
@@ -36,7 +43,11 @@ static int sy7636a_get_temp(struct thermal_zone_device *dev, int *res)
 	return ret;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)
 static const struct thermal_zone_device_ops ops = {
+#else
+static const struct thermal_zone_of_device_ops ops = {
+#endif
 	.get_temp = sy7636a_get_temp,
 };
 
@@ -63,7 +74,11 @@ static int sy7636a_thermal_probe(struct platform_device *pdev)
 
 	data->regmap = regmap;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)
 	data->thermal_zone_dev = devm_thermal_of_zone_register(pdev->dev.parent, 0, data, &ops);
+#else
+	data->thermal_zone_dev = devm_thermal_zone_of_sensor_register(pdev->dev.parent, 0, data, &ops);
+#endif
 	if (IS_ERR(data->thermal_zone_dev)) {
 		dev_err(&pdev->dev, "Fail to create thermal zone\n");
 		return PTR_ERR(data->thermal_zone_dev);

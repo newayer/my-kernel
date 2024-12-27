@@ -4,7 +4,7 @@
  * Copyright (c) 2020 FriendlyElec Computer Tech. Co., Ltd.
  * (http://www.friendlyarm.com)
  *
- * Copyright (c) 2016, ROCKCHIP CORPORATION.  All rights reserved.
+ * Copyright (c) 2016, Rockchip Electronics Co., Ltd. All rights reserved.
  * Author: Xiaotan Luo <lxt@rock-chips.com>
  *
  * This program is free software; you can redistribute it and/or modify

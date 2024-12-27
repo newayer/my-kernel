@@ -2,7 +2,7 @@
 /*
  * serdes-bridge.c  --  drm bridge access for different serdes chips
  *
- * Copyright (c) 2023-2028 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2023-2028 Rockchip Electronics Co., Ltd.
  *
  * Author: luowei <lw@rock-chips.com>
  */
@@ -243,7 +243,7 @@ static int serdes_bridge_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct serdes_bridge *serdes_bridge;
 
-	if (!serdes->dev)
+	if (!serdes->dev || !serdes->chip_data)
 		return -1;
 
 	serdes_bridge = devm_kzalloc(dev, sizeof(*serdes_bridge), GFP_KERNEL);

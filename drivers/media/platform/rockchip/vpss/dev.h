@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-/* Copyright (c) 2023 Fuzhou Rockchip Electronics Co., Ltd. */
+/* Copyright (c) 2023 Rockchip Electronics Co., Ltd. */
 
 #ifndef _RKVPSS_DEV_H
 #define _RKVPSS_DEV_H
@@ -79,6 +79,9 @@ struct rkvpss_device {
 	unsigned int irq_ends_mask;
 
 	bool is_probe_end;
+	bool is_suspend;
+	bool is_idle;
+	struct completion pm_suspend_wait_fe;
 };
 
 void rkvpss_pipeline_default_fmt(struct rkvpss_device *dev);

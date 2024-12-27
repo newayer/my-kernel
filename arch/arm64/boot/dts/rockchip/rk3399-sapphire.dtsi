@@ -114,22 +114,6 @@
 		status = "okay";
 	};
 
-	keys: gpio-keys {
-		compatible = "gpio-keys";
-		autorepeat;
-
-		key-power {
-			debounce-interval = <100>;
-			gpios = <&gpio0 RK_PA5 GPIO_ACTIVE_LOW>;
-			label = "GPIO Power";
-			linux,code = <KEY_POWER>;
-			linux,input-type = <1>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pwr_btn>;
-			wakeup-source;
-		};
-	};
-
 	/* switched by pmic_sleep */
 	vcc1v8_s3: vcca1v8_s3: vcc1v8-s3 {
 		compatible = "regulator-fixed";

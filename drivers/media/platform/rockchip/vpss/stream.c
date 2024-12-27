@@ -25,7 +25,7 @@ static int rkvpss_stream_crop(struct rkvpss_stream *stream, bool on, bool sync);
 static int rkvpss_stream_scale(struct rkvpss_stream *stream, bool on, bool sync);
 static void rkvpss_stream_mf(struct rkvpss_stream *stream);
 
-static const struct capture_fmt scl_fmts[] = {
+static const struct capture_fmt scl0_fmts[] = {
 	{
 		.fourcc = V4L2_PIX_FMT_NV16,
 		.fmt_type = FMT_YUV,
@@ -88,6 +88,24 @@ static const struct capture_fmt scl_fmts[] = {
 		.mplanes = 1,
 		.swap = 0,
 		.wr_fmt = RKVPSS_MI_CHN_WR_422P,
+		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV422,
+	}, {
+		.fourcc = V4L2_PIX_FMT_TILE420,
+		.fmt_type = FMT_YUV,
+		.bpp = { 24 },
+		.cplanes = 1,
+		.mplanes = 1,
+		.swap = 0,
+		.wr_fmt = 0,
+		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV420,
+	}, {
+		.fourcc = V4L2_PIX_FMT_TILE422,
+		.fmt_type = FMT_YUV,
+		.bpp = { 32 },
+		.cplanes = 1,
+		.mplanes = 1,
+		.swap = 0,
+		.wr_fmt = 0,
 		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV422,
 	}
 };
@@ -210,12 +228,98 @@ static const struct capture_fmt scl1_fmts[] = {
 		.swap = 0,
 		.wr_fmt = RKVPSS_MI_CHN_WR_422P,
 		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV422,
+	}, {
+		   .fourcc = V4L2_PIX_FMT_TILE420,
+		   .fmt_type = FMT_YUV,
+		   .bpp = { 24 },
+		   .cplanes = 1,
+		   .mplanes = 1,
+		   .swap = 0,
+		   .wr_fmt = 0,
+		   .output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV420,
+	}, {
+		   .fourcc = V4L2_PIX_FMT_TILE422,
+		   .fmt_type = FMT_YUV,
+		   .bpp = { 32 },
+		   .cplanes = 1,
+		   .mplanes = 1,
+		   .swap = 0,
+		   .wr_fmt = 0,
+		   .output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV422,
 	}
 };
 
+static const struct capture_fmt scl2_3_fmts[] = {
+	{
+		.fourcc = V4L2_PIX_FMT_NV16,
+		.fmt_type = FMT_YUV,
+		.bpp = { 8, 16 },
+		.cplanes = 2,
+		.mplanes = 1,
+		.swap = 0,
+		.wr_fmt = RKVPSS_MI_CHN_WR_42XSP,
+		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV422,
+	}, {
+		.fourcc = V4L2_PIX_FMT_NV12,
+		.fmt_type = FMT_YUV,
+		.bpp = { 8, 16 },
+		.cplanes = 2,
+		.mplanes = 1,
+		.swap = 0,
+		.wr_fmt = RKVPSS_MI_CHN_WR_42XSP,
+		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV420,
+	}, {
+		.fourcc = V4L2_PIX_FMT_GREY,
+		.fmt_type = FMT_YUV,
+		.bpp = { 8 },
+		.cplanes = 1,
+		.mplanes = 1,
+		.swap = 0,
+		.wr_fmt = RKVPSS_MI_CHN_WR_42XSP,
+		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV400,
+	}, {
+		.fourcc = V4L2_PIX_FMT_UYVY,
+		.fmt_type = FMT_YUV,
+		.bpp = { 16 },
+		.cplanes = 1,
+		.mplanes = 1,
+		.swap = 0,
+		.wr_fmt = RKVPSS_MI_CHN_WR_422P,
+		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV422,
+	}, {
+		.fourcc = V4L2_PIX_FMT_NV61,
+		.fmt_type = FMT_YUV,
+		.bpp = { 8, 16 },
+		.cplanes = 2,
+		.mplanes = 1,
+		.swap = 0,
+		.wr_fmt = RKVPSS_MI_CHN_WR_42XSP,
+		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV422,
+	}, {
+		.fourcc = V4L2_PIX_FMT_NV21,
+		.fmt_type = FMT_YUV,
+		.bpp = { 8, 16 },
+		.cplanes = 2,
+		.mplanes = 1,
+		.swap = 0,
+		.wr_fmt = RKVPSS_MI_CHN_WR_42XSP,
+		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV420,
+	}, {
+		.fourcc = V4L2_PIX_FMT_VYUY,
+		.fmt_type = FMT_YUV,
+		.bpp = { 16 },
+		.cplanes = 1,
+		.mplanes = 1,
+		.swap = 0,
+		.wr_fmt = RKVPSS_MI_CHN_WR_422P,
+		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV422,
+	}
+};
+
+
 static struct stream_config scl0_config = {
-	.fmts = scl_fmts,
-	.fmt_size = ARRAY_SIZE(scl_fmts),
+	.fmts = scl0_fmts,
+	.fmt_size = ARRAY_SIZE(scl0_fmts),
 	.frame_end_id = RKVPSS_MI_CHN0_FRM_END,
 	.crop = {
 		.ctrl = RKVPSS_CROP1_CTRL,
@@ -319,8 +423,8 @@ static struct stream_config scl1_config = {
 };
 
 static struct stream_config scl2_config = {
-	.fmts = scl_fmts,
-	.fmt_size = ARRAY_SIZE(scl_fmts),
+	.fmts = scl2_3_fmts,
+	.fmt_size = ARRAY_SIZE(scl2_3_fmts),
 	.frame_end_id = RKVPSS_MI_CHN2_FRM_END,
 	.crop = {
 		.ctrl = RKVPSS_CROP1_CTRL,
@@ -389,8 +493,8 @@ static struct stream_config scl2_config = {
 };
 
 static struct stream_config scl3_config = {
-	.fmts = scl_fmts,
-	.fmt_size = ARRAY_SIZE(scl_fmts),
+	.fmts = scl2_3_fmts,
+	.fmt_size = ARRAY_SIZE(scl2_3_fmts),
 	.frame_end_id = RKVPSS_MI_CHN3_FRM_END,
 	.crop = {
 		.ctrl = RKVPSS_CROP1_CTRL,
@@ -689,6 +793,15 @@ static void scl_config_mi(struct rkvpss_stream *stream)
 		mask = RKVPSS_MI_WR_UV_SWAP;
 		val = RKVPSS_MI_WR_UV_SWAP;
 		rkvpss_hw_set_bits(dev->hw_dev, RKVPSS_MI_WR_CTRL, mask, val);
+		break;
+	case V4L2_PIX_FMT_TILE420:
+	case V4L2_PIX_FMT_TILE422:
+		mask = RKVPSS_MI_WR_TILE_SEL(3);
+		val = RKVPSS_MI_WR_TILE_SEL(stream->id + 1);
+		rkvpss_hw_set_bits(dev->hw_dev, RKVPSS_MI_WR_CTRL, mask, val);
+		break;
+	default:
+		break;
 	}
 
 	stream->is_mf_upd = true;
@@ -779,8 +892,9 @@ static void rkvpss_buf_done_task(unsigned long arg)
 		buf = list_first_entry(&local_list, struct rkvpss_buffer, queue);
 		list_del(&buf->queue);
 		v4l2_dbg(2, rkvpss_debug, &stream->dev->v4l2_dev,
-			 "%s id:%d seq:%d buf:0x%x done\n",
-			 node->vdev.name, stream->id, buf->vb.sequence, buf->dma[0]);
+			 "%s stream:%d index:%d seq:%d buf:0x%x done\n",
+			 node->vdev.name, stream->id, buf->vb.vb2_buf.index,
+			 buf->vb.sequence, buf->dma[0]);
 		vb2_buffer_done(&buf->vb.vb2_buf,
 				stream->streaming ? VB2_BUF_STATE_DONE : VB2_BUF_STATE_ERROR);
 	}
@@ -793,6 +907,9 @@ static void rkvpss_stream_buf_done(struct rkvpss_stream *stream,
 
 	if (!stream || !buf)
 		return;
+
+	v4l2_dbg(3, rkvpss_debug, &stream->dev->v4l2_dev,
+		 "stream:%d\n", stream->id);
 
 	spin_lock_irqsave(&stream->vbq_lock, lock_flags);
 	list_add_tail(&buf->queue, &stream->buf_done_list);
@@ -807,6 +924,8 @@ static void rkvpss_frame_end(struct rkvpss_stream *stream)
 	struct rkvpss_buffer *buf = NULL;
 	unsigned long lock_flags = 0;
 
+	v4l2_dbg(3, rkvpss_debug, &dev->v4l2_dev,
+		 "stream:%d\n", stream->id);
 	spin_lock_irqsave(&stream->vbq_lock, lock_flags);
 	if (stream->curr_buf) {
 		buf = stream->curr_buf;
@@ -906,8 +1025,8 @@ static void rkvpss_buf_queue(struct vb2_buffer *vb)
 	}
 
 	v4l2_dbg(2, rkvpss_debug, &dev->v4l2_dev,
-		 "%s stream:%d buf:0x%x\n", __func__,
-		 stream->id, vpssbuf->dma[0]);
+		 "%s stream:%d index:%d buf:0x%x\n", __func__,
+		 stream->id, vb->index, vpssbuf->dma[0]);
 
 	spin_lock_irqsave(&stream->vbq_lock, lock_flags);
 	list_add_tail(&vpssbuf->queue, &stream->buf_queue);
@@ -1049,6 +1168,13 @@ static void poly_phase_scale(struct rkvpss_stream *stream, bool on, bool sync)
 		}
 		return;
 	}
+
+	/*config scl clk gate*/
+	if (in_w == out_w && in_h == out_h)
+		rkvpss_unite_clear_bits(dev, RKVPSS_VPSS_CLK_GATE, RKVPSS_SCL0_CKG_DIS);
+	else
+		rkvpss_unite_set_bits(dev, RKVPSS_VPSS_CLK_GATE, RKVPSS_SCL0_CKG_DIS,
+				      RKVPSS_SCL0_CKG_DIS);
 
 	/* TODO diff for input and output format */
 	if (yuv420_in) {
@@ -1275,7 +1401,7 @@ static void bilinear_scale(struct rkvpss_stream *stream, bool on, bool sync)
 	u32 in_w = stream->crop.width;
 	u32 in_h = stream->crop.height;
 	u32 in_div, out_div;
-	u32 reg, val, ctrl = 0;
+	u32 reg, val, ctrl = 0, clk_mask = 0;
 	bool yuv420_in = false, yuv422_to_420 = false;
 
 	if (!on) {
@@ -1283,6 +1409,25 @@ static void bilinear_scale(struct rkvpss_stream *stream, bool on, bool sync)
 		rkvpss_unite_write(dev, reg, 0);
 		return;
 	}
+
+	/*config scl clk gate*/
+	switch (stream->id) {
+	case RKVPSS_OUTPUT_CH1:
+		clk_mask = RKVPSS_SCL1_CKG_DIS;
+		break;
+	case RKVPSS_OUTPUT_CH2:
+		clk_mask = RKVPSS_SCL2_CKG_DIS;
+		break;
+	case RKVPSS_OUTPUT_CH3:
+		clk_mask = RKVPSS_SCL3_CKG_DIS;
+		break;
+	default:
+		return;
+	}
+	if (in_w == out_w && in_h == out_h)
+		rkvpss_unite_clear_bits(dev, RKVPSS_SCL0_CKG_DIS, clk_mask);
+	else
+		rkvpss_unite_set_bits(dev, RKVPSS_SCL0_CKG_DIS, clk_mask, clk_mask);
 
 	if (!dev->unite_mode) {
 		/* TODO diff for input and output format */
@@ -1743,6 +1888,28 @@ static int rkvpss_set_fmt(struct rkvpss_stream *stream,
 		return -EINVAL;
 	}
 
+	/* Tile4x4 writing of Channel0 and Channel1 only supports either one.*/
+	if (fmt->fourcc == V4L2_PIX_FMT_TILE420 || fmt->fourcc == V4L2_PIX_FMT_TILE422) {
+		if (stream->id == 0) {
+			if (dev->stream_vdev.stream[1].streaming &&
+			    (dev->stream_vdev.stream[1].out_cap_fmt.fourcc == V4L2_PIX_FMT_TILE420 ||
+			     dev->stream_vdev.stream[1].out_cap_fmt.fourcc == V4L2_PIX_FMT_TILE422)) {
+				v4l2_err(&dev->v4l2_dev,
+					 "Tile4x4 writing of Ch0 and Cl1 only supports either one\n");
+				return -EINVAL;
+			}
+		}
+		if (stream->id == 1) {
+			if (dev->stream_vdev.stream[0].streaming &&
+			    (dev->stream_vdev.stream[0].out_cap_fmt.fourcc == V4L2_PIX_FMT_TILE420 ||
+			     dev->stream_vdev.stream[0].out_cap_fmt.fourcc == V4L2_PIX_FMT_TILE422)) {
+				v4l2_err(&dev->v4l2_dev,
+					 "Tile4x4 writing of Ch0 and Cl1 only supports either one\n");
+				return -EINVAL;
+			}
+		}
+	}
+
 	pixm->num_planes = fmt->mplanes;
 	pixm->field = V4L2_FIELD_NONE;
 	if (!pixm->quantization)
@@ -1758,10 +1925,20 @@ static int rkvpss_set_fmt(struct rkvpss_stream *stream,
 		h = pixm->height;
 		width = i ? w / xsubs : w;
 		height = i ? h / ysubs : h;
-		bytesperline = width * DIV_ROUND_UP(fmt->bpp[i], 8);
+
+		if (fmt->fourcc == V4L2_PIX_FMT_TILE420 || fmt->fourcc == V4L2_PIX_FMT_TILE422)
+			bytesperline = ALIGN(((width / 4) * fmt->bpp[i]), 16);
+		else
+			bytesperline = width * DIV_ROUND_UP(fmt->bpp[i], 8);
+
 		if (i != 0 || plane_fmt->bytesperline < bytesperline)
 			plane_fmt->bytesperline = bytesperline;
-		plane_fmt->sizeimage = plane_fmt->bytesperline * height;
+
+		if (fmt->fourcc == V4L2_PIX_FMT_TILE420 || fmt->fourcc == V4L2_PIX_FMT_TILE422)
+			plane_fmt->sizeimage = plane_fmt->bytesperline * (height / 4);
+		else
+			plane_fmt->sizeimage = plane_fmt->bytesperline * height;
+
 		imagsize += plane_fmt->sizeimage;
 	}
 	if (fmt->mplanes == 1)
@@ -1853,6 +2030,21 @@ static int rkvpss_enum_fmt_vid_mplane(struct file *file, void *priv,
 
 	fmt = &stream->config->fmts[f->index];
 	f->pixelformat = fmt->fourcc;
+
+	switch (f->pixelformat) {
+	case V4L2_PIX_FMT_TILE420:
+		strscpy(f->description,
+			"Rockchip yuv420 tile",
+			sizeof(f->description));
+		break;
+	case V4L2_PIX_FMT_TILE422:
+		strscpy(f->description,
+			"Rockchip yuv422 tile",
+			sizeof(f->description));
+		break;
+	default:
+		break;
+	}
 
 	return 0;
 }
@@ -1966,6 +2158,10 @@ static void rkvpss_stream_mf(struct rkvpss_stream *stream)
 		rkvpss_unite_set_bits(dev, RKVPSS_VPSS_CTRL, mask, val);
 	}
 	mask = RKVPSS_MI_CHN_V_FLIP(stream->id);
+	/* Tile4x4 writing can't flip*/
+	if (stream->out_cap_fmt.fourcc == V4L2_PIX_FMT_TILE420 ||
+	    stream->out_cap_fmt.fourcc == V4L2_PIX_FMT_TILE422)
+		stream->flip_en = false;
 	val = stream->flip_en ? mask : 0;
 	rkvpss_unite_set_bits(dev, RKVPSS_MI_WR_VFLIP_CTRL, mask, val);
 }

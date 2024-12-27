@@ -3,6 +3,8 @@
  * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
  */
 
+#include <linux/slab.h>
+#include <linux/version.h>
 #include "ebc_dma_buf.h"
 
 struct ebc_dmabuf {
@@ -54,6 +56,7 @@ static void ebc_unmap_dma_buf(struct dma_buf_attachment *attachment, struct sg_t
 	kfree(st);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)
 static int ebc_dmabuf_vmap(struct dma_buf *dma_buf, struct iosys_map *map)
 {
 	struct ebc_dmabuf *ebcbuf = to_ebc_dmabuf(dma_buf);
@@ -66,12 +69,29 @@ static int ebc_dmabuf_vmap(struct dma_buf *dma_buf, struct iosys_map *map)
 
 	return 0;
 }
+#else
+static void *ebc_dmabuf_vmap(struct dma_buf *dma_buf)
+{
+	struct ebc_dmabuf *ebcbuf = to_ebc_dmabuf(dma_buf);
 
+	return vm_map_ram(ebcbuf->pages, ebcbuf->npages, 0, PAGE_KERNEL);
+}
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)
 static void ebc_dmabuf_vunmap(struct dma_buf *dma_buf, struct iosys_map *map)
 {
 	vunmap(map->vaddr);
 	iosys_map_clear(map);
 }
+#else
+static void ebc_dmabuf_vunmap(struct dma_buf *dma_buf, void *vaddr)
+{
+	struct ebc_dmabuf *ebcbuf = to_ebc_dmabuf(dma_buf);
+
+	vm_unmap_ram(vaddr, ebcbuf->npages);
+}
+#endif
 
 static int ebc_dmabuf_mmap(struct dma_buf *dma_buf, struct vm_area_struct *vma)
 {
@@ -81,8 +101,11 @@ static int ebc_dmabuf_mmap(struct dma_buf *dma_buf, struct vm_area_struct *vma)
 
 	pfn = ((unsigned long)(ebcbuf->phy_addr) >> PAGE_SHIFT);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)
 	vm_flags_set(vma, VM_IO | VM_DONTEXPAND | VM_DONTDUMP);
-
+#else
+	vma->vm_flags |= VM_IO | VM_DONTEXPAND | VM_DONTDUMP;
+#endif
 	ret = remap_pfn_range(vma, vma->vm_start, pfn, vma->vm_end - vma->vm_start,
 			      vma->vm_page_prot);
 	if (ret)

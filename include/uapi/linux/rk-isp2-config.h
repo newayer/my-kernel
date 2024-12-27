@@ -12,7 +12,7 @@
 #include <linux/v4l2-controls.h>
 #include <linux/rk-camera-module.h>
 
-#define RKISP_API_VERSION		KERNEL_VERSION(2, 6, 0)
+#define RKISP_API_VERSION		KERNEL_VERSION(2, 6, 1)
 
 /****************ISP SUBDEV IOCTL*****************************/
 
@@ -71,6 +71,24 @@
 #define RKISP_CMD_AIISP_RD_START \
 	_IO('V', BASE_VIDIOC_PRIVATE + 18)
 
+/* BASE_VIDIOC_PRIVATE + 19 for RKISP_CMD_GET_TB_HEAD_V33 */
+/* BASE_VIDIOC_PRIVATE + 20 for RKISP_CMD_SET_TB_HEAD_V33 */
+
+#define RKISP_CMD_SET_OFFLINE_RAW_BUFCNT \
+	_IOW('V', BASE_VIDIOC_PRIVATE + 21, int)
+
+#define RKISP_CMD_GET_OFFLINE_RAW_BUFCNT \
+	_IOR('V', BASE_VIDIOC_PRIVATE + 22, int)
+
+#define RKISP_CMD_SET_ONLINE_HDR_WRAP_LINE \
+	_IOW('V', BASE_VIDIOC_PRIVATE + 23, int)
+
+#define RKISP_CMD_GET_ONLINE_HDR_WRAP_LINE \
+	_IOR('V', BASE_VIDIOC_PRIVATE + 24, int)
+
+#define RKISP_CMD_SET_FPN \
+	_IOW('V', BASE_VIDIOC_PRIVATE + 25, struct rkisp_fpn_cfg)
+
 /****************ISP VIDEO IOCTL******************************/
 
 #define RKISP_CMD_GET_CSI_MEMORY_MODE \
@@ -117,6 +135,10 @@
 
 #define RKISP_CMD_SET_EXPANDER \
 	_IOW('V', BASE_VIDIOC_PRIVATE + 114, struct rkmodule_hdr_cfg)
+
+/* BASE_VIDIOC_PRIVATE + 115 for RKISP_CMD_GET_PARAMS_V39 */
+/* BASE_VIDIOC_PRIVATE + 116 for RKISP_CMD_GET_PARAMS_V33 */
+/* BASE_VIDIOC_PRIVATE + 117 for RKISP_CMD_SET_QUICK_STREAM */
 
 /**********************EVENT_PRIVATE***************************/
 #define RKISP_V4L2_EVENT_AIISP_LINECNT (V4L2_EVENT_PRIVATE_START + 1)
@@ -337,6 +359,29 @@ struct isp2x_mesh_head {
 	__u32 data_oft;
 } __attribute__ ((packed));
 
+enum {
+	RKISP_FPN_DATA_SHIFT_0 = 0,
+	RKISP_FPN_DATA_SHIFT_1,
+	RKISP_FPN_DATA_SHIFT_2,
+	RKISP_FPN_DATA_SHIFT_3,
+};
+
+/* struct rkisp_aiisp_cfg
+ * en: enable fpn function
+ * row_en: row fpn mode other column fpn
+ * data_shift: fpn data shift, 4bits of 7bits calculate fpn data
+ * buf_size: buf size: row_en ? height : width
+ * buf: fpn data, two row or two column fpn data, 4bit one fpn data
+ */
+struct rkisp_fpn_cfg {
+	char en;
+	char row_en;
+	char data_shift;
+	char reserved;
+	int buf_size;
+	void *buf;
+} __attribute__ ((packed));
+
 #define RKISP_AIISP_WR_LINECNT_ID	0
 #define RKISP_AIISP_RD_LINECNT_ID	1
 struct rkisp_aiisp_ev_info {
@@ -373,6 +418,12 @@ struct rkisp_bay3dbuf_info {
 			int ds_size;
 		} v32;
 		struct {
+			int ds_fd;
+			int ds_size;
+			int gain_fd;
+			int gain_size;
+		} v33;
+		struct {
 			int gain_fd;
 			int gain_size;
 			int aiisp_fd;
@@ -391,7 +442,7 @@ struct rkisp_bay3dbuf_info {
  * RKISP_CMSK_WIN_MAX_V30 for rk3588 support 8 windows, and
  * support for mainpath and selfpath output stream channel.
  *
- * RKISP_CMSK_WIN_MAX for rv1106 support 12 windows, and
+ * RKISP_CMSK_WIN_MAX for rv1106/rv1103b support 12 windows, and
  * support for mainpath selfpath and bypasspath output stream channel.
  *
  * mode: 0:mosaic mode, 1:cover mode
@@ -2038,6 +2089,8 @@ enum {
 	RKISP_RTT_MODE_ONE_FRAME,
 };
 
+#define MAX_PRE_BUF_NUM (4)
+
 /**
  * struct rkisp_thunderboot_resmem_head
  */
@@ -2058,8 +2111,12 @@ struct rkisp_thunderboot_resmem_head {
 	__u32 exp_time_reg[3];
 	__u32 exp_gain_reg[3];
 	__u32 exp_isp_dgain[3];
+	__u32 dcg_mode[3];
 	__u32 nr_buf_size;
 	__u32 share_mem_size;
+	__u32 pre_buf_num;
+	__u32 pre_buf_addr[MAX_PRE_BUF_NUM];
+	__u32 pre_buf_timestamp[MAX_PRE_BUF_NUM];
 } __attribute__ ((packed));
 
 /**

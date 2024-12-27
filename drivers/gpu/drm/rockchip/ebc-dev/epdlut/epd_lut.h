@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2020 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2020 Rockchip Electronics Co., Ltd.
  *
  * Author: Zorro Liu <zorro.liu@rock-chips.com>
  */
@@ -27,6 +27,8 @@ enum epd_lut_type {
 	WF_TYPE_AUTO,	// like GC16, rk define
 	WF_TYPE_RK_GLR16, // for part regal mode
 	WF_TYPE_RK_GLD16, // for part regal mode
+	WF_TYPE_RK_GL16, // for part gl16 mode
+	WF_TYPE_RK_GC16, // for part gc16 mode
 	WF_TYPE_MAX,
 	WF_TYPE_GRAY16,
 };

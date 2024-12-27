@@ -420,7 +420,7 @@ static void rockchip_dp_drm_encoder_enable(struct drm_encoder *encoder,
 		DRM_DEV_DEBUG(dp->dev, "%s output to edp\n", name);
 	}
 
-	ret = rockchip_grf_field_write(dp->grf, &dp->data->lcdc_sel, ret);
+	ret = rockchip_grf_field_write(dp->grf, &dp->data->lcdc_sel, endpoint.id);
 	if (ret != 0)
 		DRM_DEV_ERROR(dp->dev, "Could not write to GRF reg lcdc_sel: %d\n", ret);
 }
@@ -430,10 +430,23 @@ static void rockchip_dp_drm_encoder_disable(struct drm_encoder *encoder,
 {
 	struct rockchip_dp_device *dp = encoder_to_dp(encoder);
 	struct drm_crtc *crtc;
-	struct drm_crtc *old_crtc = encoder->crtc;
+	struct drm_crtc *old_crtc;
 	struct drm_crtc_state *new_crtc_state = NULL;
-	struct rockchip_crtc_state *s = to_rockchip_crtc_state(old_crtc->state);
+	struct drm_connector *conn;
+	struct drm_connector_state *old_conn_state;
+	struct rockchip_crtc_state *s;
 	int ret;
+
+	conn = drm_atomic_get_old_connector_for_encoder(state, encoder);
+	if (!conn)
+		return;
+	old_conn_state = drm_atomic_get_old_connector_state(state, conn);
+	if (!old_conn_state)
+		return;
+	if (!old_conn_state->crtc)
+		return;
+	old_crtc = old_conn_state->crtc;
+	s = to_rockchip_crtc_state(old_crtc->state);
 
 	if (old_crtc->state->active_changed) {
 		if (dp->plat_data.split_mode)
@@ -501,7 +514,8 @@ rockchip_dp_drm_encoder_atomic_check(struct drm_encoder *encoder,
 	s->output_type = DRM_MODE_CONNECTOR_eDP;
 	if (dp->plat_data.split_mode) {
 		s->output_flags |= ROCKCHIP_OUTPUT_DUAL_CHANNEL_LEFT_RIGHT_MODE;
-		s->output_flags |= dp->id ? ROCKCHIP_OUTPUT_DATA_SWAP : 0;
+		if (dp->id || dp->plat_data.dual_channel_swap)
+			s->output_flags |= ROCKCHIP_OUTPUT_DATA_SWAP;
 		s->output_if |= VOP_OUTPUT_IF_eDP0 | VOP_OUTPUT_IF_eDP1;
 		s->output_if_left_panel |= dp->id ? VOP_OUTPUT_IF_eDP1 : VOP_OUTPUT_IF_eDP0;
 	} else if (dp->plat_data.dual_connector_split) {
@@ -770,6 +784,8 @@ static int rockchip_dp_probe(struct platform_device *pdev)
 		dp->plat_data.dual_channel_mode =
 			device_property_read_bool(dev, "dual-channel") ||
 			device_property_read_bool(dev, "rockchip,dual-channel");
+		dp->plat_data.dual_channel_swap =
+			device_property_read_bool(dev, "rockchip,data-swap");
 		secondary->plat_data.panel = dp->plat_data.panel;
 		secondary->plat_data.left = dp->adp;
 		secondary->plat_data.split_mode = true;

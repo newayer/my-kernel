@@ -207,6 +207,10 @@ static irqreturn_t husb311_irq(int irq, void *dev_id)
 		}
 	}
 
+	/* TCPCI Spec. Table 4-27 ResetTransmitBuffer */
+	if (status & (TCPC_ALERT_TX_SUCCESS | TCPC_ALERT_TX_DISCARDED | TCPC_ALERT_TX_FAILED))
+		husb311_write8(chip, TCPC_COMMAND, 0xdd);
+
 	return tcpci_irq(chip->tcpci);
 }
 
@@ -320,7 +324,6 @@ static void husb311_shutdown(struct i2c_client *client)
 
 	disable_irq(client->irq);
 	cancel_delayed_work_sync(&chip->pm_work);
-	tcpci_unregister_port(chip->tcpci);
 }
 
 static int husb311_pm_suspend(struct device *dev)
