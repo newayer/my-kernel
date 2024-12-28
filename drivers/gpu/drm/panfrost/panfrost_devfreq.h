@@ -8,6 +8,10 @@
 #include <linux/spinlock.h>
 #include <linux/ktime.h>
 
+#ifdef CONFIG_ROCKCHIP_OPP
+#include <soc/rockchip/rockchip_opp_select.h>
+#endif
+
 struct devfreq;
 struct thermal_cooling_device;
 
@@ -28,6 +32,10 @@ struct panfrost_devfreq {
 	 * because these can be updated concurrently between multiple jobs.
 	 */
 	spinlock_t lock;
+
+#ifdef CONFIG_ROCKCHIP_OPP
+	struct rockchip_opp_info opp_info;
+#endif
 };
 
 int panfrost_devfreq_init(struct panfrost_device *pfdev);

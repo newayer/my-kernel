@@ -141,6 +141,13 @@ int panfrost_devfreq_init(struct panfrost_device *pfdev)
 		}
 	}
 
+#ifdef CONFIG_ROCKCHIP_OPP
+	ret = rockchip_init_opp_table(dev, &pfdevfreq->opp_info, "clk_mali", "mali");
+	if (ret) {
+		DRM_DEV_ERROR(dev, "Cannot init rockchip opp table (%d).", ret);
+		return ret;
+	}
+#else
 	ret = devm_pm_opp_of_add_table(dev);
 	if (ret) {
 		/* Optional, continue without devfreq */
@@ -148,6 +155,8 @@ int panfrost_devfreq_init(struct panfrost_device *pfdev)
 			ret = 0;
 		return ret;
 	}
+#endif
+
 	pfdevfreq->opp_of_table_added = true;
 
 	spin_lock_init(&pfdevfreq->lock);
@@ -207,6 +216,10 @@ void panfrost_devfreq_fini(struct panfrost_device *pfdev)
 		devfreq_cooling_unregister(pfdevfreq->cooling);
 		pfdevfreq->cooling = NULL;
 	}
+
+#ifdef CONFIG_ROCKCHIP_OPP
+    rockchip_uninit_opp_table(&pfdev->pdev->dev, &pfdevfreq->opp_info);
+#endif
 }
 
 void panfrost_devfreq_resume(struct panfrost_device *pfdev)
