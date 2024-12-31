@@ -439,6 +439,7 @@
 	reset-gpios = <&gpio4 RK_PA2 GPIO_ACTIVE_HIGH>;
 	rockchip,init-delay-ms = <500>;
 	rockchip,skip-hw-retry;
+	rockchip,wait-for-link-ms = <1000>;
 	vpcie3v3-supply = <&vdd_mpcie_3v3>;
 	status = "okay";
 };

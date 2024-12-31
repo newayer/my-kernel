@@ -30,6 +30,7 @@
 
 &pcie2x1l2 {
 	rockchip,skip-hw-retry;
+	rockchip,wait-for-link-ms = <1000>;
 	/delete-node/ pcie@40;
 };
 

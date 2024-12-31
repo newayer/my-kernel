@@ -142,6 +142,7 @@
 
 &pcie2x1l1 {
 	rockchip,skip-hw-retry;
+	rockchip,wait-for-link-ms = <1000>;
 };
 
 &pcie2x1l2 {
@@ -150,6 +151,7 @@
 	prsnt-gpios = <&gpio4 RK_PA5 GPIO_ACTIVE_HIGH>;
 	phys = <&combphy0_ps PHY_TYPE_PCIE 0>;
 	rockchip,skip-hw-retry;
+	rockchip,wait-for-link-ms = <1000>;
 	vpcie3v3-supply = <&vcc3v3_pcie_m2>;
 	status = "okay";
 };
