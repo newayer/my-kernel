@@ -147,6 +147,7 @@ struct rk_pcie {
 	bool				finish_probe;
 	bool				keep_power_in_suspend;
 	bool				skip_hw_retry;
+	int				probe_err;
 	struct regulator		*vpcie3v3;
 	struct irq_domain		*irq_domain;
 	raw_spinlock_t			intx_lock;
@@ -702,13 +703,18 @@ static int rk_pcie_resource_get(struct platform_device *pdev,
 				     &rk_pcie->s2r_perst_inactive_ms))
 		rk_pcie->s2r_perst_inactive_ms = rk_pcie->perst_inactive_ms;
 
+	rk_pcie->wait_for_link_ms = 2000;
 	device_property_read_u32(&pdev->dev, "rockchip,wait-for-link-ms",
 				     &rk_pcie->wait_for_link_ms);
-	rk_pcie->wait_for_link_ms = max_t(u32, rk_pcie->wait_for_link_ms, 2000);
+	rk_pcie->wait_for_link_ms = max_t(u32, rk_pcie->wait_for_link_ms, 1000);
 
 	rk_pcie->prsnt_gpio = devm_gpiod_get_optional(&pdev->dev, "prsnt", GPIOD_IN);
-	if (IS_ERR_OR_NULL(rk_pcie->prsnt_gpio))
+	if (IS_ERR_OR_NULL(rk_pcie->prsnt_gpio)) {
 		dev_info(&pdev->dev, "invalid prsnt-gpios property in node\n");
+	} else if (!gpiod_get_value(rk_pcie->prsnt_gpio)) {
+		dev_info(&pdev->dev, "device isn't present\n");
+		return -ENODEV;
+	}
 
 	rk_pcie->clk_cnt = devm_clk_bulk_get_all(&pdev->dev, &rk_pcie->clks);
 	if (rk_pcie->clk_cnt < 1)
@@ -1471,13 +1477,6 @@ static int rk_pcie_hardware_io_config(struct rk_pcie *rk_pcie)
 	struct device *dev = pci->dev;
 	int ret;
 
-	if (!IS_ERR_OR_NULL(rk_pcie->prsnt_gpio)) {
-		if (!gpiod_get_value(rk_pcie->prsnt_gpio)) {
-			dev_info(dev, "device isn't present\n");
-			return -ENODEV;
-		}
-	}
-
 	if (rk_pcie_check_keep_power_in_suspend(rk_pcie)) {
 		ret = rk_pcie_enable_power(rk_pcie);
 		if (ret)
@@ -1728,8 +1727,10 @@ unconfig_hardware_io:
 	pm_runtime_disable(dev);
 	rk_pcie_hardware_io_unconfig(rk_pcie);
 release_driver:
-	if (rk_pcie)
+	if (rk_pcie) {
 		rk_pcie->finish_probe = true;
+		rk_pcie->probe_err = ret;
+	}
 	if (IS_ENABLED(CONFIG_PCIE_RK_THREADED_INIT))
 		device_release_driver(dev);
 
@@ -1758,6 +1759,10 @@ static int rk_pcie_remove(struct platform_device *pdev)
 	unsigned long timeout = msecs_to_jiffies(10000), start = jiffies;
 
 	if (IS_ENABLED(CONFIG_PCIE_RK_THREADED_INIT)) {
+		/* rk_pcie_really_probe probe finished with error */
+		if (rk_pcie && rk_pcie->probe_err < 0)
+			return 0;
+
 		/* rk_pcie_really_probe hasn't been called yet, trying to get drvdata */
 		while (!rk_pcie && time_before(start, start + timeout)) {
 			set_current_state(TASK_INTERRUPTIBLE);
@@ -1814,6 +1819,8 @@ static void rk_pcie_shutdown(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct rk_pcie *rk_pcie = dev_get_drvdata(dev);
+
+	if (!rk_pcie) return;
 
 	dev_dbg(rk_pcie->pci->dev, "shutdown...\n");
 	rk_pcie_disable_ltssm(rk_pcie);
