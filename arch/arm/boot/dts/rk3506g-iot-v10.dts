@@ -58,7 +58,11 @@
 	status = "okay";
 };
 
-
+&uart4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io30_uart4_rx &rm_io31_uart4_tx>;
+	status = "okay";
+};
 
 
 
