@@ -75,8 +75,17 @@
 /**********SPI**********/
 &spi0 {
 	status = "okay";
-	spidev@0 {
-		spi-max-frequency = <50000000>;
+	proslic_spi4: spidev@0 {
+		compatible = "silabs,proslic_spi";
+		status = "okay";
+		spi-max-frequency = <9600000>;
+		reg = <0>;
+		spi-cpha = <1>;
+		spi-cpol = <1>;
+		channel_count = <1>;
+		reset_gpio = <40>; /* A2S-RST-L G1-B0 */
+		int_gpio = <33>; /* S2A-INT-L G1-A1 */
+		debug_level = <4>;
 	};
 };
 
