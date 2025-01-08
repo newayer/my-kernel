@@ -1390,7 +1390,7 @@ static void rockchip_init_pvtpll_table(struct device *dev,
 
 	res = sip_smc_get_pvtpll_info(PVTPLL_GET_INFO, info->pvtpll_clk_id);
 	if (res.a0) {
-		info->pvtpll_clk_id = UINT_MAX;
+		info->pvtpll_smc = false;
 		goto out;
 	}
 	if (!res.a1)
@@ -1698,6 +1698,7 @@ int rockchip_init_opp_info(struct device *dev, struct rockchip_opp_info *info,
 	info->process = -EINVAL;
 	info->volt_sel = -EINVAL;
 	info->pvtpll_clk_id = UINT_MAX;
+	info->pvtpll_smc = true;
 	info->is_runtime_active = true;
 	mutex_init(&info->dvfs_mutex);
 
@@ -1715,8 +1716,11 @@ int rockchip_init_opp_info(struct device *dev, struct rockchip_opp_info *info,
 	}
 
 	info->pvtpll_base = syscon_regmap_lookup_by_phandle(np, "rockchip,pvtpll");
-	if (IS_ERR(info->pvtpll_base))
+	if (IS_ERR_OR_NULL(info->pvtpll_base)) {
 		info->pvtpll_base = info->grf;
+		info->pvtpll_smc = false;
+		dev_info(dev, "no pvtpll\n");
+	}
 
 	ret = rockchip_get_opp_clk(dev, np, info);
 	if (ret)
@@ -2068,6 +2072,9 @@ static int rockchip_pvtpll_set_volt_sel(struct device *dev,
 	if (info->volt_sel < 0)
 		return 0;
 	if (info->pvtpll_clk_id == UINT_MAX)
+		return 0;
+
+	if (!info->pvtpll_smc)
 		return 0;
 
 	res = sip_smc_pvtpll_config(PVTPLL_VOLT_SEL, info->pvtpll_clk_id,
