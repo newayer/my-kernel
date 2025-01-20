@@ -1233,6 +1233,7 @@ err_free_old_state:
 err_free_state:
 	drm_atomic_state_put(state);
 err_unlock:
+	rockchip_free_loader_memory(drm_dev);
 	drm_modeset_unlock_all(drm_dev);
 	if (ret)
 		dev_err(drm_dev->dev, "failed to show kernel logo\n");
