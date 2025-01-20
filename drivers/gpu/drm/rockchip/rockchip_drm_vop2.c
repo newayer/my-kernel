@@ -5123,12 +5123,12 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
 				     struct drm_atomic_state *state)
 {
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
-	struct drm_crtc_state *old_cstate = drm_atomic_get_old_crtc_state(state, crtc);
+	struct drm_crtc_state *old_cstate = state ?
+		drm_atomic_get_old_crtc_state(state, crtc) : NULL;
 	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc->state);
 	struct vop2 *vop2 = vp->vop2;
 	const struct vop2_video_port_data *vp_data = &vop2->data->vp[vp->id];
 	struct vop2_video_port *splice_vp = &vop2->vps[vp_data->splice_vp_id];
-	struct drm_display_mode *disabled_mode = &old_cstate->adjusted_mode;
 	bool dual_channel = !!(vcstate->output_flags & ROCKCHIP_OUTPUT_DUAL_CHANNEL_LEFT_RIGHT_MODE);
 	int ret;
 
@@ -5284,6 +5284,8 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
 	if (hweight8(vop2->active_vp_mask) == 0) {
 		vop2_devfreq_set_aclk(crtc, ROCKCHIP_VOP_ACLK_NORMAL_MODE);
 	} else if (hweight8(vop2->active_vp_mask) == 1) {
+		struct drm_display_mode *disabled_mode = old_cstate ?
+			&old_cstate->adjusted_mode : NULL;
 		if (disabled_mode && disabled_mode->crtc_clock > 1000000) {
 			vop2_devfreq_set_aclk(crtc, ROCKCHIP_VOP_ACLK_NORMAL_MODE);
 		}
