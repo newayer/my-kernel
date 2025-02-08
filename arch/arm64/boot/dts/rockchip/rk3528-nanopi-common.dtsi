@@ -461,7 +461,7 @@
 	remote_pwm_id = <3>;
 	handle_cpu_id = <1>;
 	remote_support_psci = <0>;
-	status = "okay";
+	status = "disabled";
 };
 
 &rga2 {
