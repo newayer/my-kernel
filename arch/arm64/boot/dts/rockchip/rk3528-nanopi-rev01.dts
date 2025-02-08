@@ -104,6 +104,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pciem1_pins>;
 	reset-gpios = <&gpio1 RK_PA2 GPIO_ACTIVE_HIGH>;
+	resets = <&cru SRST_RESETN_PCIE_POWER_UP>, <&cru SRST_PRESETN_PCIE>;
+	reset-names = "pcie", "periph";
 	rockchip,skip-scan-in-resume;
 	status = "okay";
 };
@@ -130,6 +132,16 @@
 		interrupts = <RK_PC1 IRQ_TYPE_LEVEL_LOW>;
 		wakeup-source;
 	};
+};
+
+&pciem1_pins {
+	rockchip,pins =
+		/* pcie_clkreqn_m1 */
+		<1 RK_PA0 4 &pcfg_pull_none>,
+		/* pcie_waken_m1 */
+		<1 RK_PA1 4 &pcfg_pull_none>,
+		/* pcie_reset_gpio */
+		<1 RK_PA2 RK_FUNC_GPIO &pcfg_pull_none>;
 };
 
 &pinctrl {
