@@ -309,6 +309,23 @@
 		hdmi0-vp-id = <0>;
 		status = "okay";
 
+		/* 16 - 1920x1080@60Hz 16:9 */
+		hdmi0_timing {
+			clock-frequency = <148500000>;
+			hactive = <1920>;
+			vactive = <1080>;
+			hfront-porch = <88>;
+			hsync-len = <44>;
+			hback-porch = <148>;
+			vfront-porch = <4>;
+			vsync-len = <5>;
+			vback-porch = <36>;
+			hsync-active = <1>;
+			vsync-active = <1>;
+			de-active = <0>;
+			pixelclk-active = <0>;
+		};
+
 		ports {
 			#address-cells = <1>;
 			#size-cells = <0>;
