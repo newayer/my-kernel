@@ -11873,14 +11873,17 @@ static void vop3_get_csc_paramter_from_bcsh(struct rockchip_crtc_state *vcstate,
 	csc_info->r_offset = 256;
 	csc_info->g_offset = 256;
 	csc_info->b_offset = 256;
-	if (vcstate->tv_state->brightness == 50 && vcstate->tv_state->contrast == 50 &&
-	    vcstate->tv_state->saturation == 50 && vcstate->tv_state->hue == 50) {
-		csc_info->csc_enable = false;
-		csc_info->brightness = 256;
-		csc_info->contrast = 256;
-		csc_info->saturation = 256;
-		csc_info->hue = 256;
-	} else {
+
+	csc_info->csc_enable = false;
+	csc_info->brightness = 256;
+	csc_info->contrast = 256;
+	csc_info->saturation = 256;
+	csc_info->hue = 256;
+	if (!vcstate->tv_state)
+		return;
+
+	if (vcstate->tv_state->brightness != 50 || vcstate->tv_state->contrast != 50 ||
+	    vcstate->tv_state->saturation != 50 || vcstate->tv_state->hue != 50) {
 		csc_info->csc_enable = true;
 		csc_info->brightness = vcstate->tv_state->brightness * 511 / 100;
 		csc_info->contrast = vcstate->tv_state->contrast * 511 / 100;
