@@ -7,6 +7,10 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 
+#include <video/display_timing.h>
+#include <video/of_display_timing.h>
+#include <video/videomode.h>
+
 #include "rockchip_drm_drv.h"
 #include "rockchip_drm_vop.h"
 
@@ -25,6 +29,7 @@ struct vconn_device {
 	int if_id;
 	int vp_id_mask;
 	bool connected;
+	const struct drm_display_mode *mode;
 };
 
 struct rockchip_vconn {
@@ -334,7 +339,17 @@ static const struct drm_connector_funcs rockchip_virtual_connector_funcs = {
 
 static int vvop_conn_get_modes(struct drm_connector *connector)
 {
+	struct vconn_device *vconn_dev = to_vconn_device(connector);
+	struct drm_display_mode *mode;
 	int count;
+
+	if (vconn_dev->mode) {
+		mode = drm_mode_duplicate(connector->dev, vconn_dev->mode);
+		if (mode) {
+			drm_mode_probed_add(connector, mode);
+			return 1;
+		}
+	}
 
 	count = vconn_drm_add_modes_noedid(connector);
 	drm_set_preferred_mode(connector, XRES_DEF, YRES_DEF);
@@ -427,6 +442,9 @@ static int rockchip_vconn_device_create(struct rockchip_vconn *vconn,
 {
 	struct device_node *np = vconn->dev->of_node;
 	struct vconn_device *vconn_dev;
+	struct drm_display_mode *dmode;
+	struct display_timing dt;
+	struct videomode vm;
 	char propname[64];
 	int id;
 
@@ -445,6 +463,15 @@ static int rockchip_vconn_device_create(struct rockchip_vconn *vconn,
 		vconn_dev->if_id = if_id;
 		vconn_dev->vp_id_mask = BIT(id);
 		list_add_tail(&vconn_dev->list, &vconn->list_head);
+
+		snprintf(propname, sizeof(propname), "%s_timing", name);
+		dmode = devm_kzalloc(vconn->dev, sizeof(*dmode), GFP_KERNEL);
+		if (dmode && !of_get_display_timing(np, propname, &dt)) {
+			videomode_from_timing(&dt, &vm);
+			drm_display_mode_from_videomode(&vm, dmode);
+			vconn_dev->mode = dmode;
+			dev_warn(vconn->dev, "fixed modeline " DRM_MODE_FMT "\n", DRM_MODE_ARG(dmode));
+		}
 	}
 
 	return 0;
