@@ -1043,12 +1043,19 @@ static int rk3576_combphy_cfg(struct rockchip_combphy_priv *priv)
 		/* Set tx_rterm = 50 ohm and rx_rterm = 43.5 ohm */
 		writel(0x8F, priv->mmio + (0x06 << 2));
 
+		/* Invert RX output data polarity (TBC) */
+		rockchip_combphy_updatel(priv, GENMASK(4, 4), BIT(4), 0x4c);
+
 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con0_for_sata, true);
 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con1_for_sata, true);
 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con2_for_sata, true);
 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con3_for_sata, true);
 		rockchip_combphy_param_write(priv->pipe_grf, &cfg->pipe_con0_for_sata, true);
 		rockchip_combphy_param_write(priv->pipe_grf, &cfg->pipe_con1_for_sata, true);
+
+		if (device_property_read_bool(priv->dev, "rockchip,ebuff-mode"))
+			rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_ebuff_mode, true);
+
 		break;
 	default:
 		dev_err(priv->dev, "incompatible PHY type\n");
@@ -1153,6 +1160,7 @@ static const struct rockchip_combphy_grfcfg rk3576_combphy_grfcfgs = {
 	/* pipe-phy-grf */
 	.pcie_mode_set		= { 0x0000, 5, 0, 0x00, 0x11 },
 	.usb_mode_set		= { 0x0000, 5, 0, 0x00, 0x04 },
+	.pipe_ebuff_mode	= { 0x0000, 10, 10, 0x00, 0x01 },
 	.pipe_rxterm_set	= { 0x0000, 12, 12, 0x00, 0x01 },
 	.pipe_txelec_set	= { 0x0004, 1, 1, 0x00, 0x01 },
 	.pipe_txcomp_set	= { 0x0004, 4, 4, 0x00, 0x01 },
