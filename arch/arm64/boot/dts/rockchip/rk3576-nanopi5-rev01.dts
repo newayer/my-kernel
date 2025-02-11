@@ -1,0 +1,294 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2025 FriendlyElec Computer Tech. Co., Ltd.
+ * (http://www.friendlyelec.com)
+ */
+
+/dts-v1/;
+
+#include "rk3576-nanopi5-common.dtsi"
+
+/ {
+	model = "FriendlyElec NanoPi M5";
+	compatible = "friendlyelec,nanopi-m5", "rockchip,rk3576";
+
+	gpio_keys: gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&key1_pin>;
+
+		button@1 {
+			debounce-interval = <50>;
+			gpios = <&gpio1 RK_PA0 GPIO_ACTIVE_LOW>;
+			label = "K1";
+			linux,code = <BTN_1>;
+			wakeup-source;
+		};
+	};
+
+	gpio_leds: gpio-leds {
+		compatible = "gpio-leds";
+
+		sys_led: led-0 {
+			gpios = <&gpio2 RK_PB3 GPIO_ACTIVE_HIGH>;
+			label = "sys_led";
+			linux,default-trigger = "heartbeat";
+			pinctrl-names = "default";
+			pinctrl-0 = <&sys_led_pin>;
+		};
+
+		lan_led: led-1 {
+			gpios = <&gpio2 RK_PB0 GPIO_ACTIVE_HIGH>;
+			label = "lan_led";
+			pinctrl-names = "default";
+			pinctrl-0 = <&lan_led_pin>;
+		};
+
+		wan_led: led-2 {
+			gpios = <&gpio4 RK_PC5 GPIO_ACTIVE_HIGH>;
+			label = "wan_led";
+			pinctrl-names = "default";
+			pinctrl-0 = <&wan_led_pin>;
+		};
+	};
+
+	rt5616_sound: rt5616-sound {
+		status = "okay";
+		compatible = "simple-audio-card";
+		pinctrl-names = "default";
+		pinctrl-0 = <&hp_det>;
+
+		simple-audio-card,name = "realtek,rt5616-codec";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,mclk-fs = <256>;
+
+		simple-audio-card,hp-det-gpio = <&gpio2 RK_PD6 GPIO_ACTIVE_LOW>;
+		simple-audio-card,hp-pin-name = "Headphone Jack";
+
+		simple-audio-card,widgets =
+			"Headphone", "Headphone Jack",
+			"Microphone", "Microphone Jack";
+		simple-audio-card,routing =
+			"Headphone Jack", "HPOL",
+			"Headphone Jack", "HPOR",
+			"MIC1", "Microphone Jack",
+			"Microphone Jack", "micbias1";
+
+		simple-audio-card,cpu {
+			sound-dai = <&sai2>;
+		};
+		simple-audio-card,codec {
+			sound-dai = <&rt5616>;
+		};
+	};
+};
+
+&mach {
+	hwrev = <0x01>;
+	model = "NanoPi M5";
+};
+
+&i2c5 {
+	status = "okay";
+	clock-frequency = <200000>;
+	pinctrl-0 = <&i2c5m3_xfer>;
+
+	rt5616: rt5616@1b {
+		status = "okay";
+		#sound-dai-cells = <0>;
+		compatible = "rt5616";
+		reg = <0x1b>;
+		clocks = <&mclkout_sai2>;
+		clock-names = "mclk";
+		assigned-clocks = <&mclkout_sai2>;
+		assigned-clock-rates = <12288000>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sai2m0_mclk>;
+	};
+};
+
+&i2c8 {
+	clock-frequency = <200000>;
+	pinctrl-0 = <&i2c8m2_xfer>;
+};
+
+&pinctrl {
+	gpio-key {
+		key1_pin: key1-pin {
+			rockchip,pins = <4 RK_PA2 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+	gpio-leds {
+		sys_led_pin: sys-led-pin {
+			rockchip,pins = <2 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		lan_led_pin: lan-led-pin {
+			rockchip,pins = <2 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		wan_led_pin: wan-led-pin {
+			rockchip,pins = <4 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	headphone {
+		hp_det: hp-det {
+			rockchip,pins = <2 RK_PD6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	lcd {
+		/omit-if-no-ref/
+		lcd_rst0_gpio: lcd-rst0-gpio {
+			rockchip,pins = <0 RK_PC6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		/omit-if-no-ref/
+		touch_dsi0_gpio: touch-dsi0-gpio {
+			rockchip,pins =
+				<0 RK_PD0 RK_FUNC_GPIO &pcfg_pull_up>,
+				<0 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};
+
+&sai2 {
+	status = "okay";
+};
+
+&sdhci {
+	status = "disabled";
+};
+
+&sdio_pwrseq {
+	status = "okay";
+};
+
+&sdio {
+	status = "okay";
+	vqmmc-supply = <&vcc_1v8_s0>;
+	sd-uhs-sdr104;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	rtl8822cs@1 {
+		reg = <1>;
+		compatible = "realtek,rtl8822cs";
+	};
+};
+
+&fspi1m1_pins {
+	rockchip,pins =
+		/* clk, d0~4 */
+		<1 RK_PD5 3 &pcfg_pull_none>,
+		<1 RK_PC4 3 &pcfg_pull_none>,
+		<1 RK_PC5 3 &pcfg_pull_none>,
+		<1 RK_PC6 3 &pcfg_pull_none>,
+		<1 RK_PC7 3 &pcfg_pull_none>;
+};
+
+&sfc1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&fspi1m1_csn0 &fspi1m1_pins>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	spi-nor@0 {
+		compatible = "jedec,spi-nor";
+		label = "sfc_nor";
+		reg = <0>;
+		m25p,fast-read;
+		spi-max-frequency = <20000000>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+	};
+};
+
+&uart5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart5m0_xfer &uart5m0_ctsn &uart5m0_rtsn>;
+	status = "okay";
+
+	bluetooth {
+		compatible = "realtek,rtl8822cs-bt";
+		enable-gpios = <&gpio3 RK_PC7 GPIO_ACTIVE_HIGH>;
+		host-wake-gpios = <&gpio0 RK_PB1 GPIO_ACTIVE_HIGH>;
+		device-wake-gpios = <&gpio3 RK_PD0 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&usbdp_phy_dp {
+	status = "disabled";
+};
+
+&vop {
+	disable-win-move;
+};
+
+&vp0 {
+	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER0 | 1 << ROCKCHIP_VOP2_ESMART0 |
+				1 << ROCKCHIP_VOP2_ESMART2)>;
+	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART0>;
+	cursor-win-id = <ROCKCHIP_VOP2_ESMART2>;
+};
+
+&vp1 {
+	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER1 | 1 << ROCKCHIP_VOP2_ESMART1 |
+				1 << ROCKCHIP_VOP2_ESMART3)>;
+	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART1>;
+	cursor-win-id = <ROCKCHIP_VOP2_ESMART3>;
+};
+
+&vp2 {
+	/delete-property/ rockchip,plane-mask;
+	/delete-property/ rockchip,primary-plane;
+	status = "disabled";
+};
+
+/* MIPI-DSI */
+#define ENABLE_MIPI_DSI0	0
+
+#if (ENABLE_MIPI_DSI0)
+dsi0_i2c: &i2c8 {
+	status = "okay";
+};
+
+dsi0_pwm: &pwm1_6ch_0 {
+	status = "okay";
+};
+
+&dsi {
+	status = "okay";
+};
+
+&dsi_in_vp1 {
+	status = "okay";
+};
+
+&pwm_backlight {
+	status = "okay";
+	pwms = <&dsi0_pwm 0 25000 0>;
+};
+
+&route_dsi {
+	status = "okay";
+	connect = <&vp1_out_dsi>;
+};
+
+#include "rk3576-nanopi5-mipi-evb-v10.dtsi"
+#endif
+
+/* GPIO Connector */
+&spi0 {
+	status = "disabled";
+
+	spidev0: spidev@0 {
+		compatible = "rockchip,spidev";
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+		status = "disabled";
+	};
+};
