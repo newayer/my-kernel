@@ -139,7 +139,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdmmc_clk_pins &sdmmc_cmd_pins &sdmmc_bus4_pins>;
 	status = "okay";
-
 };
 
 &cma {
@@ -150,15 +149,6 @@
 	cpu-supply = <&vdd_arm>;
 };
 
-&can0 {
-	rockchip,rx-max-data = <18>;
-	assigned-clocks = <&cru CLK_CAN0>;
-	assigned-clock-rates = <300000000>;
-	pinctrl-0 = <&rm_io19_can0_tx &rm_io20_can0_rx>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-
 &rga2 {
 	status = "okay";
 };
@@ -166,17 +156,6 @@
 &rng {
 	status = "okay";
 };
-
-&can1 {
-	rockchip,rx-max-data = <18>;
-	assigned-clocks = <&cru CLK_CAN1>;
-	assigned-clock-rates = <300000000>;
-	pinctrl-0 = <&rm_io13_can1_tx &rm_io18_can1_rx>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-
-
 
 &gmac0 {
 	phy-mode = "rmii";
@@ -281,7 +260,7 @@
 };
 
 &usb20_otg0 {
-	dr_mode = "peripheral";
+	//dr_mode = "peripheral";
 	status = "okay";
 };
 
