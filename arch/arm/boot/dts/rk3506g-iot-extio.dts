@@ -1,49 +1,14 @@
-// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /*
- * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
+ * Copyright (c) 2025 Vanxoak Electronics Co., Ltd.
  */
+#include <dt-bindings/clock/rockchip,rk3506-cru.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/pinctrl/rockchip.h>"
 
 /dts-v1/;
+/plugin/;
 
-#include "rk3506.dtsi"
-//#include "rk3502.dtsi"
-#include "rk3506-iot-v10.dtsi"
-#include "rk3506g-iot-800x480-rgb.dtsi"
-
-/ {
-	model = "Rockchip RK3506G(QFN128) EVB1 V10 Board";
-	compatible = "rockchip,rk3506g-evb1-v10", "rockchip,rk3506";
-	
-		// LED
-	leds {
-		compatible = "gpio-leds";
-		status = "okay";
-		heart_led {
-			label = "run";
-			gpios = <&gpio1 RK_PB3 GPIO_ACTIVE_LOW>;
-			linux,default-trigger = "heartbeat";
-			default-state = "off";
-		};
-	};
-
-	reserved-memory {
-		#address-cells = <1>;
-		#size-cells = <1>;
-		ranges;
-
-
-		drm_logo: drm-logo@0 {
-			compatible = "rockchip,drm-logo";
-			reg = <0x0 0x0>;
-		};
-	};
-};
-
-&tsadc {
-	status = "okay";
-};
-
-/*
 &uart1 {
     pinctrl-names = "default";
 	pinctrl-0 = <&rm_io16_uart1_rx &rm_io17_uart1_tx>;
@@ -78,10 +43,5 @@
 	assigned-clock-rates = <300000000>;
 	pinctrl-0 = <&rm_io13_can1_tx &rm_io18_can1_rx>;
 	pinctrl-names = "default";
-	status = "okay";
-};
-*/
-&ramoops {
-	reg = <0x1d3000 0x2d000>;
 	status = "okay";
 };
