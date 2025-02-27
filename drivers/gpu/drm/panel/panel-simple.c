@@ -5081,6 +5081,9 @@ static int panel_simple_dsi_of_get_desc_data(struct device *dev,
 	if (!of_property_read_u32(np, "dsi,lanes", &val))
 		desc->lanes = val;
 
+	if (!desc->desc.bpc)
+		desc->desc.bpc = (desc->format == MIPI_DSI_FMT_RGB888) ? 8 : 6;
+
 	return 0;
 }
 
