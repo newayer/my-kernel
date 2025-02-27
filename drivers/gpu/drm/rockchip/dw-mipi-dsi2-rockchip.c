@@ -1278,6 +1278,17 @@ static struct drm_connector_helper_funcs dw_mipi_dsi2_connector_helper_funcs = {
 	.atomic_check = dw_mipi_dsi2_connector_atomic_check,
 };
 
+static int panel_simple_nvm_detect(struct drm_panel *panel)
+{
+	struct device *dev = panel->dev;
+	int nvmem_status = 1;
+
+	device_property_read_u32(dev, "nvmem-status", &nvmem_status);
+	dev_dbg(dev, "panel nvmem status %d\n", nvmem_status);
+
+	return nvmem_status;
+}
+
 static enum drm_connector_status
 dw_mipi_dsi2_connector_detect(struct drm_connector *connector, bool force)
 {
@@ -1287,7 +1298,7 @@ dw_mipi_dsi2_connector_detect(struct drm_connector *connector, bool force)
 		return drm_bridge_detect(dsi2->bridge);
 
 	if (dsi2->c_status == connector_status_unknown) {
-		if (drm_panel_prepare(dsi2->panel) == -ENODEV)
+		if (!panel_simple_nvm_detect(dsi2->panel))
 			dsi2->c_status = connector_status_disconnected;
 		else
 			dsi2->c_status = connector_status_connected;
