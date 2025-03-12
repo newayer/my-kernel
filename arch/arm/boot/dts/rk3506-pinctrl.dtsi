@@ -1099,6 +1099,12 @@
 				/* sdmmc_cmd */
 				<3 RK_PA1 1 &pcfg_pull_up>;
 		};
+		
+		sdmmc_det_pins: sdmmc-det-pins {
+			rockchip,pins =
+				/* sdmmc_det */
+				<0 RK_PB0 1 &pcfg_pull_up_drv_level_3>;
+		};
 	};
 
 	spi0 {

@@ -13,7 +13,7 @@
 
 	chosen {
 		//bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 ubi.mtd=5 ubi.block=0,rootfs root=/dev/ubiblock0_0 rootfstype=squashfs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1 storagemedia=mtd androidboot.storagemedia=mtd androidboot.mode=normal";
-		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 root=PARTUUID=614e0000-0000 rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
+		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 ubi.mtd=5 root=ubi0:rootfs rw rootfstype=ubifs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
 	};
 
 	backlight: backlight {
@@ -93,16 +93,6 @@
 		regulator-max-microvolt = <3300000>;
 		vin-supply = <&vcc_sys>;
 	};
-	
-	vcc_3v3: vcc-3v3 {
-		compatible = "regulator-fixed";
-		regulator-name = "vcc_3v3";
-		regulator-always-on;
-		regulator-boot-on;
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		vin-supply = <&vcc_sys>;
-	};
 
 	vcc_1v8: vcc-1v8 {
 		compatible = "regulator-fixed";
@@ -128,16 +118,31 @@
 	};
 };
 
+&fspi {
+        status = "okay";
+        flash@0 {
+                compatible = "spi-nand";
+                reg = <0>;
+                spi-max-frequency = <80000000>;
+                spi-rx-bus-width = <4>;
+                spi-tx-bus-width = <1>;
+        };
+};
+
 &mmc {
-//For eMMC
+    max-frequency = <150000000>;
 	no-sdio;
-	no-sd;
+	no-mmc;
+	bus-width = <4>;
+	cd-gpios = <&gpio0 RK_PB0 GPIO_ACTIVE_LOW>;
 	cap-mmc-highspeed;
 	cap-sd-highspeed;
-	non-removable;
-	mmc-hs200-1_8v;
+	disable-wp;
+	sd-uhs-sdr104;
+	vmmc-supply = <&vcc3v3_stb>;
+	vqmmc-supply = <&vcc3v3_stb>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&sdmmc_clk_pins &sdmmc_cmd_pins &sdmmc_bus4_pins>;
+	pinctrl-0 = <&sdmmc_clk_pins &sdmmc_cmd_pins &sdmmc_bus4_pins &sdmmc_det_pins>;
 	status = "okay";
 };
 
@@ -147,6 +152,24 @@
 
 &cpu0 {
 	cpu-supply = <&vdd_arm>;
+};
+
+&can0 {
+	rockchip,rx-max-data = <18>;
+	assigned-clocks = <&cru CLK_CAN0>;
+	assigned-clock-rates = <300000000>;
+	pinctrl-0 = <&rm_io19_can0_tx &rm_io20_can0_rx>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&can1 {
+	rockchip,rx-max-data = <18>;
+	assigned-clocks = <&cru CLK_CAN1>;
+	assigned-clock-rates = <300000000>;
+	pinctrl-0 = <&rm_io13_can1_tx &rm_io18_can1_rx>;
+	pinctrl-names = "default";
+	status = "okay";
 };
 
 &rga2 {
@@ -161,7 +184,8 @@
 	phy-mode = "rmii";
 	clock_in_out = "input";
 	
-	snps,reset-gpio = <&gpio4 RK_PA2 GPIO_ACTIVE_LOW>;
+	//snps,reset-gpio = <&gpio4 RK_PA2 GPIO_ACTIVE_LOW>;
+	snps,reset-gpio = <&gpio0 RK_PB3 GPIO_ACTIVE_LOW>;
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 20000 100000>;
 
@@ -179,7 +203,8 @@
 	phy-mode = "rmii";
 	clock_in_out = "input";
 	
-	snps,reset-gpio = <&gpio4 RK_PA3 GPIO_ACTIVE_LOW>;
+	//snps,reset-gpio = <&gpio4 RK_PA3 GPIO_ACTIVE_LOW>;
+	snps,reset-gpio = <&gpio0 RK_PB4 GPIO_ACTIVE_LOW>;
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 20000 100000>;
 
@@ -205,7 +230,6 @@
 		status = "okay";
 	};	
 };
-
 
 &i2c2 {
 	clock-frequency = <400000>;
