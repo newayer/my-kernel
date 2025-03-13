@@ -131,14 +131,13 @@
 
 &mmc {
     max-frequency = <150000000>;
-	no-sdio;
-	no-mmc;
+	supports-sd;
 	bus-width = <4>;
 	cd-gpios = <&gpio0 RK_PB0 GPIO_ACTIVE_LOW>;
-	cap-mmc-highspeed;
+	//cap-mmc-highspeed;
 	cap-sd-highspeed;
 	disable-wp;
-	sd-uhs-sdr104;
+	//sd-uhs-sdr104;
 	vmmc-supply = <&vcc3v3_stb>;
 	vqmmc-supply = <&vcc3v3_stb>;
 	pinctrl-names = "default";
