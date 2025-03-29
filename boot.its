@@ -1,20 +1,20 @@
 /*
- * Copyright (C) 2021 Rockchip Electronics Co., Ltd
+ * Copyright (C) 2024 Rockchip Electronics Co., Ltd
  *
  * SPDX-License-Identifier: GPL-2.0
  */
 
 /dts-v1/;
 / {
-    description = "FIT image with Linux kernel, FDT blob and resource";
+    description = "U-Boot FIT source file for arm";
 
     images {
         fdt {
             data = /incbin/("fdt");
             type = "flat_dt";
-            arch = "";
+            arch = "arm";
             compression = "none";
-            load = <0xffffff00>;
+            load = <0x00063000>;
 
             hash {
                 algo = "sha256";
@@ -24,22 +24,11 @@
         kernel {
             data = /incbin/("kernel");
             type = "kernel";
-            arch = "";
+            arch = "arm";
             os = "linux";
-            compression = "";
-            entry = <0xffffff01>;
-            load = <0xffffff01>;
-
-            hash {
-                algo = "sha256";
-            };
-        };
-
-        resource {
-            data = /incbin/("resource");
-            type = "multi";
-            arch = "";
             compression = "none";
+            entry = <0x01100000>;
+            load = <0x01100000>;
 
             hash {
                 algo = "sha256";
@@ -51,10 +40,10 @@
         default = "conf";
 
         conf {
+            description = "Boot Linux kernel with FDT blob and no ramdisk";
             rollback-index = <0x00>;
             fdt = "fdt";
             kernel = "kernel";
-            multi = "resource";
 
             signature {
                 algo = "sha256,rsa2048";
