@@ -31,7 +31,8 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rk3568-nanopi5-rev07.dtb
 
 dtb-$(CONFIG_ARCH_ROCKCHIP) += \
-	rk3576-nanopi5-rev01.dtb
+	rk3576-nanopi5-rev01.dtb \
+	rk3576-nanopi5-rev02.dtb
 
 dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rk3588-nanopi6-rev01.dtb \
