@@ -362,6 +362,12 @@
 };
 
 &gpu {
+	compatible = "rockchip,rk3576-mali", "arm,mali-bifrost";
+	assigned-clocks = <&scmi_clk CLK_GPU>;
+	assigned-clock-rates = <198000000>;
+	clocks = <&cru CLK_GPU>;
+	clock-names = "core";
+	interrupt-names = "gpu", "mmu", "job";
 	mali-supply = <&vdd_gpu_s0>;
 	status = "okay";
 };
