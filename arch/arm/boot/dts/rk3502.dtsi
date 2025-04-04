@@ -343,10 +343,10 @@
 			linux,cma-default;
 		};
 
-		/*drm_logo: drm-logo@0 {
+		drm_logo: drm-logo@0 {
 			compatible = "rockchip,drm-logo";
 			reg = <0x0 0x0>;
-		};*/
+		};
 
 		ramoops: ramoops@83000 {
 			compatible = "ramoops";

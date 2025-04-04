@@ -10,6 +10,8 @@
 #include "rk3506-iot-v10.dtsi"
 #include "rk3506-iot-nand-800x480-rgb.dtsi"
 
+/delete-node/ &drm_logo;
+
 / {
 	model = "Rockchip RK3506B(BGA) EVB1 V10 Board";
 	compatible = "rockchip,rk3506-evb1-v10", "rockchip,rk3506";
