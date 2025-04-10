@@ -180,6 +180,9 @@ static int proslic_open(struct inode *node, struct file *fp)
     ProSLIC_SetMuteStatus(chan, PROSLIC_MUTE_NONE);
   }
   enable_irq(proslic_get_irq());
+
+  //ProSLIC_PowerUpConverter(port->channelPtrs[0]);
+
   return 0;
 }
 
@@ -271,6 +274,7 @@ static long proslic_ioctl(struct file *fp, unsigned int cmd , unsigned long ioct
   if( (_IOC_TYPE(cmd) != PROSLIC_MAGIC_IOCTL_NUM)
     || ( _IOC_NR(cmd) > PROSLIC_IOCTL_COUNT))
   {
+    printk(KERN_INFO "%s: cmd is invalid \n", __func__);
     return -EFAULT;
   }
 
@@ -285,6 +289,7 @@ static long proslic_ioctl(struct file *fp, unsigned int cmd , unsigned long ioct
 
   if(rc)
   {
+    printk(KERN_INFO "%s: cmd is no acces! \n", __func__);
     return -EACCES;
   }
 
@@ -296,29 +301,35 @@ static long proslic_ioctl(struct file *fp, unsigned int cmd , unsigned long ioct
     uint8_t channel;
     if(copy_from_user(&chan_if, (void *) __user ioctl_params, sizeof(proslic_chan_if)) != 0)
     {
+      printk(KERN_INFO "%s: params is invalid! \n", __func__);
       return -EFAULT;
     }
 
     rc = check_chanParam(file_info, &chan_if, &channel);
     if(rc != 0)
     {
+      printk(KERN_INFO "%s: check_chanParam is error! \n", __func__);
       return rc;
     }
     chanPtr = file_info->port->channelPtrs[channel];
   }
 
+  printk(KERN_INFO "%s: === cmd=%x ===\n", __func__,cmd);
   switch(cmd)
   {
     case PROSLIC_IOCTL_GET_CHAN_COUNT:
       put_user(proslic_chan_init_count, (uint8_t __user *)ioctl_params);
+      printk(KERN_INFO "%s: GET_CHAN_COUNT ! \n", __func__);
       return 0;
 
     case PROSLIC_IOCTL_GET_PORT_COUNT:
       put_user(PROSLIC_NUM_PORTS, (uint8_t __user *)ioctl_params);
+      printk(KERN_INFO "%s: GET_PORT_COUNT ! \n", __func__);
       return 0;
 
     case PROSLIC_IOCTL_GET_PORT_CHAN:
       put_user(file_info->port->numberOfChan, (uint8_t __user *)ioctl_params);
+      printk(KERN_INFO "%s: GET_PORT_CHAN ! \n", __func__);
       return 0;
 
     case PROSLIC_IOCTL_GET_DEV_TYPE:
@@ -330,80 +341,100 @@ static long proslic_ioctl(struct file *fp, unsigned int cmd , unsigned long ioct
       break;
       
     case PROSLIC_IOCTL_READ_REG:
+      printk(KERN_INFO "%s: READ_REG ! \n", __func__);
       chan_if.byte_value = ProSLIC_ReadReg(chanPtr, chan_if.reg_address);
       if( copy_to_user((void *) __user ioctl_params, &chan_if, sizeof(proslic_chan_if)) != 0)
       {
+        printk(KERN_INFO "%s: READ_REG error ! \n", __func__);
         rc = -EFAULT; 
       }
       break;
 
     case PROSLIC_IOCTL_WRITE_REG:
+      printk(KERN_INFO "%s: PROSLIC_IOCTL_WRITE_REG ! \n", __func__);
       if (ProSLIC_WriteReg(chanPtr, chan_if.reg_address, chan_if.byte_value) != RC_NONE)
       {
+        printk(KERN_INFO "%s: PROSLIC_IOCTL_WRITE_REG error ! \n", __func__);
         rc = -EFAULT;
       }
       break;
 
     case PROSLIC_IOCTL_READ_RAM:
+      printk(KERN_INFO "%s: PROSLIC_IOCTL_READ_RAM ! \n", __func__);
       chan_if.word_value = ProSLIC_ReadRAM(chanPtr, chan_if.ram_address);
       if( copy_to_user((void *) __user ioctl_params, &chan_if, sizeof(proslic_chan_if)) != 0)
       {
+        printk(KERN_INFO "%s: PROSLIC_IOCTL_READ_RAM error ! \n", __func__);
         rc = -EFAULT; 
       }
       break;
 
     case PROSLIC_IOCTL_WRITE_RAM:
+      printk(KERN_INFO "%s: PROSLIC_IOCTL_WRITE_RAM ! \n", __func__);
       if (ProSLIC_WriteRAM(chanPtr, chan_if.ram_address, chan_if.word_value) != RC_NONE)
       {
+        printk(KERN_INFO "%s: PROSLIC_IOCTL_WRITE_RAM error ! \n", __func__);
         rc = -EFAULT;
       }
       break;
 
     case PROSLIC_IOCTL_SET_LINE_STATE:
+      printk(KERN_INFO "%s: PROSLIC_IOCTL_SET_LINE_STATE: [%d] ! \n", __func__ ,chan_if.byte_value);
       if (chan_if.byte_value < 8)
       {
         ProSLIC_SetLinefeedStatus(chanPtr, chan_if.byte_value);
+        printk(KERN_INFO "%s: ProSLIC_SetLinefeedStatus end ! \n", __func__);
       }
       else
       {
+        printk(KERN_INFO "%s: PROSLIC_IOCTL_SET_LINE_STATE error ! \n", __func__);
         rc = -EINVAL;          
       }
       break;
 
     case PROSLIC_IOCTL_GET_DCFEED_COUNT:
+      printk(KERN_INFO "%s: PROSLIC_IOCTL_GET_DCFEED_COUNT ! \n", __func__);
       chan_if.byte_value = DC_FEED_LAST_ENUM;
       if( copy_to_user((void *) __user ioctl_params, &chan_if, sizeof(proslic_chan_if)) != 0)
       {
+        printk(KERN_INFO "%s: PROSLIC_IOCTL_GET_DCFEED_COUNT error ! \n", __func__);
         rc = -EFAULT; 
       }
       break;
 
     case PROSLIC_IOCTL_SET_DCFEED:
+      printk(KERN_INFO "%s: PROSLIC_IOCTL_GET_DCFEED_COUNT ! \n", __func__);
       if(chan_if.byte_value < DC_FEED_LAST_ENUM)
       {
         ProSLIC_DCFeedSetup(chanPtr, chan_if.byte_value);
+        printk(KERN_INFO "%s: ProSLIC_DCFeedSetup end ! \n", __func__);
       }
       else
       {
+        printk(KERN_INFO "%s: PROSLIC_IOCTL_GET_DCFEED_COUNT error ! \n", __func__);
         rc = -EINVAL;          
       }
       break;
 
     case PROSLIC_IOCTL_SET_CONVERTER_STATE:
+      printk(KERN_INFO "%s: PROSLIC_IOCTL_SET_CONVERTER_STATE ! \n", __func__);
       if( (chan_if.byte_value & 0xFE) == 0)
       {
         if(chan_if.byte_value)
         {
 
           ProSLIC_PowerUpConverter(chanPtr);
+          printk(KERN_INFO "%s: ProSLIC_PowerUpConverter end ! \n", __func__);
         }
         else
         {
           ProSLIC_PowerDownConverter(chanPtr);
+          printk(KERN_INFO "%s: ProSLIC_PowerDownConverter end ! \n", __func__);
         }
       }
       else
       {
+        printk(KERN_INFO "%s: PROSLIC_IOCTL_GET_DCFEED_COUNT error ! \n", __func__);
         rc = -EINVAL;          
       }
       break;
@@ -460,30 +491,40 @@ static long proslic_ioctl(struct file *fp, unsigned int cmd , unsigned long ioct
       break;
 
     case PROSLIC_IOCTL_SET_RINGER:
+      printk(KERN_INFO "%s: PROSLIC_IOCTL_SET_RINGER [%d] ! \n", __func__ ,chan_if.byte_value);
       if(chan_if.byte_value < RINGING_LAST_ENUM)
       {
         ProSLIC_RingSetup(chanPtr, chan_if.byte_value);
+        printk(KERN_INFO "%s: ProSLIC_RingSetup end ! \n", __func__);
       }
       else
       {
+        printk(KERN_INFO "%s: PROSLIC_IOCTL_SET_RINGER error ! \n", __func__);
         rc = -EINVAL;          
       }
       break;
 
     case PROSLIC_IOCTL_SET_RINGER_STATE:
+      printk(KERN_INFO "%s: SET_RINGER_STATE channel = %x \n", __func__ ,chan_if.channel);
+      printk(KERN_INFO "%s: SET_RINGER_STATE index = %x \n", __func__ ,chan_if.index);
+      printk(KERN_INFO "%s: SET_RINGER_STATE byte_value = %x \n", __func__ ,chan_if.byte_value);
+
       if( (chan_if.byte_value & 0xFE) == 0)
       {
         if(chan_if.byte_value)
         {
           ProSLIC_RingStart(chanPtr);
+          printk(KERN_INFO "%s: ProSLIC_RingStart end ! \n", __func__);
         }
         else
         {
           ProSLIC_RingStop(chanPtr);
+          printk(KERN_INFO "%s: ProSLIC_RingStop end ! \n", __func__);
         }
       }
       else
       {
+        printk(KERN_INFO "%s: PROSLIC_IOCTL_SET_RINGER error ! \n", __func__);
         rc = -EINVAL;          
       }
       break;
@@ -508,14 +549,20 @@ static long proslic_ioctl(struct file *fp, unsigned int cmd , unsigned long ioct
       break;
 
     case PROSLIC_IOCTL_SET_RXTX_TS:
+      printk(KERN_INFO "%s: PROSLIC_IOCTL_SET_RXTX_TS  \n", __func__ );
+      printk(KERN_INFO "%s: int_values[0]=%x ,int_values[1]=%x\n", __func__ ,chan_if.int_values[0], chan_if.int_values[1]);
       if( ProSLIC_PCMTimeSlotSetup(chanPtr, chan_if.int_values[0], 
         chan_if.int_values[1]) != RC_NONE)
       {
+        printk(KERN_INFO "%s: ProSLIC_PCMTimeSlotSetup fail !!!\n", __func__ );
         rc = -EINVAL;
       }
       break;
 
     case PROSLIC_IOCTL_SET_PCM_ON_OFF:
+      printk(KERN_INFO "%s: SET_PCM_ON_OFF channel = %x \n", __func__ ,chan_if.channel);
+      printk(KERN_INFO "%s: SET_PCM_ON_OFF index = %x \n", __func__ ,chan_if.index);
+      printk(KERN_INFO "%s: SET_PCM_ON_OFF byte_value = %x \n", __func__ ,chan_if.byte_value);
       if( (chan_if.byte_value & 0xFE) == 0)
       {
         if(chan_if.byte_value)
@@ -529,7 +576,7 @@ static long proslic_ioctl(struct file *fp, unsigned int cmd , unsigned long ioct
       }
       else
       {
-        rc = -EINVAL;          
+        rc = -EINVAL;
       }
       break;
 
@@ -544,7 +591,9 @@ static long proslic_ioctl(struct file *fp, unsigned int cmd , unsigned long ioct
     case PROSLIC_IOCTL_SET_PCM:
       if(chan_if.byte_value < PCM_LAST_ENUM)
       {
+        printk(KERN_INFO "%s: PROSLIC_IOCTL_SET_PCM ==%d== ! \n", __func__,chan_if.byte_value);
         ProSLIC_PCMSetup(chanPtr, chan_if.byte_value);
+
       }
       else
       {
@@ -555,13 +604,20 @@ static long proslic_ioctl(struct file *fp, unsigned int cmd , unsigned long ioct
     case PROSLIC_IOCTL_POLL_EVENT:
     {
       struct pi_event pe;
+      printk(KERN_INFO "%s: GET_POLL_EVENT \n", __func__ );
       rc = proslic_get_int_event(&pe);
       if(rc)
+      {
+        printk(KERN_INFO "%s: proslic_get_int_event fail !!!! \n", __func__ );
         break;
+      }
+
       if(copy_to_user((void *) __user ioctl_params, &pe, sizeof(struct pi_event)) != 0)
       {
+        printk(KERN_INFO "%s: copy_to_user fail !!!! \n", __func__ );
         rc = -EFAULT; 
-      }     
+      }
+      printk(KERN_INFO "%s: GET_POLL_EVENT type = %x ,value= %x \n", __func__ ,pe.type,pe.value);
       break;
     }
 
@@ -573,17 +629,28 @@ static long proslic_ioctl(struct file *fp, unsigned int cmd , unsigned long ioct
     case PROSLIC_IOCTL_SET_GAIN:
     {
 #define C_VOLUME(x) ((x) * 36 / 100 - 30)
+      printk(KERN_INFO "%s: PROSLIC_IOCTL_SET_GAIN: r_gin=%d,t_gain=%d \n", __func__ ,chan_if.int_values[0],chan_if.int_values[1]);
       if(chan_if.int_values[0] > 100 || chan_if.int_values[1] > 100)
+      {
         rc = -EINVAL;
+      }
       else
+      {
         rc = ProSLIC_AudioGainSetup(chanPtr, C_VOLUME(chan_if.int_values[0]), C_VOLUME(chan_if.int_values[1]), 0);
+      }
       break;
     }
 
     case PROSLIC_IOCTL_SEND_CID:
+          printk(KERN_INFO "%s: PROSLIC_IOCTL_SEND_CID\n", __func__ );
       if(copy_from_user(&cid_data, (void *) __user ioctl_params, sizeof(struct _cid_msg)) != 0)
+      {
+        printk(KERN_INFO "%s: copy_from_user fail! \n", __func__ );
         return EINVAL;
+      }
+
       cid_data.ptr = cid_data.msg;
+      printk(KERN_INFO "%s: SEND_CID: msg=%s \n", __func__ ,cid_data.msg);
       ProSLIC_FSKAskeySetup(cid_data.preset, 1, cid_data.fifo_depth);//only fsk8
       ProSLIC_FSKSetup(chanPtr, cid_data.preset);
       rc = proslic_send_cid(chanPtr);
@@ -623,6 +690,8 @@ int proslic_api_char_dev_init()
   int rc;
   unsigned int i;
 
+  printk(KERN_ALERT "proslic_api_char_dev_init : begin \n");
+
   proslic_file_info = kzalloc(sizeof(*proslic_file_info) * PROSLIC_NUM_PORTS, GFP_KERNEL);
   
   if(proslic_file_info == NULL)
@@ -635,6 +704,8 @@ int proslic_api_char_dev_init()
   proslic_major_num = MAJOR(proslic_dev);
 
   pr_info("proslic_major_num=%d\n", proslic_major_num);
+  printk(KERN_ALERT "proslic_major_num=%d\n", proslic_major_num);
+
   if(rc < 0) {
     kfree(proslic_file_info);
     proslic_file_info = NULL;
@@ -680,8 +751,10 @@ int proslic_api_char_dev_init()
     }
   }
 
+    printk(KERN_ALERT "proslic_api_char_dev_init : end \n");
+
   return 0;
-}  
+}
 
 /*****************************************************************************************************/
 

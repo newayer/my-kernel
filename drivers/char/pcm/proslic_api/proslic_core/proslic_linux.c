@@ -275,36 +275,48 @@ static irqreturn_t proslic_int_handler(int irq, void* data)
   proslicIntType *intData = (proslicIntType*)data;
   proslic_core_t *pports = proslic_ports;
   int i = 0;
+  unsigned char dtmf_val;
+
   if(PROSLIC_NUM_PORTS == 1)
     ProSLIC_GetInterrupts(pports->channels, intData);
 
   if(PROSLIC_NUM_PORTS == 1){
     for(;i < intData->number; i++) {
+      printk(KERN_INFO "%s: === intData = %d ====\n", __func__,intData->irqs[i]);
       switch(intData->irqs[i]){
         case IRQ_LOOP_STATUS:
-	  pr_info("loop status\n");
-	  ProSLIC_ReadHookStatus(pports->channels, &pis.ls_cont);
-	  if(!proslic_alloc_event(IRQ_LOOP_STATUS, pis.ls_cont))
-	    pr_err("proslic NOMEM err when interrupt: IRQ_LOOP_STATUS\n");
-	  break;
+          pr_info("=== loop status ===\n");
+          printk(KERN_INFO "%s: === IRQ_LOOP_STATUS = %d ====\n", __func__,pis.ls_cont);
+          ProSLIC_ReadHookStatus(pports->channels, &pis.ls_cont);
+          if(!proslic_alloc_event(IRQ_LOOP_STATUS, pis.ls_cont))
+            pr_err("proslic NOMEM err when interrupt: IRQ_LOOP_STATUS\n");
+          break;
         case IRQ_RING_TRIP:
+          printk(KERN_INFO "%s: === IRQ_RING_TRIP ====\n", __func__);
           pr_info("hook change!!!\n");
           break;
         case IRQ_FSKBUF_AVAIL:
-	  if(proslic_send_cid(pports->channels))
-	    pr_info("proslic send cid Done\n");
+          printk(KERN_INFO "%s: === IRQ_FSKBUF_AVAIL ====\n", __func__);
+          if(proslic_send_cid(pports->channels))
+            pr_info("proslic send cid Done\n");
           break;
-	case IRQ_DTMF:
-	//  pr_info("start dtmf detect\n");
-	//  if(!proslic_alloc_event(IRQ_DTMF, 0))
-	//    pr_err("proslic NOMEM err when interrupt: IRQ_DTMF\n");
-	  break;
-	case IRQ_RING_T1:
-	  if(!proslic_alloc_event(IRQ_RING_T1, 0))
-	    pr_err("proslic NOMEM err when interrupt: IRQ_RING_T1\n");
-	  break;
+        case IRQ_DTMF:
+          printk(KERN_INFO "%s: === IRQ_DTMF ====\n", __func__);
+          pr_info("start dtmf detect\n");
+
+          ProSLIC_DTMFReadDigit(pports->channels,&dtmf_val);
+          printk(KERN_INFO "%s: ===  dtmf_val:%d  ====\n", __func__,dtmf_val);
+          if(!proslic_alloc_event(IRQ_DTMF, dtmf_val))
+            pr_err("proslic NOMEM err when interrupt: IRQ_DTMF\n");
+          break;
+        case IRQ_RING_T1:
+          printk(KERN_INFO "%s: === IRQ_RING_T1 ====\n", __func__);
+          if(!proslic_alloc_event(IRQ_RING_T1, 0))
+            pr_err("proslic NOMEM err when interrupt: IRQ_RING_T1\n");
+          break;
         default:
-	  pr_info("proslic irq:%d\n", intData->irqs[i]);
+          printk(KERN_INFO "%s: === default ====\n", __func__);
+          pr_info("proslic irq:%d\n", intData->irqs[i]);
           break;
       }
     }
