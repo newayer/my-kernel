@@ -282,8 +282,9 @@ dsi0_pwm: &pwm1_6ch_0 {
 #endif
 
 /* GPIO Connector */
-&spi0 {
+&spi3 {
 	status = "disabled";
+	pinctrl-0 = <&spi3m2_csn0 &spi3m2_csn1 &spi3m2_pins>;
 
 	spidev0: spidev@0 {
 		compatible = "rockchip,spidev";
@@ -291,4 +292,23 @@ dsi0_pwm: &pwm1_6ch_0 {
 		spi-max-frequency = <10000000>;
 		status = "disabled";
 	};
+};
+
+&sai1 {
+	status = "disabled";
+};
+
+&uart2 {
+	pinctrl-0 = <&uart2m1_xfer &uart2m1_ctsn &uart2m1_rtsn>;
+	status = "disabled";
+};
+
+&uart3 {
+	pinctrl-0 = <&uart3m0_xfer>;
+	status = "okay";
+};
+
+&uart8 {
+	pinctrl-0 = <&uart8m1_xfer>;
+	status = "okay";
 };
