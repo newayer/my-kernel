@@ -1902,8 +1902,17 @@ static int vop_plane_atomic_check(struct drm_plane *plane,
 		return 0;
 	}
 
-	if (drm_rect_width(src) >> 16 > vop_data->max_input.width ||
-	    drm_rect_height(src) >> 16 > vop_data->max_input.height) {
+	//if (drm_rect_width(src) >> 16 > vop_data->max_input.width ||
+	//    drm_rect_height(src) >> 16 > vop_data->max_input.height) {
+	//	DRM_ERROR("Invalid source: %dx%d. max input: %dx%d\n",
+	//		  drm_rect_width(src) >> 16,
+	//		  drm_rect_height(src) >> 16,
+	//		  vop_data->max_input.width,
+	//		  vop_data->max_input.height);
+	//	return -EINVAL;
+	//}
+
+	if (drm_rect_width(src) >> 16 > vop_data->max_input.width) {
 		DRM_ERROR("Invalid source: %dx%d. max input: %dx%d\n",
 			  drm_rect_width(src) >> 16,
 			  drm_rect_height(src) >> 16,
