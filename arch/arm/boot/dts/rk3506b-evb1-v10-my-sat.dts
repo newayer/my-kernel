@@ -13,7 +13,7 @@
 	compatible = "rockchip,rk3506b-evb1-v10", "rockchip,rk3506";
 
 	chosen {
-		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 ubi.mtd=2 root=ubi0:rootfs rw rootfstype=ubifs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
+		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 root=PARTUUID=614e0000-0000 rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
 	};
 
 	vcc3v3_lcd_n: vcc3v3-lcd0-n {
@@ -152,20 +152,16 @@
 };
 
 &mmc {
-	supports-sd;
-	cd-gpios = <&gpio0 RK_PB0 GPIO_ACTIVE_LOW>;
-	disable-wp;
-	vmmc-supply = <&vcc3v3_stb>;
-	vqmmc-supply = <&vcc3v3_stb>;
-	pinctrl-0 = <&sdmmc_clk_pins &sdmmc_cmd_pins &sdmmc_bus4_pins &sdmmc_det_pins>;
-
-	/delete-property/ no-sd;
+	/delete-property/ bus-width;
 	/delete-property/ no-mmc;
 	/delete-property/ ignore-pm-notify;
 	/delete-property/ keep-power-in-suspend;
-	/delete-property/ non-removable;
 	/delete-property/ mmc-pwrseq;
 	/delete-property/ sd-uhs-sdr104;
+
+	no-sdio;
+	cap-mmc-highspeed;
+	mmc-hs200-1_8v;
 };
 
 &sdio_pwrseq {
@@ -228,14 +224,14 @@
 
 &gmac0 {
 	clock_in_out = "input";
-	snps,reset-gpio = <&gpio0 RK_PB3 GPIO_ACTIVE_LOW>;
+	snps,reset-gpio = <&gpio4 RK_PA2 GPIO_ACTIVE_LOW>;
 };
 
 &gmac1 {
 	phy-mode = "rmii";
 	clock_in_out = "input";
 
-	snps,reset-gpio = <&gpio0 RK_PB4 GPIO_ACTIVE_LOW>;
+	snps,reset-gpio = <&gpio4 RK_PA3 GPIO_ACTIVE_LOW>;
 	snps,reset-active-low;
 	snps,reset-delays-us = <0 20000 100000>;
 
@@ -247,10 +243,6 @@
 
 	phy-handle = <&rmii_phy1>;
 	status = "okay";
-};
-
-&i2c2 {
-	status = "disabled";
 };
 
 /delete-node/ &rmii_phy0;
@@ -305,4 +297,9 @@
 
 &uart5 {
         status = "disabled";
+};
+
+&ramoops {
+	reg = <0x1d3000 0x2d000>;
+	status = "okay";
 };

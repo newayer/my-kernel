@@ -1,0 +1,304 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
+ */
+
+/dts-v1/;
+
+#include "rk3506.dtsi"
+#include "rk3506-evb1-v10.dtsi"
+
+/ {
+	model = "Rockchip RK3506B(BGA) EVB1 V10 Board";
+	compatible = "rockchip,rk3506b-evb1-v10", "rockchip,rk3506";
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 ubi.mtd=2 root=ubi0:rootfs rw rootfstype=ubifs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
+	};
+
+	vcc3v3_lcd_n: vcc3v3-lcd0-n {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio0 RK_PA1 GPIO_ACTIVE_HIGH>;
+		regulator-name = "vcc3v3_lcd_n";
+		regulator-boot-on;
+		regulator-state-mem {
+			regulator-off-in-suspend;
+		};
+	};
+
+	vcc5v0_otg0: vcc5v0-otg0-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc5v0_otg0";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		gpio = <&gpio1 RK_PC4 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc5v0_otg0_en>;
+	};
+
+	vcc5v0_otg1: vcc5v0-otg1-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc5v0_otg1";
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		gpio = <&gpio1 RK_PD0 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc5v0_otg1_en>;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		status = "okay";
+		heart_led {
+			label = "run";
+			gpios = <&gpio1 RK_PB3 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "heartbeat";
+			default-state = "off";
+		};
+	};
+
+	wireless-bluetooth {
+		status = "disabled";
+	};
+
+	wireless-wlan {
+		status = "disabled";
+	};
+};
+
+&cma {
+	size = <0x1600000>;
+};
+
+&dsi {
+	status = "disabled";
+};
+
+&dsi_dphy {
+	status = "disabled";
+};
+
+&dsi_in_vop {
+	status = "disabled";
+};
+
+&dsi_panel {
+	power-supply = <&vcc3v3_lcd_n>;
+};
+
+&es8388 {
+	status = "disabled";
+};
+
+&gt1x {
+	power-supply = <&vcc3v3_lcd_n>;
+	status = "disabled";
+};
+
+&pinctrl {
+	usb {
+		vcc5v0_otg0_en: vcc5v0-otg0-en {
+			rockchip,pins = <1 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		vcc5v0_otg1_en: vcc5v0-otg1-en {
+			rockchip,pins = <1 RK_PD0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};
+
+&route_dsi {
+	status = "disabled";
+};
+
+&sai1 {
+	status = "disabled";
+};
+
+&u2phy_otg0 {
+	vbus-supply = <&vcc5v0_otg0>;
+	status = "okay";
+};
+
+&u2phy_otg1 {
+	phy-supply = <&vcc5v0_otg1>;
+	status = "okay";
+};
+
+/* added */
+&acodec_sound {
+	status = "disabled";
+};
+
+&adc_keys {
+	status = "disabled";
+};
+
+&backlight {
+	status = "disabled";
+};
+
+&fiq_debugger {
+	rockchip,baudrate = <115200>;	/* Only 115200 and 1500000 */
+};
+
+&gpio_keys {
+	status = "disabled";
+};
+
+&mmc {
+	supports-sd;
+	cd-gpios = <&gpio0 RK_PB0 GPIO_ACTIVE_LOW>;
+	disable-wp;
+	vmmc-supply = <&vcc3v3_stb>;
+	vqmmc-supply = <&vcc3v3_stb>;
+	pinctrl-0 = <&sdmmc_clk_pins &sdmmc_cmd_pins &sdmmc_bus4_pins &sdmmc_det_pins>;
+
+	/delete-property/ no-sd;
+	/delete-property/ no-mmc;
+	/delete-property/ ignore-pm-notify;
+	/delete-property/ keep-power-in-suspend;
+	/delete-property/ non-removable;
+	/delete-property/ mmc-pwrseq;
+	/delete-property/ sd-uhs-sdr104;
+};
+
+&sdio_pwrseq {
+	status = "disabled";
+};
+
+&audio_codec {
+	status = "disabled";
+};
+
+&i2c0 {
+	status = "disabled";
+};
+
+&pwm0_4ch_0 {
+	status = "disabled";
+};
+
+&pwm0_4ch_1 {
+	status = "disabled";
+};
+
+&pwm0_4ch_2 {
+	status = "disabled";
+};
+
+&rga2 {
+	status = "disabled";
+};
+
+&rng {
+	status = "disabled";
+};
+
+&rockchip_suspend {
+	status = "disabled";
+};
+
+&sai4 {
+	status = "disabled";
+};
+
+&can0 {
+	rockchip,rx-max-data = <18>;
+	pinctrl-0 = <&rm_io19_can0_tx &rm_io20_can0_rx>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&can1 {
+	rockchip,rx-max-data = <18>;
+	pinctrl-0 = <&rm_io13_can1_tx &rm_io18_can1_rx>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&display_subsystem {
+	status = "disabled";
+};
+
+&gmac0 {
+	clock_in_out = "input";
+	snps,reset-gpio = <&gpio0 RK_PB3 GPIO_ACTIVE_LOW>;
+};
+
+&gmac1 {
+	phy-mode = "rmii";
+	clock_in_out = "input";
+
+	snps,reset-gpio = <&gpio0 RK_PB4 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	snps,reset-delays-us = <0 20000 100000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&eth_rmii1_miim_pins
+		     &eth_rmii1_tx_bus2_pins
+		     &eth_rmii1_rx_bus2_pins
+		     &eth_rmii1_clk_pins>;
+
+	phy-handle = <&rmii_phy1>;
+	status = "okay";
+};
+
+/delete-node/ &rmii_phy0;
+
+&mdio0 {
+	rmii_phy0: phy@0 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x0>;
+		clocks = <&cru CLK_MAC_OUT>;
+		assigned-clocks = <&cru CLK_MAC_OUT>;
+		assigned-clock-rates = <25000000>;
+	};
+};
+
+&mdio1 {
+	rmii_phy1: phy@0 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x0>;
+		clocks = <&cru CLK_MAC_OUT>;
+		assigned-clocks = <&cru CLK_MAC_OUT>;
+		assigned-clock-rates = <25000000>;
+	};
+};
+
+&vop {
+	status = "disabled";
+};
+
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io16_uart1_rx &rm_io17_uart1_tx>;
+	status = "okay";
+};
+
+&uart2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io0_uart2_rx &rm_io2_uart2_tx>;
+	status = "okay";
+};
+
+&uart3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io15_uart3_rx &rm_io14_uart3_tx>;
+	status = "okay";
+};
+
+&uart4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io30_uart4_rx &rm_io31_uart4_tx>;
+	status = "okay";
+};
+
+&uart5 {
+        status = "disabled";
+};
