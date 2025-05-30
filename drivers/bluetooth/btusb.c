@@ -33,7 +33,7 @@ static bool disable_scofix;
 static bool force_scofix;
 static bool enable_autosuspend = IS_ENABLED(CONFIG_BT_HCIBTUSB_AUTOSUSPEND);
 static bool reset = true;
-static bool ignore_mediatek = true;
+static bool ignore_mediatek = false;
 
 static struct usb_driver btusb_driver;
 
@@ -255,6 +255,9 @@ static const struct usb_device_id blacklist_table[] = {
 	/* Atheros AR5BBU12 with sflash firmware */
 	{ USB_DEVICE(0x0489, 0xe036), .driver_info = BTUSB_ATH3012 },
 	{ USB_DEVICE(0x0489, 0xe03c), .driver_info = BTUSB_ATH3012 },
+
+	/* MediaTek MT7921u (CF-953AX) */
+	{ USB_DEVICE(0x0e8d, 0x7961), .driver_info = BTUSB_IGNORE },
 
 	/* QCA ROME chipset */
 	{ USB_DEVICE(0x0cf3, 0x535b), .driver_info = BTUSB_QCA_ROME |
