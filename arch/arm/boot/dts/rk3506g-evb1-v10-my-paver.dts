@@ -7,10 +7,15 @@
 
 #include "rk3506.dtsi"
 #include "rk3506-evb1-v10.dtsi"
+#include <dt-bindings/sensor-dev.h>
 
 / {
 	model = "Rockchip RK3506G(QFN128) EVB1 V10 Board";
 	compatible = "rockchip,rk3506g-evb1-v10", "rockchip,rk3506";
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 ubi.mtd=2 root=ubi0:rootfs rw rootfstype=ubifs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
+	};
 
 	extcon_usb: extcon-usb {
 		compatible = "linux,extcon-usb-gpio";
@@ -21,7 +26,7 @@
 	};
 
 	sai_dais: sai-dais {
-		status = "okay";
+		status = "disabled";
 		compatible = "rockchip,multi-dais";
 		dais = <&sai1>, <&sai4>;
 		capture,channel-mapping = <2 2>;
@@ -65,6 +70,25 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&vcc5v0_otg1_en>;
 	};
+
+	leds {
+		compatible = "gpio-leds";
+		status = "okay";
+		heart_led {
+			label = "run";
+			gpios = <&gpio1 RK_PB7 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "heartbeat";
+			default-state = "off";
+		};
+	};
+
+	wireless-bluetooth {
+		status = "disabled";
+	};
+
+	wireless-wlan {
+		status = "disabled";
+	};
 };
 
 &acodec_sound {
@@ -76,15 +100,15 @@
 };
 
 &dsi {
-	status = "okay";
+	status = "disabled";
 };
 
 &dsi_dphy {
-	status = "okay";
+	status = "disabled";
 };
 
 &dsi_in_vop {
-	status = "okay";
+	status = "disabled";
 };
 
 &dsi_panel {
@@ -92,11 +116,11 @@
 };
 
 &es8388 {
-	status = "okay";
+	status = "disabled";
 };
 
 &es8388_sound {
-	status = "okay";
+	status = "disabled";
 	rockchip,cpu = <&sai_dais>;
 	rockchip,codec = <&es8388>, <&audio_codec>;
 	rockchip,mclk-fs-mapping = <256 1024>;
@@ -104,7 +128,7 @@
 
 &gt1x {
 	power-supply = <&vcc3v3_lcd_n>;
-	status = "okay";
+	status = "disabled";
 };
 
 &pinctrl {
@@ -121,28 +145,34 @@
 			rockchip,pins = <1 RK_PD0 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
+
+	sensor {
+		sensor_gpio:sensor-gpio {
+				rockchip,pins = <1 RK_PC6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 };
 
 &route_dsi {
-	status = "okay";
+	status = "disabled";
 };
 
 &sai1 {
-	status = "okay";
+	status = "disabled";
 };
 
 &uart3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io26_uart3_tx &rm_io25_uart3_rx &rm_io24_uart3_rtsn &rm_io29_uart3_ctsn>;
 	linux,rs485-enabled-at-boot-time;	/* enable rs485 */
-	status = "okay";
+	status = "disabled";
 };
 
 &uart4 {
 	dma-names = "!tx", "!rx";	/* remove ! to enable dma */
 	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io27_uart4_tx &rm_io28_uart4_rx>;   /* vccio1 */
-	status = "okay";
+	status = "disabled";
 };
 
 &u2phy_otg0 {
@@ -159,4 +189,122 @@
 &usb2phy {
 	extcon = <&extcon_usb>;
 	status = "okay";
+};
+
+/* added */
+
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io28_uart1_rx &rm_io27_uart1_tx>;
+	status = "okay";
+};
+
+&uart2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io2_uart2_rx &rm_io0_uart2_tx>;
+	status = "okay";
+};
+
+&adc_keys {
+	status = "disabled";
+};
+
+&backlight {
+	status = "disabled";
+};
+
+&fiq_debugger {
+	rockchip,baudrate = <115200>;	/* Only 115200 and 1500000 */
+};
+
+&gpio_keys {
+	status = "disabled";
+};
+
+&mmc {
+	status = "disabled";
+};
+
+&sdio_pwrseq {
+	status = "disabled";
+};
+
+&audio_codec {
+	status = "disabled";
+};
+
+&i2c0 {
+	status = "disabled";
+};
+
+&i2c1 {
+	clock-frequency = <400000>;
+	i2c-scl-rising-time-ns = <144>;
+	i2c-scl-falling-time-ns = <4>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io25_i2c1_scl &rm_io26_i2c1_sda>;
+	status = "okay";
+
+	sensor@19 {
+		compatible = "gs_sc7a20";
+		reg = <0x19>;
+		type = <SENSOR_TYPE_ACCEL>;
+		irq_enable = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sensor_gpio>;
+		irq-gpio = <&gpio1 RK_PC6 IRQ_TYPE_EDGE_RISING>;
+		poll_delay_ms = <10>;
+		layout = <1>;
+	};
+};
+
+&pwm0_4ch_0 {
+	status = "disabled";
+};
+
+&pwm0_4ch_1 {
+	status = "disabled";
+};
+
+&pwm0_4ch_2 {
+	status = "disabled";
+};
+
+&rga2 {
+	status = "disabled";
+};
+
+&rng {
+	status = "disabled";
+};
+
+&rockchip_suspend {
+	status = "disabled";
+};
+
+&sai4 {
+	status = "disabled";
+};
+
+&can0 {
+	rockchip,rx-max-data = <18>;
+	pinctrl-0 = <&rm_io19_can0_tx &rm_io20_can0_rx>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&display_subsystem {
+	status = "disabled";
+};
+
+&gmac0 {
+	status = "disabled";
+};
+
+&gmac1 {
+	status = "disabled";
+};
+
+&vop {
+	status = "disabled";
 };
