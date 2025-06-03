@@ -249,7 +249,7 @@
 };
 
 /* MIPI-DSI */
-#define ENABLE_MIPI_DSI0	0
+#define ENABLE_MIPI_DSI0	1
 
 #if (ENABLE_MIPI_DSI0)
 dsi0_i2c: &i2c8 {
@@ -278,7 +278,7 @@ dsi0_pwm: &pwm1_6ch_0 {
 	connect = <&vp1_out_dsi>;
 };
 
-#include "rk3576-nanopi5-mipi-evb-v10.dtsi"
+#include "rk3576-nanopi5-mipi-lcd-yx70.dtsi"
 #endif
 
 /* GPIO Connector */
