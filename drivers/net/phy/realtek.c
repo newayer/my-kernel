@@ -432,6 +432,39 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 	return 0;
 }
 
+static int rtl8211f_resume(struct phy_device *phydev)
+{
+	int ret;
+
+	if (!phydev->suspended)
+		return 0;
+
+	ret = genphy_resume(phydev);
+	if (ret < 0)
+		return ret;
+
+	msleep(20);
+
+	/*
+	 * When the RTL8211F is switched from power down to normal operation,
+	 * a software reset and restart auto-negotiation is performed, even if
+	 * bits Reset and Restart_AN are not set by the user.
+	 */
+	if (phydev->drv->config_init) {
+		ret = phydev->drv->config_init(phydev);
+		if (ret < 0)
+			return ret;
+	}
+
+	if (phydev->drv->config_intr) {
+		ret = phydev->drv->config_intr(phydev);
+		if (ret < 0)
+			return ret;
+	}
+
+	return 0;
+}
+
 static int rtl821x_resume(struct phy_device *phydev)
 {
 	int ret;
@@ -998,7 +1031,7 @@ static struct phy_driver realtek_drvs[] = {
 		.config_intr	= &rtl8211f_config_intr,
 		.handle_interrupt = rtl8211f_handle_interrupt,
 		.suspend	= genphy_suspend,
-		.resume		= rtl821x_resume,
+		.resume		= rtl8211f_resume,
 		.read_page	= rtl821x_read_page,
 		.write_page	= rtl821x_write_page,
 	}, {
