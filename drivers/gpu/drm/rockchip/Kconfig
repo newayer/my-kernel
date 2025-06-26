@@ -39,7 +39,7 @@ config ROCKCHIP_DRM_DIRECT_SHOW
 
 config ROCKCHIP_DRM_FBDEV
 	bool "Rockchip DRM fbdev support"
-	default n
+	default DRM_FBDEV_EMULATION
 	help
 	  drm_fbdev_generic_setup(drm_dev, 0) register fbdev will register drm
 	  client and lead to display black screen after kernel logo, so we
