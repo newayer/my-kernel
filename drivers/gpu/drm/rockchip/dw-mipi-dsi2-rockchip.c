@@ -1327,7 +1327,7 @@ dw_mipi_dsi2_connector_detect(struct drm_connector *connector, bool force)
 			dsi2->c_status = connector_status_connected;
 	}
 
-	return dsi2->c_status;;
+	return dsi2->c_status;
 }
 
 static void dw_mipi_dsi2_drm_connector_destroy(struct drm_connector *connector)
