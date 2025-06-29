@@ -152,20 +152,7 @@
 };
 
 &mmc {
-	supports-sd;
-	cd-gpios = <&gpio0 RK_PB0 GPIO_ACTIVE_LOW>;
-	disable-wp;
-	vmmc-supply = <&vcc3v3_stb>;
-	vqmmc-supply = <&vcc3v3_stb>;
-	pinctrl-0 = <&sdmmc_clk_pins &sdmmc_cmd_pins &sdmmc_bus4_pins &sdmmc_det_pins>;
-
-	/delete-property/ no-sd;
-	/delete-property/ no-mmc;
-	/delete-property/ ignore-pm-notify;
-	/delete-property/ keep-power-in-suspend;
-	/delete-property/ non-removable;
-	/delete-property/ mmc-pwrseq;
-	/delete-property/ sd-uhs-sdr104;
+	status = "disabled";
 };
 
 &sdio_pwrseq {
@@ -206,20 +193,6 @@
 
 &sai4 {
 	status = "disabled";
-};
-
-&can0 {
-	rockchip,rx-max-data = <18>;
-	pinctrl-0 = <&rm_io19_can0_tx &rm_io20_can0_rx>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-
-&can1 {
-	rockchip,rx-max-data = <18>;
-	pinctrl-0 = <&rm_io13_can1_tx &rm_io18_can1_rx>;
-	pinctrl-names = "default";
-	status = "okay";
 };
 
 &display_subsystem {
