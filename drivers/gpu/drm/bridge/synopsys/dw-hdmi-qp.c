@@ -1097,7 +1097,7 @@ static int dw_hdmi_i2c_read(struct dw_hdmi_qp *hdmi,
 
 			/* Check for error condition on the bus */
 			if (i2c->stat & I2CM_NACK_RCVD_IRQ) {
-				dev_err(hdmi->dev, "i2c read err!\n");
+				dev_err_ratelimited(hdmi->dev, "i2c read err!\n");
 				hdmi_writel(hdmi, 0x01, I2CM_CONTROL0);
 				hdmi_modb(hdmi, 0, I2CM_WR_MASK, I2CM_INTERFACE_CONTROL0);
 				retry--;
