@@ -513,6 +513,10 @@ uvc_video_complete(struct usb_ep *ep, struct usb_request *req)
 			 * up later.
 			 */
 			list_add_tail(&to_queue->list, &video->req_free);
+			/*
+			 * There is a new free request - wake up the pump.
+			 */
+			queue_work(video->async_wq, &video->pump);
 		}
 	} else {
 		uvc_video_free_request(ureq, ep);
@@ -816,6 +820,7 @@ int uvcg_video_enable(struct uvc_video *video)
 	video->req_int_count = 0;
 
 	uvc_video_ep_queue_initial_requests(video);
+	queue_work(video->async_wq, &video->pump);
 
 	return ret;
 }

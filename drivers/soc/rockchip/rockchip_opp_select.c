@@ -1353,6 +1353,16 @@ static int rockchip_get_soc_info(struct device *dev, struct device_node *np,
 	else if (value == 0x13)
 		*bin = 3;
 
+	if (of_property_match_string(np, "nvmem-cell-names", "customer_demand") >= 0) {
+		ret = rockchip_nvmem_cell_read_u8(np, "customer_demand", &value);
+		if (ret) {
+			dev_err(dev, "Failed to get customer_demand\n");
+			return ret;
+		}
+		if (value == 0x3)
+			*bin = 4;
+	}
+
 	if (*bin < 0)
 		*bin = 0;
 	dev_info(dev, "bin=%d\n", *bin);
@@ -2075,7 +2085,8 @@ static int rockchip_pvtpll_set_volt_sel(struct device *dev,
 		return 0;
 
 	if (!info->pvtpll_smc)
-		return 0;
+		return rockchip_pvtpll_volt_sel_adjust(info->pvtpll_clk_id,
+						       info->volt_sel);
 
 	res = sip_smc_pvtpll_config(PVTPLL_VOLT_SEL, info->pvtpll_clk_id,
 				    (u32)info->volt_sel, 0, 0, 0, 0);

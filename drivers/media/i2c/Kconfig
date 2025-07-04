@@ -211,6 +211,19 @@ config VIDEO_GC1084
 	  To compile this driver as a module, choose M here: the
 	  module will be called gc1084.
 
+config VIDEO_GC16B3C
+	tristate "GalaxyCore GC16B3C sensor support"
+	depends on I2C && VIDEO_DEV
+	depends on MEDIA_CAMERA_SUPPORT
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  Support for the GalaxyCore GC16B3C sensor.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called gc16B3C.
+
 config VIDEO_GC2035
 	tristate "GalaxyCore GC2035 sensor support"
 	depends on I2C && VIDEO_DEV
@@ -328,6 +341,19 @@ config VIDEO_GC3003
 	  To compile this driver as a module, choose M here: the
 	  module will be called gc3003.
 
+config VIDEO_GC32E1
+	tristate "GalaxyCore GC32E1 sensor support"
+	depends on I2C && VIDEO_DEV
+	depends on MEDIA_CAMERA_SUPPORT
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  Support for the GalaxyCore GC32E1 sensor.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called GC32E1.
+
 config VIDEO_GC4023
 	tristate "GalaxyCore GC4023 sensor support"
 	depends on I2C && VIDEO_DEV
@@ -431,6 +457,19 @@ config VIDEO_GC8034
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called gc8034.
+
+config VIDEO_GC8613
+	tristate "GalaxyCore GC8613 sensor support"
+	depends on I2C && VIDEO_DEV
+	depends on MEDIA_CAMERA_SUPPORT
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  Support for the GalaxyCore GC8613 sensor.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called GC8613.
 
 config VIDEO_HI556
 	tristate "Hynix Hi-556 sensor support"
@@ -693,6 +732,20 @@ config VIDEO_IMX378
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called imx378.
+
+config VIDEO_IMX386
+	tristate "Sony IMX386 sensor support"
+	depends on I2C && VIDEO_DEV
+	depends on MEDIA_CAMERA_SUPPORT
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  This is a Video4Linux2 sensor driver for the Sony
+	  IMX386 camera.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called imx386.
 
 config VIDEO_IMX412
 	tristate "Sony IMX412 sensor support"
@@ -1049,6 +1102,17 @@ config VIDEO_OS05A20
 	help
 	  This is a Video4Linux2 sensor driver for the OmniVision
 	  OS05A20 camera.
+
+config VIDEO_OS05L10
+	tristate "OmniVision OS05L10 sensor support"
+	depends on I2C && VIDEO_DEV
+	depends on MEDIA_CAMERA_SUPPORT
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  This is a Video4Linux2 sensor driver for the OmniVision
+	  OS05L10 camera.
 
 config VIDEO_OS08A20
 	tristate "OmniVision OS08A20 sensor support"

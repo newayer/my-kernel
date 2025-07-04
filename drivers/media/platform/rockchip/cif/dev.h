@@ -37,6 +37,7 @@
 #define OF_CIF_MONITOR_PARA	"rockchip,cif-monitor"
 #define OF_CIF_WAIT_LINE	"wait-line"
 #define OF_CIF_FASTBOOT_RESERVED_BUFS	"fastboot-reserved-bufs"
+#define OF_CIF_PINS_GROUP	"cif-pins-group"
 
 #define CIF_MONITOR_PARA_NUM	(5)
 
@@ -637,6 +638,7 @@ struct rkcif_stream {
 	struct list_head		done_fence_list_head;
 	spinlock_t			fence_lock;
 	u32				rounding_bit;
+	int				frame_loss;
 	struct kfifo			exp_kfifo;
 	struct kfifo			gain_kfifo;
 	struct kfifo			vts_kfifo;
@@ -765,6 +767,7 @@ enum scale_ch_sw {
 };
 
 enum scale_mode {
+	SCALE_4TIMES,
 	SCALE_8TIMES,
 	SCALE_16TIMES,
 	SCALE_32TIMES,
@@ -1051,6 +1054,7 @@ struct rkcif_device {
 	u32				pre_buf_num;
 	u32				pre_buf_addr[MAX_PRE_BUF_NUM];
 	u64				pre_buf_timestamp[MAX_PRE_BUF_NUM];
+	u32				dvp_pin_group;
 };
 
 extern struct platform_driver rkcif_plat_drv;
@@ -1173,4 +1177,6 @@ void rkcif_reinit_right_half_config(struct rkcif_stream *stream);
 void rkcif_modify_line_int(struct rkcif_stream *stream, bool en);
 
 void rkcif_set_sof(struct rkcif_device *cif_dev, u32 seq);
+
+void rkcif_set_sensor_streamon_in_sync_mode(struct rkcif_device *cif_dev);
 #endif

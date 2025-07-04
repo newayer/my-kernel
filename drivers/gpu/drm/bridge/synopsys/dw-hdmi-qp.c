@@ -281,6 +281,7 @@ struct dw_hdmi_qp {
 	const struct drm_display_mode *fixed_mode;
 	u8 edid[HDMI_EDID_LEN];
 	u8 vendor_info[VENDOR_INFO_LEN];
+	u32 dovi_vsif[DOVI_VSIF_LEN];
 
 	struct {
 		const struct dw_hdmi_qp_phy_ops *ops;
@@ -1542,6 +1543,7 @@ static void hdmi_config_AVI(struct dw_hdmi_qp *hdmi,
 		hdmi_infoframe_set_checksum(buff, 17);
 	} else if (is_hdmi2_sink(connector) && hdmi_quirk_vsi(connector, hdmi->vendor_info)) {
 		buff[7] = hdmi->vic;
+		hdmi_infoframe_set_checksum(buff, 17);
 	}
 
 	/*
@@ -1588,14 +1590,22 @@ static void hdmi_config_vendor_specific_infoframe(struct dw_hdmi_qp *hdmi,
 	struct dw_hdmi_link_config *link_cfg = NULL;
 	void *data = hdmi->plat_data->phy_data;
 
+	hdmi_modb(hdmi, 0, PKTSCHED_VSI_TX_EN, PKTSCHED_PKT_EN);
+
+	if (hdmi->dovi_vsif[0]) {
+		for (i = 0; i < 8; i++)
+			hdmi_writel(hdmi, hdmi->dovi_vsif[i], PKT_VSI_CONTENTS0 + i * 4);
+
+		goto out;
+	}
+
 	if (hdmi->plat_data->get_link_cfg)
 		link_cfg = hdmi->plat_data->get_link_cfg(data);
 
-	hdmi_modb(hdmi, 0, PKTSCHED_VSI_TX_EN, PKTSCHED_PKT_EN);
 	for (i = 0; i <= 7; i++)
 		hdmi_writel(hdmi, 0, PKT_VSI_CONTENTS0 + i * 4);
 
-	if (hdmi->allm_enable && (link_cfg->add_func & SUPPORT_HDMI_ALLM)) {
+	if (hdmi->allm_enable && link_cfg->allm_supported) {
 		buffer[0] = VSI_PKT_TYPE;
 		buffer[1] = VSI_PKT_VERSION;
 		buffer[2] = 5;
@@ -1657,6 +1667,7 @@ static void hdmi_config_vendor_specific_infoframe(struct dw_hdmi_qp *hdmi,
 
 	hdmi_writel(hdmi, 0, PKT_VSI_CONTENTS7);
 
+out:
 	hdmi_modb(hdmi, 0, PKTSCHED_VSI_FIELDRATE, PKTSCHED_PKT_CONFIG1);
 	hdmi_modb(hdmi, PKTSCHED_VSI_TX_EN, PKTSCHED_VSI_TX_EN,
 		  PKTSCHED_PKT_EN);
@@ -2613,11 +2624,15 @@ dw_hdmi_connector_detect(struct drm_connector *connector, bool force)
 	hdmi->force = DRM_FORCE_UNSPECIFIED;
 	mutex_unlock(&hdmi->mutex);
 
-	if (hdmi->panel || hdmi->fixed_mode || hdmi->force_kernel_output)
-		return connector_status_connected;
+	if (hdmi->panel || hdmi->fixed_mode || hdmi->force_kernel_output) {
+		result = connector_status_connected;
+		goto out;
+	}
 
-	if (hdmi->next_bridge && hdmi->next_bridge->ops & DRM_BRIDGE_OP_DETECT)
-		return drm_bridge_detect(hdmi->next_bridge);
+	if (hdmi->next_bridge && hdmi->next_bridge->ops & DRM_BRIDGE_OP_DETECT) {
+		result = drm_bridge_detect(hdmi->next_bridge);
+		goto out;
+	}
 
 	if (hdmi->plat_data->left)
 		secondary = hdmi->plat_data->left;
@@ -2634,6 +2649,12 @@ dw_hdmi_connector_detect(struct drm_connector *connector, bool force)
 		else
 			result = connector_status_disconnected;
 	}
+
+out:
+	if (result == connector_status_connected)
+		extcon_set_state_sync(hdmi->extcon, EXTCON_DISP_HDMI, true);
+	else
+		extcon_set_state_sync(hdmi->extcon, EXTCON_DISP_HDMI, false);
 
 	return result;
 }
@@ -2765,14 +2786,18 @@ static int dw_hdmi_connector_get_modes(struct drm_connector *connector)
 		hdmi->sink_has_audio = drm_detect_monitor_audio(edid);
 		if (hdmi->cec_notifier)
 			cec_notifier_set_phys_addr_from_edid(hdmi->cec_notifier, edid);
-		if (hdmi->plat_data->get_edid_dsc_info)
-			hdmi->plat_data->get_edid_dsc_info(data, edid);
+		if (hdmi->plat_data->get_edid_hdmi21_info)
+			hdmi->plat_data->get_edid_hdmi21_info(data, edid);
 		memcpy(hdmi->vendor_info, &raw_edid[8], VENDOR_INFO_LEN);
 		ret = drm_edid_connector_update(connector, drm_edid);
+		if (hdmi->plat_data->get_dovi_data)
+			hdmi->plat_data->get_dovi_data(data, edid, connector);
 		if (hdmi->plat_data->get_colorimetry)
 			hdmi->plat_data->get_colorimetry(data, edid);
 		if (hdmi->plat_data->get_yuv422_format)
 			hdmi->plat_data->get_yuv422_format(connector, edid);
+		if (hdmi->plat_data->get_hdr10_plus_vsdb)
+			hdmi->plat_data->get_hdr10_plus_vsdb(data, edid, connector);
 		dw_hdmi_update_hdr_property(connector);
 		if (ret > 0 && hdmi->plat_data->split_mode) {
 			struct dw_hdmi_qp *secondary = NULL;
@@ -2795,8 +2820,8 @@ static int dw_hdmi_connector_get_modes(struct drm_connector *connector)
 			if (secondary->cec_notifier)
 				cec_notifier_set_phys_addr_from_edid(secondary->cec_notifier,
 								     edid);
-			if (secondary->plat_data->get_edid_dsc_info)
-				secondary->plat_data->get_edid_dsc_info(secondary_data, edid);
+			if (secondary->plat_data->get_edid_hdmi21_info)
+				secondary->plat_data->get_edid_hdmi21_info(secondary_data, edid);
 		}
 		kfree(edid);
 		kfree(drm_edid);
@@ -2865,7 +2890,7 @@ void dw_hdmi_qp_set_allm_enable(struct dw_hdmi_qp *hdmi, bool enable)
 
 	hdmi->allm_enable = enable;
 
-	if (enable && !(link_cfg->add_func & SUPPORT_HDMI_ALLM)) {
+	if (enable && !link_cfg->allm_supported) {
 		hdmi->allm_enable = false;
 		dev_err(hdmi->dev, "sink don't support allm, allm won't be enabled\n");
 		return;
@@ -2874,6 +2899,64 @@ void dw_hdmi_qp_set_allm_enable(struct dw_hdmi_qp *hdmi, bool enable)
 	hdmi_config_vendor_specific_infoframe(hdmi, hdmi->curr_conn, &hdmi->previous_mode);
 }
 EXPORT_SYMBOL_GPL(dw_hdmi_qp_set_allm_enable);
+
+/*
+ * If userspace don't disable hdmi output when hdmi plug out,
+ * turn off hdmi signal output. Recovering hdmi status that
+ * before plug out via turn on hdmi signal output and do scdc
+ * communication when hdmi plug in.
+ */
+void dw_hdmi_qp_handle_hpd(struct dw_hdmi_qp *hdmi, bool enable)
+{
+	bool is_hdmi14 = false;
+
+	mutex_lock(&hdmi->mutex);
+	/* hdmi2.1 don't support keep vop output in current version */
+	if (hdmi->hdmi_data.video_mode.mtmdsclock > 600000000)
+		goto out;
+
+	mutex_lock(&hdmi->audio_mutex);
+	if (!hdmi->dclk_en)
+		goto err_dclk;
+
+	if (!enable && !hdmi->disabled) {
+		hdmi_writel(hdmi, 1, PKTSCHED_PKT_CONTROL0);
+		hdmi_modb(hdmi, PKTSCHED_GCP_TX_EN, PKTSCHED_GCP_TX_EN, PKTSCHED_PKT_EN);
+		msleep(50);
+		hdmi->phy.ops->disable(hdmi, hdmi->phy.data);
+		hdmi->disabled = true;
+		goto err_dclk;
+	}
+
+	if (hdmi->hdmi_data.video_mode.mtmdsclock <= 340000000)
+		is_hdmi14 = true;
+
+	if (enable && hdmi->disabled) {
+		if (!is_hdmi14) {
+			drm_scdc_set_high_tmds_clock_ratio(hdmi->ddc, 1);
+			drm_scdc_set_scrambling(hdmi->ddc, 1);
+			hdmi_writel(hdmi, 1, SCRAMB_CONFIG0);
+			/* Wait for resuming transmission of TMDS clock and data */
+			msleep(100);
+		} else {
+			drm_scdc_set_high_tmds_clock_ratio(hdmi->ddc, 0);
+			drm_scdc_set_scrambling(hdmi->ddc, 0);
+			hdmi_writel(hdmi, 0, SCRAMB_CONFIG0);
+		}
+
+		hdmi->phy.ops->init(hdmi, hdmi->phy.data, &hdmi->previous_mode);
+		hdmi->disabled = false;
+		msleep(50);
+		hdmi_writel(hdmi, 2, PKTSCHED_PKT_CONTROL0);
+		hdmi_modb(hdmi, PKTSCHED_GCP_TX_EN, PKTSCHED_GCP_TX_EN, PKTSCHED_PKT_EN);
+	}
+
+err_dclk:
+	mutex_unlock(&hdmi->audio_mutex);
+out:
+	mutex_unlock(&hdmi->mutex);
+}
+EXPORT_SYMBOL_GPL(dw_hdmi_qp_handle_hpd);
 
 static int
 dw_hdmi_atomic_connector_set_property(struct drm_connector *connector,
@@ -3104,6 +3187,27 @@ static void set_dw_hdmi_hdcp_enable(struct dw_hdmi_qp *hdmi,
 	}
 }
 
+static bool dovi_vsif_equal(struct dw_hdmi_qp *hdmi)
+{
+	void *data = hdmi->plat_data->phy_data;
+	int ret;
+	u32 vsif[DOVI_VSIF_LEN] = {0};
+
+	if (!hdmi->plat_data->get_dovi_vsif)
+		return true;
+
+	hdmi->plat_data->get_dovi_vsif(data, vsif);
+
+	ret = memcmp(hdmi->dovi_vsif, vsif, DOVI_VSIF_LEN * 4);
+
+	if (ret) {
+		memcpy(hdmi->dovi_vsif, vsif, DOVI_VSIF_LEN * 4);
+		return false;
+	} else {
+		return true;
+	}
+}
+
 static int dw_hdmi_connector_atomic_check(struct drm_connector *connector,
 					  struct drm_atomic_state *state)
 {
@@ -3266,9 +3370,28 @@ static void dw_hdmi_connector_atomic_commit(struct drm_connector *connector,
 		hdmi->update = false;
 	}
 
-	if (!hdmi->disabled)
+	if (!hdmi->disabled) {
 		set_dw_hdmi_hdcp_enable(hdmi, connector, state);
+		if (!dovi_vsif_equal(hdmi))
+			hdmi_config_vendor_specific_infoframe(hdmi, hdmi->curr_conn,
+							      &hdmi->previous_mode);
+	}
 }
+
+void dw_hdmi_qp_set_quant_range(struct dw_hdmi_qp *hdmi)
+{
+	void *data = hdmi->plat_data->phy_data;
+
+	if (hdmi->disabled)
+		return;
+
+	if (hdmi->plat_data->get_quant_range)
+		hdmi->hdmi_data.quant_range =
+			hdmi->plat_data->get_quant_range(data);
+
+	hdmi_config_AVI(hdmi, hdmi->curr_conn, &hdmi->previous_mode);
+}
+EXPORT_SYMBOL_GPL(dw_hdmi_qp_set_quant_range);
 
 void dw_hdmi_qp_set_output_type(struct dw_hdmi_qp *hdmi, u64 val)
 {
@@ -3308,8 +3431,25 @@ static void dw_hdmi_connector_force(struct drm_connector *connector)
 	mutex_unlock(&hdmi->mutex);
 }
 
+static int drm_hdmi_probe_single_connector_modes(struct drm_connector *connector,
+						 uint32_t maxX, uint32_t maxY)
+{
+	struct dw_hdmi_qp *hdmi =
+		container_of(connector, struct dw_hdmi_qp, connector);
+	struct drm_display_info *info = &connector->display_info;
+	void *data = hdmi->plat_data->phy_data;
+	int ret;
+
+	ret = drm_helper_probe_single_connector_modes(connector, maxX, maxY);
+
+	if (hdmi->plat_data->get_mode_color_caps)
+		hdmi->plat_data->get_mode_color_caps(connector, info, data);
+
+	return ret;
+}
+
 static const struct drm_connector_funcs dw_hdmi_connector_funcs = {
-	.fill_modes = drm_helper_probe_single_connector_modes,
+	.fill_modes = drm_hdmi_probe_single_connector_modes,
 	.detect = dw_hdmi_connector_detect,
 	.destroy = drm_connector_cleanup,
 	.force = dw_hdmi_connector_force,
@@ -3430,9 +3570,21 @@ static void dw_hdmi_qp_bridge_atomic_disable(struct drm_bridge *bridge,
 	struct dw_hdmi_qp *hdmi = bridge->driver_private;
 	void *data = hdmi->plat_data->phy_data;
 	const struct drm_connector_state *conn_state = hdmi->curr_conn->state;
+	struct dw_hdmi_link_config *link_cfg = NULL;
 
 	if (hdmi->panel)
 		drm_panel_disable(hdmi->panel);
+
+	if (hdmi->plat_data->get_link_cfg)
+		link_cfg = hdmi->plat_data->get_link_cfg(data);
+
+	if (!link_cfg) {
+		dev_err(hdmi->dev, "link_cfg is null\n");
+		return;
+	}
+
+	if (link_cfg->dsc_mode)
+		hdmi->frl_switch = false;
 
 	/* set avmute */
 	hdmi_writel(hdmi, 1, PKTSCHED_PKT_CONTROL0);
@@ -3440,8 +3592,9 @@ static void dw_hdmi_qp_bridge_atomic_disable(struct drm_bridge *bridge,
 
 	dw_hdmi_qp_hdcp_disable(hdmi, conn_state);
 
-	extcon_set_state_sync(hdmi->extcon, EXTCON_DISP_HDMI, false);
 	handle_plugged_change(hdmi, false);
+	if (hdmi->plat_data->crtc_pre_disable)
+		hdmi->plat_data->crtc_pre_disable(data, bridge->encoder->crtc);
 	mutex_lock(&hdmi->mutex);
 
 	if (hdmi->dclk_en) {
@@ -3466,6 +3619,7 @@ static void dw_hdmi_qp_bridge_atomic_disable(struct drm_bridge *bridge,
 	}
 
 	hdmi->curr_conn = NULL;
+	hdmi->update = false;
 	mutex_unlock(&hdmi->mutex);
 
 	cancel_work_sync(&hdmi->flt_work);
@@ -3515,11 +3669,13 @@ static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,
 	if (link_cfg && link_cfg->frl_mode)
 		queue_work(hdmi->workqueue, &hdmi->flt_work);
 
+	if (hdmi->plat_data->crtc_post_enable)
+		hdmi->plat_data->crtc_post_enable(data, bridge->encoder->crtc);
+
 	dw_hdmi_qp_init_audio_infoframe(hdmi);
 	dw_hdmi_qp_audio_enable(hdmi);
 	hdmi_clk_regenerator_update_pixel_clock(hdmi);
 
-	extcon_set_state_sync(hdmi->extcon, EXTCON_DISP_HDMI, true);
 	handle_plugged_change(hdmi, true);
 
 	if (hdmi->panel)

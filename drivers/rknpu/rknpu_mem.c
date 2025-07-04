@@ -17,6 +17,59 @@
 
 #ifdef CONFIG_ROCKCHIP_RKNPU_DMA_HEAP
 
+#if KERNEL_VERSION(6, 1, 115) < LINUX_VERSION_CODE
+#ifdef CONFIG_ARM64
+/*
+ * Check whether a kernel address is valid (derived from arch/x86/).
+ */
+static int kern_addr_valid(unsigned long addr)
+{
+	pgd_t *pgdp;
+	p4d_t *p4dp;
+	pud_t *pudp, pud;
+	pmd_t *pmdp, pmd;
+	pte_t *ptep, pte;
+
+	addr = arch_kasan_reset_tag(addr);
+	if ((((long)addr) >> VA_BITS) != -1UL)
+		return 0;
+
+	pgdp = pgd_offset_k(addr);
+	if (pgd_none(READ_ONCE(*pgdp)))
+		return 0;
+
+	p4dp = p4d_offset(pgdp, addr);
+	if (p4d_none(READ_ONCE(*p4dp)))
+		return 0;
+
+	pudp = pud_offset(p4dp, addr);
+	pud = READ_ONCE(*pudp);
+	if (pud_none(pud))
+		return 0;
+
+	if (pud_sect(pud))
+		return pfn_valid(pud_pfn(pud));
+
+	pmdp = pmd_offset(pudp, addr);
+	pmd = READ_ONCE(*pmdp);
+	if (pmd_none(pmd))
+		return 0;
+
+	if (pmd_sect(pmd))
+		return pfn_valid(pmd_pfn(pmd));
+
+	ptep = pte_offset_kernel(pmdp, addr);
+	pte = READ_ONCE(*ptep);
+	if (pte_none(pte))
+		return 0;
+
+	return pfn_valid(pte_pfn(pte));
+}
+#else
+#define kern_addr_valid(addr)	(1)
+#endif
+#endif
+
 int rknpu_mem_create_ioctl(struct rknpu_device *rknpu_dev, struct file *file,
 			   unsigned int cmd, unsigned long data)
 {
@@ -141,6 +194,7 @@ int rknpu_mem_create_ioctl(struct rknpu_device *rknpu_dev, struct file *file,
 	rknpu_obj->size = PAGE_ALIGN(args.size);
 	rknpu_obj->dma_addr = phys;
 	rknpu_obj->sgt = table;
+	rknpu_obj->attachment = attachment;
 
 	args.size = rknpu_obj->size;
 	args.obj_addr = (__u64)(uintptr_t)rknpu_obj;
@@ -158,9 +212,6 @@ int rknpu_mem_create_ioctl(struct rknpu_device *rknpu_dev, struct file *file,
 		ret = -EFAULT;
 		goto err_unmap_kv_addr;
 	}
-
-	dma_buf_unmap_attachment(attachment, table, DMA_BIDIRECTIONAL);
-	dma_buf_detach(dmabuf, attachment);
 
 	spin_lock(&rknpu_dev->lock);
 
@@ -247,9 +298,15 @@ int rknpu_mem_destroy_ioctl(struct rknpu_device *rknpu_dev, struct file *file,
 		vunmap(rknpu_obj->kv_addr);
 		rknpu_obj->kv_addr = NULL;
 
-		if (!rknpu_obj->owner)
+		if (!rknpu_obj->owner) {
 			dma_buf_put(rknpu_obj->dmabuf);
-
+		} else {
+			dma_buf_unmap_attachment(rknpu_obj->attachment,
+						 rknpu_obj->sgt,
+						 DMA_BIDIRECTIONAL);
+			dma_buf_detach(rknpu_obj->dmabuf,
+				       rknpu_obj->attachment);
+		}
 		kfree(rknpu_obj);
 	}
 

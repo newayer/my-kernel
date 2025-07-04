@@ -37,6 +37,13 @@ config CLK_RV1126
 	help
 	  Build the driver for RV1126 Clock Driver.
 
+config CLK_RV1126B
+	tristate "Rockchip RV1126B clock controller support"
+	depends on CPU_RV1126B || COMPILE_TEST
+	default y
+	help
+	  Build the driver for RV1126B Clock Driver.
+
 config CLK_RK1808
 	tristate "Rockchip RK1808 clock controller support"
 	depends on CPU_RK1808 || COMPILE_TEST
@@ -207,7 +214,8 @@ config ROCKCHIP_DDRCLK_SIP
 config ROCKCHIP_DDRCLK_SIP_V2
 	bool "Rockchip DDR Clk SIP V2"
 	depends on CPU_PX30   || CPU_RK1808 || CPU_RK312X || CPU_RK322X || \
-		   CPU_RK3288 || CPU_RK3308 || CPU_RK3328 || CPU_RV1126
+		   CPU_RK3288 || CPU_RK3308 || CPU_RK3328 || CPU_RV1126 || \
+		   CPU_RV1126B
 	default y
 	select ROCKCHIP_DDRCLK
 	help

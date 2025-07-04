@@ -118,8 +118,6 @@
 	((ltssm & PORT_LOGIC_LTSSM_STATE_MASK) == 0x15)
 #define RK_PCIE_ENUM_HW_RETRYIES	2
 
-#define	PORT_LOGIC_LTSSM_L2
-
 struct rk_pcie {
 	struct dw_pcie			*pci;
 	void __iomem			*dbi_base;
@@ -1581,6 +1579,8 @@ static int rk_pcie_host_config(struct rk_pcie *rk_pcie)
 
 	/* Enable L0s capability */
 	if (rk_pcie->linkcap_off) {
+		pci->n_fts[0] = 255; /* Gen1 */
+		pci->n_fts[1] = 255; /* Gen2+ */
 		val = dw_pcie_readl_dbi(rk_pcie->pci, rk_pcie->linkcap_off);
 		val |= PCI_EXP_LNKCAP_ASPM_L0S;
 		dw_pcie_writel_dbi(rk_pcie->pci, rk_pcie->linkcap_off, val);
@@ -2059,6 +2059,7 @@ int rockchip_dw_pcie_pm_ctrl_for_user(struct pci_dev *dev, enum rockchip_pcie_pm
 	struct dw_pcie_rp *pp;
 	struct dw_pcie *pci;
 	struct rk_pcie *rk_pcie;
+	u32 intr_mask;
 
 	if (!dev || !dev->bus || !dev->bus->sysdata) {
 		pr_err("%s input invalid\n", __func__);
@@ -2071,8 +2072,16 @@ int rockchip_dw_pcie_pm_ctrl_for_user(struct pci_dev *dev, enum rockchip_pcie_pm
 
 	switch (flag) {
 	case ROCKCHIP_PCIE_PM_CTRL_RESET:
+		/*
+		 * suspend and resume should be called in noirq context, masking and
+		 * unmasking local irq to prevent hunging for accessing died controller
+		 * if serving irq, for instance, hot reset case.
+		 */
+		intr_mask = rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_INTR_MASK);
+		rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_MASK, 0xffffffff);
 		rockchip_dw_pcie_suspend(rk_pcie->pci->dev);
 		rockchip_dw_pcie_resume(rk_pcie->pci->dev);
+		rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_MASK, intr_mask | 0xffff0000);
 		break;
 	case ROCKCHIP_PCIE_PM_RETRAIN_LINK:
 		rk_pcie_retrain(pci);

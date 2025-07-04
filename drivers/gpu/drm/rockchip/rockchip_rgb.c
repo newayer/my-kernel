@@ -45,6 +45,9 @@
 #define RV1126_GRF_IOFUNC_CON3		0x1026c
 #define RV1126_LCDC_IO_BYPASS(v)	HIWORD_UPDATE(v, 0, 0)
 
+#define RV1126B_GRF_VOP_LCDC_CON	0x30b9c
+#define RV1126B_VOP_MCU_SEL(v)		HIWORD_UPDATE(v, 15, 15)
+
 #define RK3288_GRF_SOC_CON6		0x025c
 #define RK3288_LVDS_LCDC_SEL(x)		HIWORD_UPDATE(x,  3,  3)
 #define RK3288_GRF_SOC_CON7		0x0260
@@ -246,11 +249,12 @@ static void rockchip_rgb_encoder_enable(struct drm_encoder *encoder)
 	}
 }
 
-static void rockchip_rgb_encoder_disable(struct drm_encoder *encoder)
+static void rockchip_rgb_encoder_atomic_disable(struct drm_encoder *encoder,
+						struct drm_atomic_state *state)
 {
 	struct rockchip_rgb *rgb = encoder_to_rgb(encoder);
-	struct drm_crtc *crtc = encoder->crtc;
-	struct rockchip_crtc_state *s = to_rockchip_crtc_state(crtc->state);
+	struct drm_crtc *old_crtc, *new_crtc;
+	struct rockchip_crtc_state *s;
 
 	if (rgb->panel) {
 		drm_panel_disable(rgb->panel);
@@ -267,8 +271,14 @@ static void rockchip_rgb_encoder_disable(struct drm_encoder *encoder)
 
 	pinctrl_pm_select_sleep_state(rgb->dev);
 
-	if (crtc->state->active_changed)
+	old_crtc = drm_atomic_get_old_crtc_for_encoder(state, encoder);
+	new_crtc = drm_atomic_get_new_crtc_for_encoder(state, encoder);
+
+	if (old_crtc && old_crtc != new_crtc) {
+		s = to_rockchip_crtc_state(old_crtc->state);
+
 		s->output_if &= ~(VOP_OUTPUT_IF_RGB | VOP_OUTPUT_IF_BT656 | VOP_OUTPUT_IF_BT1120);
+	}
 }
 
 static int
@@ -420,7 +430,7 @@ rockchip_rgb_encoder_mode_valid(struct drm_encoder *encoder,
 static const
 struct drm_encoder_helper_funcs rockchip_rgb_encoder_helper_funcs = {
 	.enable = rockchip_rgb_encoder_enable,
-	.disable = rockchip_rgb_encoder_disable,
+	.atomic_disable = rockchip_rgb_encoder_atomic_disable,
 	.atomic_check = rockchip_rgb_encoder_atomic_check,
 	.mode_valid = rockchip_rgb_encoder_mode_valid,
 };
@@ -1194,6 +1204,20 @@ static const struct rockchip_rgb_data rv1126_rgb = {
 	.funcs = &rv1126_rgb_funcs,
 };
 
+static void rv1126b_rgb_enable(struct rockchip_rgb *rgb)
+{
+	regmap_write(rgb->grf, RV1126B_GRF_VOP_LCDC_CON,
+		     RV1126B_VOP_MCU_SEL(rgb->data_sync_bypass));
+}
+
+static const struct rockchip_rgb_funcs rv1126b_rgb_funcs = {
+	.enable = rv1126b_rgb_enable,
+};
+
+static const struct rockchip_rgb_data rv1126b_rgb = {
+	.funcs = &rv1126b_rgb_funcs,
+};
+
 static void rv1106_rgb_enable(struct rockchip_rgb *rgb)
 {
 	regmap_write(rgb->grf, RV1106_VENC_GRF_VOP_IO_WRAPPER,
@@ -1228,6 +1252,7 @@ static const struct of_device_id rockchip_rgb_dt_ids[] = {
 	{ .compatible = "rockchip,rv1106-rgb", .data = &rv1106_rgb},
 	{ .compatible = "rockchip,rv1108-rgb", },
 	{ .compatible = "rockchip,rv1126-rgb", .data = &rv1126_rgb},
+	{ .compatible = "rockchip,rv1126b-rgb", .data = &rv1126b_rgb},
 	{}
 };
 MODULE_DEVICE_TABLE(of, rockchip_rgb_dt_ids);

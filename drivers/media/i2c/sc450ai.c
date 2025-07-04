@@ -5,6 +5,7 @@
  * Copyright (C) 2020 Rockchip Electronics Co., Ltd.
  *
  * V0.0X01.0X01 first version
+ * V0.0X01.0X02 Increase vblank in 2688x1520@30fps linear 4lane configuration
  */
 
 //#define DEBUG
@@ -30,18 +31,18 @@
 #include "cam-tb-setup.h"
 #include "cam-sleep-wakeup.h"
 
-#define DRIVER_VERSION			KERNEL_VERSION(0, 0x01, 0x01)
+#define DRIVER_VERSION			KERNEL_VERSION(0, 0x01, 0x02)
 
 #ifndef V4L2_CID_DIGITAL_GAIN
 #define V4L2_CID_DIGITAL_GAIN		V4L2_CID_GAIN
 #endif
 
-#define SC450AI_LANES			2
+#define SC450AI_LANES			4
 #define SC450AI_BITS_PER_SAMPLE		10
 #define SC450AI_LINK_FREQ_360		360000000
 
-#define PIXEL_RATE_WITH_360M_10BIT	(SC450AI_LINK_FREQ_360 * 2 * \
-					SC450AI_LANES / SC450AI_BITS_PER_SAMPLE)
+#define PIXEL_RATE_WITH_360M_10BIT	(SC450AI_LINK_FREQ_360 / SC450AI_BITS_PER_SAMPLE * 2 * \
+					SC450AI_LANES)
 
 #define SC450AI_XVCLK_FREQ		27000000
 
@@ -372,27 +373,26 @@ static const struct regval sc450ai_linear_10_1344x760_120fps_regs[] = {
 
 /*
  * Xclk 27Mhz
- * max_framerate 60fps
- * mipi_datarate per lane 720Mbps, 2lane
+ * max_framerate 30fps
+ * mipi_datarate per lane 720Mbps, 4lane
  */
 static const struct regval sc450ai_linear_10_2688x1520_30fps_regs[] = {
 	{0x0103, 0x01},
 	{0x0100, 0x00},
 	{0x36e9, 0x80},
 	{0x36f9, 0x80},
-	{0x3018, 0x3a},
-	{0x3019, 0x0c},
 	{0x301c, 0x78},
-	{0x301f, 0x3c},
+	{0x301f, 0x02},
+	{0x302d, 0xa0},
 	{0x302e, 0x00},
 	{0x3208, 0x0a},
 	{0x3209, 0x80},
 	{0x320a, 0x05},
 	{0x320b, 0xf0},
-	{0x320c, 0x02},
-	{0x320d, 0xee},
-	{0x320e, 0x06},
-	{0x320f, 0x18},
+	{0x320c, 0x03},
+	{0x320d, 0xa8},
+	{0x320e, 0x0c},
+	{0x320f, 0x30},
 	{0x3214, 0x11},
 	{0x3215, 0x11},
 	{0x3220, 0x00},
@@ -401,38 +401,38 @@ static const struct regval sc450ai_linear_10_2688x1520_30fps_regs[] = {
 	{0x325f, 0x44},
 	{0x3274, 0x09},
 	{0x3280, 0x01},
-	{0x3301, 0x07},
-	{0x3306, 0x20},
-	{0x3308, 0x08},
-	{0x330b, 0x58},
-	{0x330e, 0x18},
+	{0x3301, 0x08},
+	{0x3306, 0x24},
+	{0x3309, 0x60},
+	{0x330b, 0x64},
+	{0x330d, 0x30},
 	{0x3315, 0x00},
+	{0x331f, 0x59},
 	{0x335d, 0x60},
 	{0x3364, 0x56},
 	{0x338f, 0x80},
 	{0x3390, 0x08},
 	{0x3391, 0x18},
 	{0x3392, 0x38},
-	{0x3393, 0x07},
+	{0x3393, 0x0a},
 	{0x3394, 0x10},
 	{0x3395, 0x18},
 	{0x3396, 0x08},
 	{0x3397, 0x18},
 	{0x3398, 0x38},
-	{0x3399, 0x10},
-	{0x339a, 0x13},
-	{0x339b, 0x15},
+	{0x3399, 0x0f},
+	{0x339a, 0x12},
+	{0x339b, 0x14},
 	{0x339c, 0x18},
 	{0x33af, 0x18},
+	{0x3400, 0x16},
 	{0x360f, 0x13},
 	{0x3621, 0xec},
-	{0x3622, 0x00},
-	{0x3625, 0x0b},
-	{0x3627, 0x20},
+	{0x3627, 0xa0},
 	{0x3630, 0x90},
 	{0x3633, 0x56},
 	{0x3637, 0x1d},
-	{0x3638, 0x12},
+	{0x3638, 0x0a},
 	{0x363c, 0x0f},
 	{0x363d, 0x0f},
 	{0x363e, 0x08},
@@ -440,27 +440,27 @@ static const struct regval sc450ai_linear_10_2688x1520_30fps_regs[] = {
 	{0x3671, 0xe0},
 	{0x3672, 0xe0},
 	{0x3673, 0xe0},
-	{0x3674, 0xc0},
-	{0x3675, 0x87},
+	{0x3674, 0xb0},
+	{0x3675, 0x88},
 	{0x3676, 0x8c},
 	{0x367a, 0x48},
 	{0x367b, 0x58},
 	{0x367c, 0x48},
 	{0x367d, 0x58},
-	{0x3690, 0x22},
-	{0x3691, 0x33},
+	{0x3690, 0x34},
+	{0x3691, 0x43},
 	{0x3692, 0x44},
 	{0x3699, 0x03},
 	{0x369a, 0x0f},
 	{0x369b, 0x1f},
 	{0x369c, 0x40},
-	{0x369d, 0x78},
+	{0x369d, 0x48},
 	{0x36a2, 0x48},
 	{0x36a3, 0x78},
-	{0x36b0, 0x53},
-	{0x36b1, 0x74},
-	{0x36b2, 0x34},
-	{0x36b3, 0x40},
+	{0x36b0, 0x54},
+	{0x36b1, 0x75},
+	{0x36b2, 0x35},
+	{0x36b3, 0x48},
 	{0x36b4, 0x78},
 	{0x36b7, 0xa0},
 	{0x36b8, 0xa0},
@@ -473,22 +473,25 @@ static const struct regval sc450ai_linear_10_2688x1520_30fps_regs[] = {
 	{0x36e2, 0x12},
 	{0x36e3, 0x48},
 	{0x36e4, 0x78},
-	{0x36ec, 0x43},
+	{0x36fa, 0x0d},
+	{0x36fb, 0xa4},
 	{0x36fc, 0x00},
+	{0x36fd, 0x24},
 	{0x3907, 0x00},
 	{0x3908, 0x41},
-	{0x391e, 0xf1},
+	{0x391e, 0x01},
 	{0x391f, 0x11},
+	{0x3921, 0x10},
 	{0x3933, 0x82},
-	{0x3934, 0x30},
+	{0x3934, 0x0b},
 	{0x3935, 0x02},
-	{0x3936, 0xc7},
+	{0x3936, 0x5e},
 	{0x3937, 0x76},
-	{0x3938, 0x76},
+	{0x3938, 0x78},
 	{0x3939, 0x00},
 	{0x393a, 0x28},
 	{0x393b, 0x00},
-	{0x393c, 0x23},
+	{0x393c, 0x1d},
 	{0x3e01, 0xc2},
 	{0x3e02, 0x60},
 	{0x3e03, 0x0b},
@@ -499,6 +502,7 @@ static const struct regval sc450ai_linear_10_2688x1520_30fps_regs[] = {
 	{0x4837, 0x16},
 	{0x5000, 0x0e},
 	{0x5001, 0x44},
+	{0x5780, 0x76},
 	{0x5784, 0x08},
 	{0x5785, 0x04},
 	{0x5787, 0x0a},
@@ -514,9 +518,12 @@ static const struct regval sc450ai_linear_10_2688x1520_30fps_regs[] = {
 	{0x5793, 0x08},
 	{0x5794, 0x04},
 	{0x5795, 0x04},
-	{0x5799, 0x06},
-	{0x57aa, 0x28},
-	{0x57ab, 0x00},
+	{0x5799, 0x46},
+	{0x579a, 0x77},
+	{0x57a1, 0x04},
+	{0x57a8, 0xd0},
+	{0x57aa, 0x2a},
+	{0x57ab, 0x7f},
 	{0x57ac, 0x00},
 	{0x57ad, 0x00},
 	{0x59e0, 0xfe},
@@ -562,13 +569,13 @@ static const struct sc450ai_mode supported_modes[] = {
 		},
 		.exp_def = 0x0080,//mark
 		.hts_def = 0x2ee * 4,
-		.vts_def = 0x0618,
+		.vts_def = 0x0c30,
 		.bus_fmt = MEDIA_BUS_FMT_SBGGR10_1X10,
 		.reg_list = sc450ai_linear_10_2688x1520_30fps_regs,
 		.hdr_mode = NO_HDR,
 		.xvclk_freq = 27000000,
 		.link_freq_idx = 0,
-		.vc[PAD0] = V4L2_MBUS_CSI2_CHANNEL_0,
+		.vc[PAD0] = 0,
 	},
 	{
 		.width = 1344,
@@ -585,7 +592,7 @@ static const struct sc450ai_mode supported_modes[] = {
 		.hdr_mode = NO_HDR,
 		.xvclk_freq = 27000000,
 		.link_freq_idx = 0,
-		.vc[PAD0] = V4L2_MBUS_CSI2_CHANNEL_0,
+		.vc[PAD0] = 0,
 	},
 };
 
@@ -791,7 +798,7 @@ sc450ai_find_best_fit(struct v4l2_subdev_format *fmt)
 }
 
 static int sc450ai_set_fmt(struct v4l2_subdev *sd,
-			   struct v4l2_subdev_pad_config *cfg,
+			   struct v4l2_subdev_state *sd_state,
 			   struct v4l2_subdev_format *fmt)
 {
 	struct sc450ai *sc450ai = to_sc450ai(sd);
@@ -809,7 +816,7 @@ static int sc450ai_set_fmt(struct v4l2_subdev *sd,
 	fmt->format.field = V4L2_FIELD_NONE;
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
 #ifdef CONFIG_VIDEO_V4L2_SUBDEV_API
-		*v4l2_subdev_get_try_format(sd, cfg, fmt->pad) = fmt->format;
+		*v4l2_subdev_get_try_format(sd, sd_state, fmt->pad) = fmt->format;
 #else
 		mutex_unlock(&sc450ai->mutex);
 		return -ENOTTY;
@@ -839,7 +846,7 @@ static int sc450ai_set_fmt(struct v4l2_subdev *sd,
 }
 
 static int sc450ai_get_fmt(struct v4l2_subdev *sd,
-			   struct v4l2_subdev_pad_config *cfg,
+			   struct v4l2_subdev_state *sd_state,
 			   struct v4l2_subdev_format *fmt)
 {
 	struct sc450ai *sc450ai = to_sc450ai(sd);
@@ -848,7 +855,7 @@ static int sc450ai_get_fmt(struct v4l2_subdev *sd,
 	mutex_lock(&sc450ai->mutex);
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
 #ifdef CONFIG_VIDEO_V4L2_SUBDEV_API
-		fmt->format = *v4l2_subdev_get_try_format(sd, cfg, fmt->pad);
+		fmt->format = *v4l2_subdev_get_try_format(sd, sd_state, fmt->pad);
 #else
 		mutex_unlock(&sc450ai->mutex);
 		return -ENOTTY;
@@ -870,7 +877,7 @@ static int sc450ai_get_fmt(struct v4l2_subdev *sd,
 }
 
 static int sc450ai_enum_mbus_code(struct v4l2_subdev *sd,
-				  struct v4l2_subdev_pad_config *cfg,
+				  struct v4l2_subdev_state *sd_state,
 				  struct v4l2_subdev_mbus_code_enum *code)
 {
 	struct sc450ai *sc450ai = to_sc450ai(sd);
@@ -883,7 +890,7 @@ static int sc450ai_enum_mbus_code(struct v4l2_subdev *sd,
 }
 
 static int sc450ai_enum_frame_sizes(struct v4l2_subdev *sd,
-				    struct v4l2_subdev_pad_config *cfg,
+				    struct v4l2_subdev_state *sd_state,
 				    struct v4l2_subdev_frame_size_enum *fse)
 {
 	if (fse->index >= ARRAY_SIZE(supported_modes))
@@ -934,20 +941,8 @@ static int sc450ai_g_mbus_config(struct v4l2_subdev *sd,
 				unsigned int pad_id,
 				struct v4l2_mbus_config *config)
 {
-	struct sc450ai *sc450ai = to_sc450ai(sd);
-	const struct sc450ai_mode *mode = sc450ai->cur_mode;
-
-	u32 val = 1 << (SC450AI_LANES - 1) |
-		V4L2_MBUS_CSI2_CHANNEL_0 |
-		V4L2_MBUS_CSI2_CONTINUOUS_CLOCK;
-
-	if (mode->hdr_mode != NO_HDR)
-		val |= V4L2_MBUS_CSI2_CHANNEL_1;
-	if (mode->hdr_mode == HDR_X3)
-		val |= V4L2_MBUS_CSI2_CHANNEL_2;
-
 	config->type = V4L2_MBUS_CSI2_DPHY;
-	config->flags = val;
+	config->bus.mipi_csi2.num_data_lanes = SC450AI_LANES;
 
 	return 0;
 }
@@ -1310,7 +1305,6 @@ static void __sc450ai_power_off(struct sc450ai *sc450ai)
 
 	if (!IS_ERR(sc450ai->pwdn_gpio))
 		gpiod_set_value_cansleep(sc450ai->pwdn_gpio, 0);
-	clk_disable_unprepare(sc450ai->xvclk);
 	if (!IS_ERR(sc450ai->reset_gpio))
 		gpiod_set_value_cansleep(sc450ai->reset_gpio, 0);
 	if (!IS_ERR_OR_NULL(sc450ai->pins_sleep)) {
@@ -1392,7 +1386,7 @@ static int sc450ai_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct sc450ai *sc450ai = to_sc450ai(sd);
 	struct v4l2_mbus_framefmt *try_fmt =
-				v4l2_subdev_get_try_format(sd, fh->pad, 0);
+				v4l2_subdev_get_try_format(sd, fh->state, 0);
 	const struct sc450ai_mode *def_mode = &supported_modes[0];
 
 	mutex_lock(&sc450ai->mutex);
@@ -1410,7 +1404,7 @@ static int sc450ai_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 #endif
 
 static int sc450ai_enum_frame_interval(struct v4l2_subdev *sd,
-				       struct v4l2_subdev_pad_config *cfg,
+				       struct v4l2_subdev_state *sd_state,
 				       struct v4l2_subdev_frame_interval_enum *fie)
 {
 	if (fie->index >= ARRAY_SIZE(supported_modes))
@@ -1818,7 +1812,7 @@ static int sc450ai_probe(struct i2c_client *client,
 	snprintf(sd->name, sizeof(sd->name), "m%02d_%s_%s %s",
 		 sc450ai->module_index, facing,
 		 SC450AI_NAME, dev_name(sd->dev));
-	ret = v4l2_async_register_subdev_sensor_common(sd);
+	ret = v4l2_async_register_subdev_sensor(sd);
 	if (ret) {
 		dev_err(dev, "v4l2 async register subdev failed\n");
 		goto err_clean_entity;
@@ -1847,7 +1841,7 @@ err_destroy_mutex:
 	return ret;
 }
 
-static int sc450ai_remove(struct i2c_client *client)
+static void sc450ai_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct sc450ai *sc450ai = to_sc450ai(sd);
@@ -1866,7 +1860,6 @@ static int sc450ai_remove(struct i2c_client *client)
 		__sc450ai_power_off(sc450ai);
 	pm_runtime_set_suspended(&client->dev);
 
-	return 0;
 }
 
 #if IS_ENABLED(CONFIG_OF)

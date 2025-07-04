@@ -182,6 +182,7 @@ int rkisp_rockit_buf_queue(struct rockit_cfg *input_rockit_cfg)
 			reg = stream->config->mi.cb_base_ad_init;
 			rkisp_write(ispdev, reg, val, false);
 			stream->dummy_buf.dma_addr = isprk_buf->buff_addr;
+			stream->dummy_buf.dbuf = isprk_buf->dmabuf;
 			v4l2_info(&ispdev->v4l2_dev, "rockit wrap buf:0x%x\n", isprk_buf->buff_addr);
 		}
 		return -EINVAL;
@@ -314,7 +315,7 @@ int rkisp_rockit_buf_done(struct rkisp_stream *stream, int cmd, struct rkisp_buf
 		rockit_cfg->frame.u64PTS = ns;
 
 		rockit_cfg->frame.u32TimeRef = seq;
-		if (dev->isp_ver == ISP_V33)
+		if (dev->isp_ver == ISP_V33 || dev->isp_ver == ISP_V35)
 			rockit_cfg->frame.ispEncCnt =
 				ISP33_ISP2ENC_FRM_CNT(rkisp_read(dev, ISP3X_ISP_DEBUG1, true));
 	}

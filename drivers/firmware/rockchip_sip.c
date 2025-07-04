@@ -24,6 +24,7 @@
 #include <linux/ptrace.h>
 #include <linux/sched/clock.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <soc/rockchip/rockchip_sip.h>
 
 #ifdef CONFIG_64BIT
@@ -356,6 +357,28 @@ struct arm_smccc_res sip_hdcp_config(u32 arg0, u32 arg1, u32 arg2)
 	return res;
 }
 EXPORT_SYMBOL_GPL(sip_hdcp_config);
+
+struct arm_smccc_res sip_smc_gpio_config(u32 sub_func_id, u32 arg1, u32 arg2,
+					 u32 arg3)
+{
+	struct arm_smccc_res res;
+
+	/*
+	 * res.a0: error code(0: success, !0: error).
+	 */
+	arm_smccc_smc(SIP_GPIO_CFG, sub_func_id, arg1, arg2, arg3, 0, 0, 0, &res);
+	return res;
+}
+EXPORT_SYMBOL_GPL(sip_smc_gpio_config);
+
+int sip_smc_cpu_pm_config(u32 func, u32 id, u32 cfg)
+{
+	struct arm_smccc_res res;
+
+	res = __invoke_sip_fn_smc(SIP_CPU_PM_CFG, func, id, cfg);
+	return res.a0;
+}
+EXPORT_SYMBOL_GPL(sip_smc_cpu_pm_config);
 
 /************************** fiq debugger **************************************/
 /*
