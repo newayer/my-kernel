@@ -1,0 +1,214 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
+ */
+
+/dts-v1/;
+#include "rv1106.dtsi"
+#include "rv1106-luckfox-pico-ultra-ipc.dtsi"
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/display/media-bus-format.h>
+
+/ {
+	model = "Luckfox Pico Ultra";
+	compatible = "rockchip,rv1103g-38x38-ipc-v10", "rockchip,rv1106g3";
+
+	spi3: spi@gpiol {
+		compatible = "spi-gpio";
+		#address-cells = <1>;
+		gpio-sck = <&gpio1 RK_PD3 GPIO_ACTIVE_LOW>;
+		gpio-miso = <&gpio1 RK_PD2 GPIO_ACTIVE_HIGH>;
+		gpio-mosi = <&gpio1 RK_PC6 GPIO_ACTIVE_HIGH>;
+		num-chipselects = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&spi3gpio_pins>;
+		status = "disabled";
+	};
+};
+
+/**********CRU**********/
+&cru {
+	assigned-clocks =
+		<&cru PLL_GPLL>, <&cru PLL_CPLL>,
+		<&cru ARMCLK>,
+		<&cru ACLK_PERI_ROOT>, <&cru HCLK_PERI_ROOT>,
+		<&cru PCLK_PERI_ROOT>, <&cru ACLK_BUS_ROOT>,
+		<&cru PCLK_TOP_ROOT>, <&cru PCLK_PMU_ROOT>,
+		<&cru HCLK_PMU_ROOT>, <&cru CLK_500M_SRC>;
+	assigned-clock-rates =
+		<1188000000>, <700000000>,
+		<1104000000>,
+		<400000000>, <200000000>,
+		<100000000>, <300000000>,
+		<100000000>, <100000000>,
+		<200000000>, <700000000>;
+};
+
+/**********NPU**********/
+&npu {
+	assigned-clock-rates = <700000000>;
+};
+
+/**********EMMC**********/
+&emmc {
+	bus-width = <8>;
+	cap-mmc-highspeed;
+	non-removable;
+	// mmc-hs200-1_8v;
+	rockchip,default-sample-phase = <90>;
+	no-sdio;
+	no-sd;
+	memory-region-ecsd = <&mmc_ecsd>;
+	post-power-on-delay-ms = <0>;
+	status = "okay";
+};
+
+&fiq_debugger {
+	rockchip,irq-mode-enable = <1>;
+	status = "okay";
+};
+
+/**********ETH**********/
+&gmac {
+	status = "okay";
+};
+
+/**********USB**********/
+&usbdrd_dwc3 {
+	status = "okay";
+	dr_mode = "peripheral";
+};
+
+/**********RTC**********/
+&rtc {
+	status = "disabled";
+};
+
+/**********SPI**********/
+&spi0 {
+	status = "disabled";
+	spidev@0 {
+		spi-max-frequency = <50000000>;
+	};
+};
+
+&i2c4 {
+	status = "disabled";
+};
+
+&uart3 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart3m0_xfer>;
+};
+
+&display_subsystem {
+	status = "disabled";
+};
+
+&rgb {
+	status = "disabled";
+};
+
+&rgb_in_vop {
+	status = "disabled";
+};
+
+&vop {
+	status = "disabled";
+};
+
+&spi0 {
+	status = "okay";
+	spi-slave;
+	slave {
+		compatible ="rockchip,spidev";
+		reg = <0>;
+		id = <0>;
+	};
+};
+
+&pinctrl {
+	spi3 {
+		spi3gpio_pins: spi3gpio_pins {
+			rockchip,pins =
+				<1 RK_PD3 0 &pcfg_pull_none>,
+				<1 RK_PD2 0 &pcfg_pull_none>,
+				<1 RK_PC6 0 &pcfg_pull_none>;
+		};
+	};
+};
+
+&spi3 {
+	status = "okay";
+	spidev@0 {
+		compatible = "rockchip,spidev";
+		spi-max-frequency = <50000000>;
+		reg = <0>;
+		status = "okay";
+	};
+};
+
+&work_led{
+	gpios = <&gpio3 RK_PA1 GPIO_ACTIVE_HIGH>;
+};
+
+&csi2_dphy_hw {
+	status = "disabled";
+};
+
+&csi2_dphy0 {
+	status = "disabled";
+};
+
+&mipi0_csi2 {
+	status = "disabled";
+};
+
+&rkcif {
+	status = "disabled";
+};
+
+&rkcif_mipi_lvds {
+	status = "disabled";
+};
+
+&rkcif_mipi_lvds_sditf {
+	status = "disabled";
+};
+
+&rkisp {
+	status = "disabled";
+};
+
+&rkisp_vir0 {
+	status = "disabled";
+};
+
+&wdt {
+	status = "okay";
+};
+
+&uart0 {
+        status = "okay";
+        pinctrl-names = "default";
+        pinctrl-0 = <&uart0m0_xfer>;
+};
+
+&uart1 {
+        status = "okay";
+        pinctrl-names = "default";
+        pinctrl-0 = <&uart1m0_xfer>;
+};
+
+&uart4 {
+        status = "okay";
+        pinctrl-names = "default";
+        pinctrl-0 = <&uart4m0_xfer>;
+};
+
+&uart5 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart5m0_xfer>;
+};
