@@ -321,20 +321,23 @@ dsi1_pwm: &pwm4 {
 };
 
 &vp0 {
-	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER0)>;
-	rockchip,primary-plane = <ROCKCHIP_VOP2_CLUSTER0>;
+	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_SMART0)>;
+	rockchip,primary-plane = <ROCKCHIP_VOP2_SMART0>;
 	/delete-property/ cursor-win-id;
 };
 
 &vp1 {
-	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_ESMART0 | 1 << ROCKCHIP_VOP2_SMART0)>;
+	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER0 | 1 << ROCKCHIP_VOP2_ESMART0)>;
 	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART0>;
-	cursor-win-id = <ROCKCHIP_VOP2_SMART0>;
+	cursor-win-id = <ROCKCHIP_VOP2_CLUSTER0>;
 };
 
 &vp2 {
-	/delete-property/ rockchip,plane-mask;
-	/delete-property/ rockchip,primary-plane;
+	rockchip,plane-mask = <(
+				1 << ROCKCHIP_VOP2_CLUSTER1 | 1 << ROCKCHIP_VOP2_ESMART1 |
+				1 << ROCKCHIP_VOP2_SMART1)>;
+	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART1>;
+	cursor-win-id = <ROCKCHIP_VOP2_SMART1>;
 	status = "disabled";
 };
 
