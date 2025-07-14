@@ -265,6 +265,24 @@
 };
 
 /* GPIO Connector */
+&gpio4 {
+	gpio-line-names =
+		/* GPIO4 A0-A7 */
+		"", "",
+		"", "PIN_03",
+		"PIN_04 [UART6_TX_M0]", "PIN_05",
+		"PIN_06 [UART6_RX_M0]", "PIN_07",
+		/* GPIO4 B0-B7 */
+		"", "", "", "",
+		"", "", "", "",
+		/* GPIO4 C0-C7 */
+		"", "", "", "",
+		"", "", "", "",
+		/* GPIO4 D0-D7 */
+		"", "", "", "",
+		"", "", "", "";
+};
+
 &spi0 {
 	status = "disabled";
 

@@ -213,6 +213,38 @@
 };
 
 /* GPIO Connector */
+&gpio1 {
+	gpio-line-names =
+		/* GPIO1 A0-A7 */
+		"", "", "", "",
+		"", "", "", "",
+		/* GPIO1 B0-B7 */
+		"", "PIN_05", "PIN_07", "PIN_03",
+		"PIN_06", "", "PIN_10", "PIN_09",
+		/* GPIO1 C0-C7 */
+		"", "", "", "",
+		"", "", "", "",
+		/* GPIO1 D0-D7 */
+		"", "", "", "",
+		"", "", "", "";
+};
+
+&gpio3 {
+	gpio-line-names =
+		/* GPIO3 A0-A7 */
+		"", "", "", "",
+		"", "", "", "",
+		/* GPIO3 B0-B7 */
+		"", "", "", "",
+		"", "", "", "",
+		/* GPIO3 C0-C7 */
+		"", "", "", "",
+		"PIN_11 [UART5_TX_M1]", "PIN_12 [UART5_RX_M1]", "", "",
+		/* GPIO3 D0-D7 */
+		"", "", "", "",
+		"", "", "", "";
+};
+
 &spi0 {
 	pinctrl-0 = <&spi0m2_cs0 &spi0m2_pins>;
 	status = "disabled";
