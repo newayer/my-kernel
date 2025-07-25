@@ -281,6 +281,16 @@ dsi0_pwm: &pwm1_6ch_0 {
 #include "rk3576-nanopi5-mipi-lcd-yx70.dtsi"
 #endif
 
+/* MIPI-CSI */
+#define ENABLE_MIPI_CSI0	1
+
+#if (ENABLE_MIPI_CSI0)
+#include "rk3576-nanopi5-csi0-imx415.dtsi"
+#endif
+#if (ENABLE_MIPI_CSI1)
+#include "rk3576-nanopi5-csi1-imx415.dtsi"
+#endif
+
 /* GPIO Connector */
 &gpio0 {
 	gpio-line-names =
