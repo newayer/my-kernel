@@ -757,6 +757,13 @@ dsi1_pwm: &pwm11 {
 
 #undef ENABLE_MIPI_DSI1
 
+/* MIPI-CSI */
+#define ENABLE_MIPI_CSI0	1
+
+#if (ENABLE_MIPI_CSI0)
+#include "rk3588-nanopi6-csi0-imx415.dtsi"
+#endif
+
 /* GPIO Connector */
 &gpio0 {
 	gpio-line-names =
