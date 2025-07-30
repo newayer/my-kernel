@@ -173,7 +173,20 @@
 };
 
 &i2c0 {
-	status = "disabled";
+	clock-frequency = <400000>;
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io25_i2c0_scl &rm_io24_i2c0_sda>;
+
+	rtc_RS4C1339: rtc@68 {
+		compatible = "dallas,ds1339";
+		reg = <0x68>;
+		status = "okay";
+	};
+};
+
+&i2c2 {
+	// todo
 };
 
 &pwm0_4ch_0 {
@@ -202,20 +215,6 @@
 
 &sai4 {
 	status = "disabled";
-};
-
-&can0 {
-	rockchip,rx-max-data = <18>;
-	pinctrl-0 = <&rm_io19_can0_tx &rm_io20_can0_rx>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-
-&can1 {
-	rockchip,rx-max-data = <18>;
-	pinctrl-0 = <&rm_io13_can1_tx &rm_io18_can1_rx>;
-	pinctrl-names = "default";
-	status = "okay";
 };
 
 &display_subsystem {
