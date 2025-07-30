@@ -246,6 +246,7 @@
 	status = "okay";
 
 	sensor@19 {
+		status = "okay";
 		compatible = "gs_sc7a20";
 		reg = <0x19>;
 		type = <SENSOR_TYPE_ACCEL>;
