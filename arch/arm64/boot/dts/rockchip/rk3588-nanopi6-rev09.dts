@@ -805,6 +805,30 @@ dsi0_pwm: &pwm2 {
 	status = "disabled";
 };
 
+/* MIPI-DSI */
+#define ENABLE_MIPI_DSI0	1
+
+#include "rk3588-nanopi6-mipi-lcd-yx70.dtsi"
+#include "rk3588-nanopi6-mipi-dsi-sel.dtsi"
+
+#if defined(ENABLE_MIPI_DSI0)
+&dsi0_gt1x {
+	compatible = "goodix,gt1x", "goodix,gt9xx";
+	status = "okay";
+};
+
+&dsi0_gt9xx {
+	status = "disabled";
+};
+#endif
+
+/* MIPI-CSI */
+#define ENABLE_MIPI_CSI1	1
+
+#if (ENABLE_MIPI_CSI1)
+#include "rk3588-nanopi6-csi1-imx415.dtsi"
+#endif
+
 /* GPIO Connector */
 &gpio0 {
 	gpio-line-names =
