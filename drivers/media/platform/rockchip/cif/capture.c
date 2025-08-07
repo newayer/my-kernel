@@ -7464,12 +7464,11 @@ int rkcif_update_sensor_info(struct rkcif_stream *stream)
 			terminal_sensor->hdmi_input_en = 0;
 		}
 	} else {
-		v4l2_err(&stream->cifdev->v4l2_dev,
+		v4l2_warn_once(&stream->cifdev->v4l2_dev,
 			 "%s: stream[%d] get remote terminal sensor failed!\n",
 			 __func__, stream->id);
 		return -ENODEV;
 	}
-
 
 	if (terminal_sensor->mbus.type == V4L2_MBUS_CSI2_DPHY ||
 	    terminal_sensor->mbus.type == V4L2_MBUS_CSI2_CPHY)
@@ -8415,7 +8414,7 @@ int rkcif_do_start_stream(struct rkcif_stream *stream, enum rkcif_stream_mode mo
 	if (!dev->active_sensor) {
 		ret = rkcif_update_sensor_info(stream);
 		if (ret < 0) {
-			v4l2_err(v4l2_dev,
+			v4l2_warn_once(v4l2_dev,
 				 "update sensor info failed %d\n",
 				 ret);
 			goto out;
@@ -9054,7 +9053,7 @@ static int rkcif_fh_open(struct file *filp)
 	/* Make sure active sensor is valid before .set_fmt() */
 	ret = rkcif_update_sensor_info(stream);
 	if (ret < 0) {
-		v4l2_err(vdev,
+		v4l2_warn_once(vdev,
 			 "update sensor info failed %d\n",
 			 ret);
 
@@ -9194,7 +9193,7 @@ static int rkcif_enum_frameintervals(struct file *file, void *fh,
 
 	if (!sensor || !sensor->sd) {
 		/* TODO: active_sensor is NULL if using DMARX path */
-		v4l2_err(&dev->v4l2_dev, "%s Not active sensor\n", __func__);
+		v4l2_warn_once(&dev->v4l2_dev, "%s Not active sensor\n", __func__);
 		return -ENODEV;
 	}
 

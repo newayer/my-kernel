@@ -342,7 +342,7 @@ static int rkcif_tools_fh_open(struct file *file)
 
 	ret = rkcif_update_sensor_info(tools_vdev->stream);
 	if (ret < 0) {
-		v4l2_err(vdev,
+		v4l2_warn_once(vdev,
 			 "update sensor info failed %d\n",
 			 ret);
 

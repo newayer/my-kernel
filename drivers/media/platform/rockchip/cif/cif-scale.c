@@ -584,7 +584,7 @@ static int rkcif_scale_fh_open(struct file *file)
 
 	ret = rkcif_update_sensor_info(scale_vdev->stream);
 	if (ret < 0) {
-		v4l2_err(vdev,
+		v4l2_warn_once(vdev,
 			 "update sensor info failed %d\n",
 			 ret);
 

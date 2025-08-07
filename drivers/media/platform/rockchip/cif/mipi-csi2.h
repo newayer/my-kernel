@@ -208,4 +208,9 @@ int rkcif_csi2_register_notifier(struct notifier_block *nb);
 int rkcif_csi2_unregister_notifier(struct notifier_block *nb);
 void rkcif_csi2_event_reset_pipe(struct csi2_dev *csi2_dev, int reset_src);
 
+#ifndef v4l2_warn_once
+#define v4l2_warn_once(dev, fmt, arg...) \
+	printk_once(KERN_WARNING "%s: " fmt, (dev)->name , ## arg)
+#endif
+
 #endif

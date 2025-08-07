@@ -1495,7 +1495,7 @@ rkisp_start_streaming(struct vb2_queue *queue, unsigned int count)
 
 	atomic_inc(&dev->cap_dev.refcnt);
 	if (!dev->isp_inp || !stream->linked) {
-		v4l2_err(v4l2_dev, "check %s link or isp input\n", node->vdev.name);
+		v4l2_warn_once(v4l2_dev, "check %s link or isp input\n", node->vdev.name);
 		goto buffer_done;
 	}
 

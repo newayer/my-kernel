@@ -218,4 +218,9 @@ struct v4l2_rect *rkisp_get_isp_sd_win(struct rkisp_isp_subdev *isp_sdev)
 	return &isp_sdev->out_crop;
 }
 
+#ifndef v4l2_warn_once
+#define v4l2_warn_once(dev, fmt, arg...) \
+	printk_once(KERN_WARNING "%s: " fmt, (dev)->name , ## arg)
+#endif
+
 #endif /* _RKISP_H */
