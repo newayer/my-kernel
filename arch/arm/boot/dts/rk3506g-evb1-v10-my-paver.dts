@@ -19,7 +19,7 @@
 
 	extcon_usb: extcon-usb {
 		compatible = "linux,extcon-usb-gpio";
-		vbus-gpio = <&gpio1 RK_PC5 GPIO_ACTIVE_LOW>;
+		vbus-gpio = <&gpio1 RK_PB1 GPIO_ACTIVE_LOW>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&usb_extcon_vbus>;
 		status = "okay";
@@ -35,6 +35,7 @@
 	};
 
 	vcc3v3_lcd_n: vcc3v3-lcd0-n {
+		status = "disabled";
 		compatible = "regulator-fixed";
 		enable-active-high;
 		gpio = <&gpio0 RK_PA1 GPIO_ACTIVE_HIGH>;
@@ -113,6 +114,7 @@
 
 &dsi_panel {
 	power-supply = <&vcc3v3_lcd_n>;
+	status = "disabled";
 };
 
 &es8388 {
@@ -134,7 +136,7 @@
 &pinctrl {
 	usb {
 		usb_extcon_vbus: usb-extcon-vbus {
-			rockchip,pins = <1 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+			rockchip,pins = <1 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 
 		vcc5v0_otg0_en: vcc5v0-otg0-en {
