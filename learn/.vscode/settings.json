@@ -1,0 +1,15 @@
+    {
+        "kconfig.env": {
+            "SRCARCH": "arm"
+        },
+        "ctags.languages": [
+            "C",
+            "C++",
+            "Kconfig",
+            "Make"
+        ],
+        "devicetree.bindings": [
+            "${workspaceFolder}/../Documentation/devicetree/bindings"
+        ],
+        "kerneldev.experimental.newDtsEngine": true
+    }
