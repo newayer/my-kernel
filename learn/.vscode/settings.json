@@ -1,0 +1,18 @@
+{
+  "kconfig.env": {
+    "SRCARCH": "arm"
+  },
+  "ctags.languages": [
+    "C",
+    "C++",
+    "Kconfig",
+    "Make"
+  ],
+  "kerneldev.experimental.newKconfigEngine": true,
+  "devicetree.defaultDeviceOrgTreeBindings": [
+    "${workspaceFolder}/../Documentation/devicetree/bindings"
+  ],
+  "devicetree.defaultDeviceOrgBindingsMetaSchema": [
+    "${workspaceFolder}/../Documentation/devicetree/bindings/meta-schemas"
+  ]
+}
