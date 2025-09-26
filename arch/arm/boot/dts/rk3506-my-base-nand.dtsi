@@ -1,0 +1,134 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
+ */
+
+#include <dt-bindings/display/drm_mipi_dsi.h>
+#include <dt-bindings/input/rk-input.h>
+#include <dt-bindings/suspend/rockchip-rk3506.h>
+#include "rk3506.dtsi"
+
+/ {
+	model = "Rockchip RK3506B(BGA) EVB1 V10 Board";
+	compatible = "rockchip,rk3506b-evb1-v10", "rockchip,rk3506";
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 ubi.mtd=2 root=ubi0:rootfs rw rootfstype=ubifs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
+	};
+
+	fiq_debugger: fiq-debugger {
+		compatible = "rockchip,fiq-debugger";
+		rockchip,serial-id = <0>;
+		rockchip,wake-irq = <0>;
+		rockchip,irq-mode-enable = <1>;
+		rockchip,baudrate = <115200>;    /* Only 115200 and 1500000 */
+		interrupts = <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	vcc12v_dc: vcc12v-dc {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc12v_dc";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+	};
+
+	vcc_sys: vcc-sys {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_sys";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		vin-supply = <&vcc12v_dc>;
+	};
+
+	vcc3v3_stb: vcc3v3-stb {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc3v3_stb";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&vcc_sys>;
+	};
+
+	vcc_1v8: vcc-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_1v8";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		vin-supply = <&vcc3v3_stb>;
+	};
+
+	vcc_ddr: vcc-ddr {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_ddr";
+		regulator-always-on;
+		regulator-boot-on;
+		vin-supply = <&vcc_sys>;
+	};
+
+	vdd_arm: vdd-arm {
+		compatible = "pwm-regulator";
+		pwms = <&pwm0_4ch_0 0 5000 1>;
+		regulator-name = "vdd_arm";
+		regulator-min-microvolt = <710000>;
+		regulator-max-microvolt = <1207000>;
+		regulator-init-microvolt = <1011000>;
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-settling-time-up-us = <250>;
+		pwm-supply = <&vcc_sys>;
+	};
+};
+
+&cma {
+	size = <0x1600000>;
+};
+
+&cpu0 {
+	cpu-supply = <&vdd_arm>;
+};
+
+&fspi {
+	status = "okay";
+
+	flash@0 {
+		compatible = "spi-nand";
+		reg = <0>;
+		spi-max-frequency = <80000000>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+	};
+};
+
+&pwm0_4ch_0 {
+	pinctrl-names = "active";
+	pinctrl-0 = <&rm_io21_pwm0_ch0>;
+	status = "disabled";
+};
+
+&rockchip_suspend {
+	status = "disabled";
+};
+
+&saradc {
+	vref-supply = <&vcc_1v8>;
+	status = "okay";
+};
+
+&usb2phy {
+	status = "okay";
+};
+
+&u2phy_otg0 {
+	status = "okay";
+};
+
+&usb20_otg0 {
+	status = "okay";
+};
