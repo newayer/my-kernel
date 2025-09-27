@@ -24,12 +24,66 @@
 	leds {
 		compatible = "gpio-leds";
 		status = "okay";
-		heart_led {
+
+		heart_led: heart_led {
 			label = "run";
 			gpios = <&gpio1 RK_PB7 GPIO_ACTIVE_LOW>;
 			linux,default-trigger = "heartbeat";
 			default-state = "off";
 		};
+	};
+
+	gpio_keys: gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&key_bd>;
+		status = "okay";
+
+		bd_pvt: bd_pvt {
+			label = "bd_pvt";
+			gpios = <&gpio1 RK_PB0 GPIO_ACTIVE_HIGH>;
+			linux,code = <KEY_1>;
+			debounce-interval = <20>;
+			wakeup-source;
+		};
+
+		bd_rtk: bd_rtk {
+			label = "bd_rtk";
+			gpios = <&gpio1 RK_PA1 GPIO_ACTIVE_HIGH>;
+			linux,code = <KEY_2>;
+			debounce-interval = <20>;
+			wakeup-source;
+		};
+
+		bd_err: bd_err {
+			label = "bd_err";
+			gpios = <&gpio1 RK_PA6 GPIO_ACTIVE_HIGH>;
+			linux,code = <KEY_3>;
+			debounce-interval = <20>;
+			wakeup-source;
+		};
+	};
+
+	wireless-bluetooth {
+		compatible = "bluetooth-platdata";
+		uart_rts_gpios = <&gpio3 RK_PB5 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default", "rts_gpio";
+		pinctrl-0 = <&uart5m0_rtsn_pins>;
+		pinctrl-1 = <&uart5_gpios>;
+		BT,power_gpio = <&gpio2 RK_PB3 GPIO_ACTIVE_HIGH>;
+		BT,wake_gpio =  <&gpio0 RK_PB0 GPIO_ACTIVE_HIGH>;
+		BT,wake_host_irq = <&gpio0 RK_PB1 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+
+	wireless-wlan {
+		compatible = "wlan-platdata";
+		rockchip,grf = <&grf>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_wake_host>;
+		WIFI,poweren_gpio = <&gpio2 RK_PC0 GPIO_ACTIVE_HIGH>;
+		WIFI,host_wake_irq = <&gpio0 RK_PA7 GPIO_ACTIVE_HIGH>;
+		status = "okay";
 	};
 };
 
@@ -45,6 +99,27 @@
 			rockchip,pins = <1 RK_PC6 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
+
+	btn_keys {
+		key_bd: key-bd {
+			rockchip,pins = <1 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>,
+			                <1 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>,
+			                <1 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	wireless-bluetooth {
+		uart5_gpios: uart5-gpios {
+			rockchip,pins = <3 RK_PB5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	wireless-wlan {
+		wifi_wake_host: wifi-wake-host {
+			rockchip,pins = <2 RK_PC0 RK_FUNC_GPIO &pcfg_pull_up>,
+			                <0 RK_PA7 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
 };
 
 &usb2phy {
@@ -53,6 +128,15 @@
 
 &u2phy_otg0 {
 	rockchip,gpio-vbus-det;
+};
+
+&u2phy_otg1 {
+	status = "okay";
+};
+
+&usb20_otg1 {
+	dr_mode = "host";
+	status = "okay";
 };
 
 &uart1 {
@@ -66,6 +150,11 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io2_uart2_rx &rm_io0_uart2_tx>;
 	dma-names = "tx", "rx";
+	status = "okay";
+};
+
+&uart5 {
+	pinctrl-0 = <&uart5m0_xfer_pins &uart5m0_ctsn_pins>;
 	status = "okay";
 };
 
@@ -88,6 +177,26 @@
 		irq-gpio = <&gpio1 RK_PC6 IRQ_TYPE_EDGE_RISING>;
 		poll_delay_ms = <10>;
 		layout = <1>;
+	};
+};
+
+&i2c2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io4_i2c2_scl &rm_io5_i2c2_sda>;
+	status = "okay";
+
+	hym8563: hym8563@51 {
+			compatible = "haoyu,hym8563";
+			reg = <0x51>;
+			// #clock-cells = <0>;
+			// clock-frequency = <32768>;
+			// clock-output-names = "hym8563";
+			// pinctrl-names = "default";
+			// pinctrl-0 = <&hym8563_int>;
+			// interrupt-parent = <&gpio0>;
+			// interrupts = <RK_PC0 IRQ_TYPE_LEVEL_LOW>;
+
+			wakeup-source;
 	};
 };
 
