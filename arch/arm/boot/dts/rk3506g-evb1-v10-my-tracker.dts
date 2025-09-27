@@ -195,7 +195,7 @@
 		compatible = "st,lis3dh-accel";
 		st,drdy-int-pin = <1>;
 		reg = <0x18>;
-		interrupt-parent = <&gpio0>;
+		interrupt-parent = <&gpio1>;
 		interrupts = <RK_PB0 IRQ_TYPE_EDGE_RISING>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&lis3dh_int1>;
@@ -205,4 +205,8 @@
 						"-1", "0", "0",
 						"0", "0", "1";
 	};
+};
+
+&pwm0_4ch_0 {
+	status = "okay";
 };
