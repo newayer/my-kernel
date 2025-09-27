@@ -5,17 +5,13 @@
 
 /dts-v1/;
 
-#include "rk3506.dtsi"
-#include "rk3506-evb1-v10.dtsi"
 #include <dt-bindings/sensor-dev.h>
+
+#include "rk3506-my-base-nand.dtsi"
 
 / {
 	model = "Rockchip RK3506G(QFN128) EVB1 V10 Board";
 	compatible = "rockchip,rk3506g-evb1-v10", "rockchip,rk3506";
-
-	chosen {
-		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 ubi.mtd=2 root=ubi0:rootfs rw rootfstype=ubifs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
-	};
 
 	extcon_usb: extcon-usb {
 		compatible = "linux,extcon-usb-gpio";
@@ -23,53 +19,6 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&usb_extcon_vbus>;
 		status = "okay";
-	};
-
-	sai_dais: sai-dais {
-		status = "disabled";
-		compatible = "rockchip,multi-dais";
-		dais = <&sai1>, <&sai4>;
-		capture,channel-mapping = <2 2>;
-		playback,channel-mapping = <2 0>;
-		mclk-fs-mapping = <256 1024>;
-	};
-
-	vcc3v3_lcd_n: vcc3v3-lcd0-n {
-		status = "disabled";
-		compatible = "regulator-fixed";
-		enable-active-high;
-		gpio = <&gpio0 RK_PA1 GPIO_ACTIVE_HIGH>;
-		regulator-name = "vcc3v3_lcd_n";
-		regulator-boot-on;
-		regulator-state-mem {
-			regulator-off-in-suspend;
-		};
-	};
-
-	vcc5v0_otg0: vcc5v0-otg0-regulator {
-		compatible = "regulator-fixed";
-		regulator-name = "vcc5v0_otg0";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		enable-active-high;
-		gpio = <&gpio1 RK_PC4 GPIO_ACTIVE_HIGH>;
-		vin-supply = <&vcc_sys>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&vcc5v0_otg0_en>;
-	};
-
-	vcc5v0_otg1: vcc5v0-otg1-regulator {
-		compatible = "regulator-fixed";
-		regulator-name = "vcc5v0_otg1";
-		regulator-boot-on;
-		regulator-always-on;
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		enable-active-high;
-		gpio = <&gpio1 RK_PD0 GPIO_ACTIVE_HIGH>;
-		vin-supply = <&vcc_sys>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&vcc5v0_otg1_en>;
 	};
 
 	leds: leds {
@@ -119,12 +68,19 @@
 		};
 	};
 
-	wireless-bluetooth {
-		status = "disabled";
-	};
+	gpio_keys: gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&key_sos>;
+		status = "okay";
 
-	wireless-wlan {
-		status = "disabled";
+		sos_key: sos-key {
+			label = "SOS";
+			gpios = <&gpio0 RK_PA1 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_WAKEUP>;
+			debounce-interval = <20>;
+			wakeup-source;
+		};
 	};
 
 	bat: battery {
@@ -136,59 +92,10 @@
 	};
 };
 
-&acodec_sound {
-	status = "disabled";
-};
-
-&cma {
-	size = <0x1600000>;
-};
-
-&dsi {
-	status = "disabled";
-};
-
-&dsi_dphy {
-	status = "disabled";
-};
-
-&dsi_in_vop {
-	status = "disabled";
-};
-
-&dsi_panel {
-	power-supply = <&vcc3v3_lcd_n>;
-	status = "disabled";
-};
-
-&es8388 {
-	status = "disabled";
-};
-
-&es8388_sound {
-	status = "disabled";
-	rockchip,cpu = <&sai_dais>;
-	rockchip,codec = <&es8388>, <&audio_codec>;
-	rockchip,mclk-fs-mapping = <256 1024>;
-};
-
-&gt1x {
-	power-supply = <&vcc3v3_lcd_n>;
-	status = "disabled";
-};
-
 &pinctrl {
 	usb {
 		usb_extcon_vbus: usb-extcon-vbus {
 			rockchip,pins = <1 RK_PA7 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-
-		vcc5v0_otg0_en: vcc5v0-otg0-en {
-			rockchip,pins = <1 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-
-		vcc5v0_otg1_en: vcc5v0-otg1-en {
-			rockchip,pins = <1 RK_PD0 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
@@ -200,7 +107,7 @@
 
 	lis3dh {
 		lis3dh_int1: lis3dh-int1 {
-			rockchip,pins = <1 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>; /* GPIO1_B0, 无上下拉 */
+			rockchip,pins = <1 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
@@ -211,100 +118,32 @@
 	};
 };
 
-&route_dsi {
-	status = "disabled";
-};
-
-&sai1 {
-	status = "disabled";
-};
-
-&uart3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&rm_io26_uart3_tx &rm_io25_uart3_rx &rm_io24_uart3_rtsn &rm_io29_uart3_ctsn>;
-	linux,rs485-enabled-at-boot-time;	/* enable rs485 */
-	status = "disabled";
-};
-
-&uart4 {
-	dma-names = "!tx", "!rx";	/* remove ! to enable dma */
-	pinctrl-names = "default";
-	pinctrl-0 = <&rm_io27_uart4_tx &rm_io28_uart4_rx>;   /* vccio1 */
-	status = "disabled";
+&usb2phy {
+	extcon = <&extcon_usb>;
 };
 
 &u2phy_otg0 {
-	vbus-supply = <&vcc5v0_otg0>;
 	rockchip,gpio-vbus-det;
-	status = "okay";
 };
-
-&u2phy_otg1 {
-	phy-supply = <&vcc5v0_otg1>;
-	status = "okay";
-};
-
-&usb2phy {
-	extcon = <&extcon_usb>;
-	status = "okay";
-};
-
-/* added */
 
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io16_uart1_rx &rm_io17_uart1_tx>;
+	dma-names = "tx", "rx";
 	status = "okay";
 };
 
 &uart2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io0_uart2_rx &rm_io2_uart2_tx>;
+	dma-names = "tx", "rx";
 	status = "okay";
 };
 
 &uart5 {
 	pinctrl-0 = <&uart5m0_xfer_pins>;
+	dma-names = "tx", "rx";
 	status = "okay";
-};
-
-&adc_keys {
-	status = "disabled";
-};
-
-&backlight {
-	status = "disabled";
-};
-
-&fiq_debugger {
-	rockchip,baudrate = <115200>;	/* Only 115200 and 1500000 */
-};
-
-/delete-node/ &wake_up;
-
-&gpio_keys {
-	status = "okay";
-	pinctrl-0 = <&key_sos>;
-
-	sos_key: sos-key {
-		label = "SOS";
-		gpios = <&gpio0 RK_PA1 GPIO_ACTIVE_LOW>;
-		linux,code = <KEY_WAKEUP>;
-		debounce-interval = <20>;
-		wakeup-source;
-	};
-};
-
-&mmc {
-	status = "disabled";
-};
-
-&sdio_pwrseq {
-	status = "disabled";
-};
-
-&audio_codec {
-	status = "disabled";
 };
 
 &i2c0 {
@@ -362,56 +201,8 @@
 		pinctrl-0 = <&lis3dh_int1>;
 		irq-gpio = <&gpio1 RK_PB0 IRQ_TYPE_EDGE_RISING>;
 
-		mount-matrix = "0",  "1",  "0",
-						"-1", "0",  "0",
-						"0",  "0",  "1";
+		mount-matrix = "0", "1", "0",
+						"-1", "0", "0",
+						"0", "0", "1";
 	};
-};
-
-&i2c2 {
-	status = "disabled";
-};
-
-&pwm0_4ch_0 {
-	status = "disabled";
-};
-
-&pwm0_4ch_1 {
-	status = "disabled";
-};
-
-&pwm0_4ch_2 {
-	status = "disabled";
-};
-
-&rga2 {
-	status = "disabled";
-};
-
-&rng {
-	status = "disabled";
-};
-
-&rockchip_suspend {
-	status = "disabled";
-};
-
-&sai4 {
-	status = "disabled";
-};
-
-&display_subsystem {
-	status = "disabled";
-};
-
-&gmac0 {
-	status = "disabled";
-};
-
-&gmac1 {
-	status = "disabled";
-};
-
-&vop {
-	status = "disabled";
 };
