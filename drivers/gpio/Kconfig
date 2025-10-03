@@ -1733,6 +1733,13 @@ config GPIO_SIM
 	  This enables the GPIO simulator - a configfs-based GPIO testing
 	  driver.
 
+config MY_GPIO_DRIVER
+	tristate "My custom GPIO driver with sysfs interface"
+	depends on GPIOLIB && OF
+	help
+	  This driver provides sysfs interface for GPIO control with interrupt
+	  support on Rockchip platforms.
+
 endmenu
 
 endif
