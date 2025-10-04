@@ -85,6 +85,31 @@
 		WIFI,host_wake_irq = <&gpio0 RK_PA7 GPIO_ACTIVE_HIGH>;
 		status = "okay";
 	};
+
+	my_gpio_init: my-gpio-init {
+		compatible = "dnxt,my-gpio-init";
+		status = "okay";
+
+		init-delay-ms = <0>;
+
+		gpios = <
+			&gpio1 RK_PA7 GPIO_ACTIVE_HIGH
+		>;
+
+		gpio-names = "gps_rst";
+
+		gpio-init-states = <0>;
+
+		// format: <gpio_index delay_ms>
+		gpio-delays = <
+			0   50      // gps_rst在全局延时后50ms初始化
+		>;
+
+		// format: <gpio_index delay_ms target_state>
+		gpio-state-delays = <
+			0   10   1   // gps_rst在初始化10ms保持高电平
+		>;
+	};
 };
 
 &pinctrl {
