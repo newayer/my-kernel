@@ -1,0 +1,428 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
+ */
+
+/dts-v1/;
+
+#include "rk3506-my-base-emmc.dtsi"
+
+/ {
+	model = "Rockchip RK3506J(BGA)";
+	compatible = "rockchip,rk3506J", "rockchip,rk3506";
+
+	leds {
+		compatible = "gpio-leds";
+		status = "okay";
+
+		heart_led: heart_led {
+			label = "run";
+			gpios = <&gpio0 RK_PA5 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "heartbeat";
+			default-state = "off";
+		};
+
+		star_r_led: star_r_led {
+			label = "star_r_led";
+			gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+		star_g_led: star_g_led {
+			label = "star_g_led";
+			gpios = <&gpio4 RK_PA0 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+
+		bat0_r_led: bat0_r_led {
+			label = "bat0_r_led";
+			gpios = <&gpio4 RK_PA5 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		bat1_r_led: bat1_r_led {
+			label = "bat1_r_led";
+			gpios = <&gpio4 RK_PA4 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+		bat1_g_led: bat1_g_led {
+			label = "bat1_g_led";
+			gpios = <&gpio4 RK_PA3 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+
+		bat2_r_led: bat2_r_led {
+			label = "bat2_r_led";
+			gpios = <&gpio1 RK_PC5 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+		bat2_g_led: bat2_g_led {
+			label = "bat2_g_led";
+			gpios = <&gpio4 RK_PA2 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "none";
+			default-state = "off";
+		};
+	};
+
+	wireless-wlan {
+		compatible = "wlan-platdata";
+		rockchip,grf = <&grf>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_wake_host>;
+		WIFI,vbat_gpio = <&gpio1 RK_PB2 GPIO_ACTIVE_HIGH>;
+		WIFI,poweren_gpio = <&gpio2 RK_PA4 GPIO_ACTIVE_HIGH>;
+		WIFI,host_wake_irq = <&gpio2 RK_PA2 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+
+	my_gpio_init: my-gpio-init {
+		compatible = "dnxt,my-gpio-init";
+		status = "okay";
+
+		init-delay-ms = <0>;
+
+		gpios = <&gpio3 RK_PA6 GPIO_ACTIVE_HIGH    // 0 GD-ON-H
+				 &gpio2 RK_PA1 GPIO_ACTIVE_HIGH    // 1 PWROFF-H
+				 &gpio2 RK_PA3 GPIO_ACTIVE_HIGH    // 2 HOST-WAKE-WIFI
+				 &gpio2 RK_PA5 GPIO_ACTIVE_HIGH    // 3 TR-ON-H
+				 &gpio1 RK_PA0 GPIO_ACTIVE_HIGH    // 4 A2B-PWRKEY-H
+				 &gpio1 RK_PA1 GPIO_ACTIVE_HIGH    // 5 A2B-RST-L
+				 &gpio1 RK_PA2 GPIO_ACTIVE_HIGH    // 6 A2B-WAKE
+				 &gpio1 RK_PA3 GPIO_ACTIVE_HIGH    // 7 A2B-SLEEP
+				 &gpio1 RK_PB1 GPIO_ACTIVE_HIGH    // 8 BB-ON-H
+				 &gpio1 RK_PB3 GPIO_ACTIVE_HIGH    // 9 PHYON-H
+				 &gpio1 RK_PC1 GPIO_ACTIVE_HIGH    // 10 TR-STMRST-H
+				 &gpio1 RK_PC0 GPIO_ACTIVE_HIGH    // 11 555-RST-L
+				 &gpio1 RK_PB4 GPIO_ACTIVE_HIGH    // 12 SLIC-ON-H
+				 &gpio2 RK_PA4 GPIO_ACTIVE_HIGH>;  // 13 WIFI-PWRKEY-H
+
+
+		gpio-names = "gd_on_h",
+		             "pwroff_h",
+		             "host_wake_wifi",
+		             "tr_on_h",
+		             "a2b_pwrkey_h",
+		             "a2b_rst_l",
+		             "a2b_wake",
+		             "a2b_sleep",
+		             "bb_on_h",
+		             "phyon_h",
+		             "tr_stmrst_h",
+		             "rst_555_l",
+		             "slic_on_h",
+		             "wifi_pwrkey_h";
+
+		//                  0 1 2 3 4 5 6 7 8 9 10 11 12 13
+		gpio-init-states = <1 0 0 1 1 1 0 0 1 1  0  1  1  1>;
+
+		// format: <gpio_index delay_ms>
+		gpio-delays = <5 10>;
+
+		// format: <gpio_index delay_ms target_state>
+		gpio-state-delays = <5 10 1>;
+	};
+
+	vccio4: mmcio-gpio-regulator {
+		compatible = "regulator-gpio";
+
+		regulator-name = "mmcio-gpio-supply";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&vccio4_gpio>;
+
+		gpios = <&gpio0 RK_PD0 GPIO_ACTIVE_HIGH>;
+		gpios-states = <0>;
+		states = <3300000 0x1>,
+				 <1800000 0x0>;
+
+		startup-delay-us = <100000>;
+	};
+
+	vcc_3v3: vcc-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_3v3";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&vcc_sys>;
+	};
+
+	sai0-sound {
+		compatible = "rockchip,multicodecs-card";
+		rockchip,card-name = "sai0-modem";
+		rockchip,format = "dsp_b";
+		rockchip,mclk-fs = <256>;
+
+		dai-tdm-slot-num = <2>;
+		dai-tdm-slot-width = <16>;
+		dai-tdm-slot-tx-mask = <1>;  // 只发送通道0
+		dai-tdm-slot-rx-mask = <1>;  // 只接收通道0
+
+		rockchip,cpu = <&sai0>;
+		rockchip,codec = <&modem_audio_codec>;
+
+		status = "okay";
+	};
+
+	modem_audio_codec: modem-audio-codec {
+		compatible = "rockchip,dummy-codec";
+		#sound-dai-cells = <0>;
+		pcm-slot-size = <16>;             // 16位数据
+		pcm-clock-rate = <2048000>;       // 2.048MHz时钟
+		pcm-frame-rate = <8000>;          // 8kHz帧率
+		channel-count = <1>;              // 单通道
+		channel-map = <0>;                // 使用通道0
+
+		status = "okay";
+	};
+
+	sai1-sound {
+		compatible = "rockchip,multicodecs-card";
+		rockchip,card-name = "sai1-proslic";
+		rockchip,format = "dsp_b";
+		rockchip,mclk-fs = <256>;
+
+		dai-tdm-slot-num = <2>;
+		dai-tdm-slot-width = <16>;
+		dai-tdm-slot-tx-mask = <1>;  // 只发送通道0
+		dai-tdm-slot-rx-mask = <1>;  // 只接收通道0
+
+		rockchip,cpu = <&sai1>;
+		rockchip,codec = <&proslic_audio_codec>;
+		status = "okay";
+	};
+
+	proslic_audio_codec: proslic-audio-codec {
+		compatible = "rockchip,dummy-codec";
+		#sound-dai-cells = <0>;
+		pcm-slot-size = <16>;             // 16位数据
+		pcm-clock-rate = <2048000>;       // 2.048MHz时钟
+		pcm-frame-rate = <8000>;          // 8kHz帧率
+		channel-count = <1>;              // 单通道
+		channel-map = <0>;                // 使用通道0
+
+		status = "okay";
+	};
+
+	hw_detector: hw-detector {
+		compatible = "rockchip,hw-detector";
+		status = "okay";
+
+		io-channels = <&saradc 3>, <&saradc 2>;
+		io-channel-names = "hw_version", "vbat";
+
+		// 硬件版本检测参数
+		hw-version-adc-channel = <0>; // 对应io-channels中的第一个(通道2)
+		hw-version-thresholds = <
+								/* min(mV) max(mV) version */
+								0       200     0       // 版本1: 0-200mV (0.0V)
+								1600    2000    1       // 版本2: 1.6-2.0V (1.8V)
+								800     1000    2       // 版本3: 800-1000mV (0.9V)
+								250     350     3       // 版本4: 250-350mV (0.3V)
+								>;
+
+		// 电压检测参数
+		vbat-adc-channel = <1>; // 对应io-channels中的第二个(通道3)
+		vbat-divider-ratio = <4922>; // 分压比 * 1000 (7.0/1.422≈4.922)
+		vbat-ref-voltage = <1800>; // 参考电压1800mV
+		vbat-calibration = <
+							/* adc电压(mV) 实际电压(mV) */
+							1422    7000    // 1.422V对应7.0V
+							1707    8400    // 1.707V对应8.4V
+							>;
+
+		sample-count = <5>;        // 每次采样次数
+		sample-interval-ms = <10>; // 采样间隔
+		debounce-count = <3>;      // 去抖动次数
+
+        vref-supply = <&vcc_1v8>;
+	};
+};
+
+&i2c0 {
+	clock-frequency = <400000>;
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io31_i2c0_scl &rm_io20_i2c0_sda>;
+
+	hym8563: hym8563@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+		// #clock-cells = <0>;
+		// clock-frequency = <32768>;
+		// clock-output-names = "hym8563";
+		// pinctrl-names = "default";
+		// pinctrl-0 = <&hym8563_int>;
+		// interrupt-parent = <&gpio0>;
+		// interrupts = <RK_PC0 IRQ_TYPE_LEVEL_LOW>;
+
+		wakeup-source;
+	};
+};
+
+&i2c1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io13_i2c1_scl &rm_io8_i2c1_sda>;
+	status = "okay";
+};
+
+
+&gmac0 {
+	clock_in_out = "input";
+
+	snps,reset-gpio = <&gpio1 RK_PB7 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	snps,reset-delays-us = <0 20000 100000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&eth_rmii0_miim_pins
+				 &eth_rmii0_tx_bus2_pins
+				 &eth_rmii0_rx_bus2_pins
+				 &eth_rmii0_clk_pins>;
+
+	phy-handle = <&rmii_phy0>;
+	status = "okay";
+};
+
+&mdio0 {
+	rmii_phy0: phy@0 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x0>;
+		clocks = <&cru CLK_MAC_OUT>;
+		assigned-clocks = <&cru CLK_MAC_OUT>;
+		assigned-clock-rates = <25000000>;
+	};
+};
+
+&mmc {
+	vqmmc-supply = <&vccio4>;
+	vmmc-supply = <&vcc_3v3>;
+};
+
+&pinctrl {
+	wireless-wlan {
+		wifi_wake_host: wifi-wake-host {
+			rockchip,pins = <1 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>,
+							<2 RK_PA4 RK_FUNC_GPIO &pcfg_pull_none>,
+							<2 RK_PA2 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+	sdmmc {
+		vccio4_gpio: vccio4_gpio {
+			rockchip,pins = <0 RK_PD0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	proslic {
+		proslic_int: proslic-int {
+			rockchip,pins = <1 RK_PB5 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+		proslic_reset: proslic-reset {
+			rockchip,pins = <1 RK_PB6 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+};
+
+&ramoops {
+	reg = <0x1d3000 0x2d000>;
+	status = "okay";
+};
+
+/* xw modem codec */
+&sai0 {
+	pinctrl-0 = <&sai0_lrck_pins
+				 &sai0_sclk_pins
+				 &sai0_sdi0_pins
+				 &sai0_sdo_pins>;
+	rockchip,trcm-sync-tx-only;
+	rockchip,mclk-fs = <256>;
+	status = "okay";
+};
+
+/* proslic codec */
+&sai1 {
+	pinctrl-0 = <&sai1_lrck_pins
+				 &sai1_sclk_pins
+				 &sai1_sdi_pins
+				 &sai1_sdo0_pins>;
+	rockchip,trcm-sync-tx-only;
+	assigned-clocks = <&cru MCLK_SAI1>;
+	assigned-clock-rates = <2048000>;  // 2.048MHz
+	rockchip,mclk-fs = <256>;
+	rockchip,always-on;
+	status = "okay";
+};
+
+&spi0 {
+	status = "okay";
+	max-freq = <48000000>;
+	num-cs = <1>;
+	pinctrl-0 = <&spi0_csn0_pins &spi0_clk_pins>;
+
+	proslic_spi4: si32185@0 {
+		compatible = "silabs,proslic_spi";
+		reg = <0>;
+		spi-max-frequency = <9600000>;
+		spi-cpol = <1>;
+		spi-cpha = <1>;
+
+		int_gpio = <45>; /* 1 RK_PB5 */
+		reset_gpio = <46>; /* 1 RK_PB6 */
+		channel_count = <1>;
+		debug_level = <7>;
+
+		status = "okay";
+	};
+};
+
+&uart1 {// tr ctrl uart6
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io15_uart1_rx &rm_io14_uart1_tx>;
+	dma-names = "tx", "rx";
+	status = "okay";
+};
+
+&uart2 {// gd rs422
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io6_uart2_rx &rm_io7_uart2_tx>;
+	dma-names = "tx", "rx";
+	status = "okay";
+};
+
+&uart3 {// modem uart2 at contrl
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io29_uart3_rx &rm_io30_uart3_tx>;
+	dma-names = "tx", "rx";
+	status = "okay";
+};
+
+&uart4 {// modem uart1 at contrl
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io27_uart4_rx &rm_io28_uart4_tx>;
+	dma-names = "tx", "rx";
+	status = "okay";
+};
+
+&uart5 {// modem uart0 ppp
+	dma-names = "tx", "rx";
+	status = "okay";
+};
+
+&u2phy_otg1 {
+	status = "okay";
+};
+
+&usb20_otg1 {
+	dr_mode = "host";
+	status = "okay";
+};
