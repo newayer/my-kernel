@@ -66,22 +66,6 @@
 		};
 	};
 
-	sdio_pwrseq: sdio-pwrseq {
-		compatible = "mmc-pwrseq-simple";
-		pinctrl-names = "default";
-		pinctrl-0 = <&wifi_poweren_gpio>;
-
-		/*
-		 * On the module itself this is one of these (depending
-		 * on the actual card populated):
-		 * - SDIO_RESET_L_WL_REG_ON
-		 * - PDN (power down when low)
-		 */
-		post-power-on-delay-ms = <200>;
-		reset-gpios = <&gpio1 RK_PC6 GPIO_ACTIVE_LOW>;
-		status = "disabled";
-	};
-
 	vcc_1v8_s0: vcc-1v8-s0 {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc_1v8_s0";
@@ -155,19 +139,8 @@
 		pinctrl-0 = <&usb_host_pwren>;
 	};
 
-	vbus5v0_typec: vbus5v0-typec {
-		compatible = "regulator-fixed";
-		regulator-name = "vbus5v0_typec";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		enable-active-high;
-		gpio = <&gpio0 RK_PD1 GPIO_ACTIVE_HIGH>;
-		vin-supply = <&vcc5v0_device>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&usb_otg0_pwren>;
-	};
-
 	vcc_mipicsi0: vcc-mipicsi0-regulator {
+		status = "disabled";
 		compatible = "regulator-fixed";
 		gpio = <&gpio3 RK_PB0 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
@@ -212,7 +185,7 @@
 	status = "okay";
 };
 
-&dp0_in_vp2 {
+&dp0_in_vp0 {
 	status = "okay";
 };
 
@@ -228,68 +201,8 @@
 	status = "okay";
 };
 
-&dsi_panel {
-	power-supply = <&vcc3v3_lcd_n>;
-};
-
-&gmac0 {
-	/* Use rgmii-rxid mode to disable rx delay inside Soc */
-	phy-mode = "rgmii-rxid";
-	clock_in_out = "output";
-
-	snps,reset-gpio = <&gpio2 RK_PB5 GPIO_ACTIVE_LOW>;
-	snps,reset-active-low;
-	/* Reset time is 20ms, 100ms for rtl8211f */
-	snps,reset-delays-us = <0 20000 100000>;
-
-	pinctrl-names = "default";
-	pinctrl-0 = <&eth0m0_miim
-		     &eth0m0_tx_bus2
-		     &eth0m0_rx_bus2
-		     &eth0m0_rgmii_clk
-		     &eth0m0_rgmii_bus
-		     &ethm0_clk0_25m_out>;
-
-	tx_delay = <0x21>;
-	/* rx_delay = <0x3f>; */
-
-	phy-handle = <&rgmii_phy0>;
-	status = "okay";
-};
-
-&gmac1 {
-	/* Use rgmii-rxid mode to disable rx delay inside Soc */
-	phy-mode = "rgmii-rxid";
-	clock_in_out = "output";
-
-	snps,reset-gpio = <&gpio3 RK_PA3 GPIO_ACTIVE_LOW>;
-	snps,reset-active-low;
-	/* Reset time is 20ms, 100ms for rtl8211f */
-	snps,reset-delays-us = <0 20000 100000>;
-
-	pinctrl-names = "default";
-	pinctrl-0 = <&eth1m0_miim
-		     &eth1m0_tx_bus2
-		     &eth1m0_rx_bus2
-		     &eth1m0_rgmii_clk
-		     &eth1m0_rgmii_bus
-		     &ethm0_clk1_25m_out>;
-
-	tx_delay = <0x20>;
-	/* rx_delay = <0x3f>; */
-
-	phy-handle = <&rgmii_phy1>;
-	status = "okay";
-};
-
-&gt1x {
-	status = "okay";
-	power-supply = <&vcc3v3_lcd_n>;
-};
-
 &hdmi {
 	status = "okay";
-	enable-gpios = <&gpio2 RK_PB0 GPIO_ACTIVE_HIGH>;
 	rockchip,sda-falling-delay-ns = <360>;
 };
 
@@ -301,89 +214,12 @@
 	status = "okay";
 };
 
-&i2c2 {
-	status = "okay";
-
-	usbc0: husb311@4e {
-		compatible = "hynetek,husb311";
-		reg = <0x4e>;
-		interrupt-parent = <&gpio0>;
-		interrupts = <RK_PA5 IRQ_TYPE_LEVEL_LOW>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&usbc0_int>;
-		vbus-supply = <&vbus5v0_typec>;
-		status = "okay";
-
-		port {
-			usbc0_role_sw: endpoint {
-				remote-endpoint = <&usb_drd0_role_switch>;
-			};
-		};
-
-		usb_con: connector {
-			compatible = "usb-c-connector";
-			label = "USB-C";
-			data-role = "dual";
-			power-role = "dual";
-			try-power-role = "sink";
-			op-sink-microwatt = <1000000>;
-			sink-pdos =
-				<PDO_FIXED(5000, 1000, PDO_FIXED_USB_COMM)>;
-			source-pdos =
-				<PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
-			mode-switch = <&dp>;
-
-			altmodes {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				altmode@0 {
-					reg = <0>;
-					svid = <0xff01>;
-					vdo = <0xffffffff>;
-				};
-			};
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@0 {
-					reg = <0>;
-					usbc0_orien_sw: endpoint {
-						remote-endpoint = <&usbdp_phy_orientation_switch>;
-					};
-				};
-
-				port@1 {
-					reg = <1>;
-					dp_altmode_mux: endpoint {
-						remote-endpoint = <&usbdp_phy_dp_altmode_mux>;
-					};
-				};
-			};
-		};
-	};
-};
-
 &i2c3 {
-	status = "okay";
-	es8388: es8388@10 {
-		status = "okay";
-		#sound-dai-cells = <0>;
-		compatible = "everest,es8388", "everest,es8323";
-		reg = <0x10>;
-		clocks = <&mclkout_sai1>;
-		clock-names = "mclk";
-		assigned-clocks = <&mclkout_sai1>;
-		assigned-clock-rates = <12288000>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&sai1m0_mclk>;
-	};
+	status = "disabled";
 };
 
 &i2c7 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c7m1_xfer>;
 
@@ -430,7 +266,7 @@
 };
 
 &pcie0 {
-	reset-gpios = <&gpio2 RK_PB4 GPIO_ACTIVE_HIGH>;
+	reset-gpios = <&gpio1 RK_PC3 GPIO_ACTIVE_HIGH>;
 	rockchip,skip-scan-in-resume;
 	pinctrl-names = "default";
 	pinctrl-0 = <&wifi_poweren_gpio>;
@@ -486,25 +322,6 @@
 			rockchip,pins = <0 RK_PD1 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 
-		usbc0_int: usbc0-int {
-			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_up>;
-		};
-	};
-
-	wireless-bluetooth {
-		uart4_gpios: uart4-gpios {
-			rockchip,pins = <1 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-	};
-
-	wireless-wlan {
-		wifi_host_wake_irq: wifi-host-wake-irq {
-			rockchip,pins = <0 RK_PB0 RK_FUNC_GPIO &pcfg_pull_down>;
-		};
-
-		wifi_poweren_gpio: wifi-poweren-gpio {
-			rockchip,pins = <1 RK_PC6 RK_FUNC_GPIO &pcfg_pull_up>;
-		};
 	};
 };
 
@@ -560,28 +377,6 @@
 
 &u2phy1_otg {
 	phy-supply = <&vcc5v0_host>;
-};
-
-&usbdp_phy {
-	orientation-switch;
-	svid = <0xff01>;
-	sbu1-dc-gpios = <&gpio2 RK_PA6 GPIO_ACTIVE_HIGH>;
-	sbu2-dc-gpios = <&gpio2 RK_PA7 GPIO_ACTIVE_HIGH>;
-
-	port {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		usbdp_phy_orientation_switch: endpoint@0 {
-			reg = <0>;
-			remote-endpoint = <&usbc0_orien_sw>;
-		};
-
-		usbdp_phy_dp_altmode_mux: endpoint@1 {
-			reg = <1>;
-			remote-endpoint = <&dp_altmode_mux>;
-		};
-	};
 };
 
 &usb_drd0_dwc3 {

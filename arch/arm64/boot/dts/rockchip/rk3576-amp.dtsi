@@ -26,7 +26,7 @@
 		status = "okay";
 	};
 
-	reserved-memory {
+	reserved_memory: reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
@@ -51,6 +51,38 @@
 		mcu_reserved: mcu@48200000 {
 			reg = <0x0 0x48200000 0x0 0x100000>;
 			no-map;
+		};
+
+		amp_cpu0_reserved:amp-cpu0@49400000 {
+			reg = <0x0 0x49400000 0x0 0x00800000>;
+		};
+
+		amp_cpu1_reserved:amp-cpu1@49c00000 {
+			reg = <0x0 0x49c00000 0x0 0x00800000>;
+		};
+
+		amp_cpu2_reserved:amp-cpu2@4A400000 {
+			reg = <0x0 0x4A400000 0x0 0x00800000>;
+		};
+
+		amp_cpu3_reserved:amp-cpu3@4AC00000 {
+			reg = <0x0 0x4AC00000 0x0 0x00800000>;
+		};
+
+		amp_cpu4_reserved:amp-cpu4@4B400000 {
+			reg = <0x0 0x4B400000 0x0 0x00800000>;
+		};
+
+		amp_cpu5_reserved:amp-cpu5@4BC00000 {
+			reg = <0x0 0x4BC00000 0x0 0x00800000>;
+		};
+
+		amp_cpu6_reserved:amp-cpu6@4C400000 {
+			reg = <0x0 0x4C400000 0x0 0x00800000>;
+		};
+
+		amp_cpu7_reserved:amp-cpu7@4CC00000 {
+			reg = <0x0 0x4CC00000 0x0 0x00800000>;
 		};
 	};
 

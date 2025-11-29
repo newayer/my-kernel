@@ -2850,6 +2850,15 @@ config VIDEO_OTP_EEPROM
 	help
 	  This driver supports OTP load from eeprom.
 
+config VIDEO_XS9922
+	tristate "XINSHENG TECH xs9922 driver support"
+	depends on VIDEO_DEV && I2C
+	help
+	  Support for the XINSHENG TECH XS9922 video decoder.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called jaguar1_drv.
+
 config VIDEO_SAA7110
 	tristate "Philips SAA7110 video decoder"
 	depends on VIDEO_DEV && I2C

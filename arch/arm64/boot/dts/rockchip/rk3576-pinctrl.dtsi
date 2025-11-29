@@ -1603,8 +1603,6 @@
 		/omit-if-no-ref/
 		hdmi_txm0_pins: hdmi_txm0-pins {
 			rockchip,pins =
-				/* hdmi_tx_cec_m0 */
-				<4 RK_PC0 9 &pcfg_pull_none>,
 				/* hdmi_tx_hpdin_m0 */
 				<4 RK_PC1 9 &pcfg_pull_none>;
 		};

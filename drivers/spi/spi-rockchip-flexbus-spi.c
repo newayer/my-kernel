@@ -18,7 +18,7 @@
 				 FLEXBUS_TX_UDF_ISR | FLEXBUS_TX_OVF_ISR)
 
 /* Flexbus definition */
-#define FLEXBUS_MAX_IOSIZE			(0x4000)
+#define FLEXBUS_MAX_IOSIZE			(0x10000)
 #define FLEXBUS_MAX_SPEED			(150 * 1000 * 1000)
 #define FLEXBUS_MAX_CHIPSELECT_NUM		(1)
 #define FLEXBUS_MAX_DLL_CELLS			(0xff)
@@ -119,6 +119,8 @@ static int rk_flexbus_spi_stop(struct rk_flexbus_spi *flexbus)
 	if (flexbus->irq) {
 		rockchip_flexbus_writel(flexbus->fb, FLEXBUS_ICR, 0);
 		rockchip_flexbus_writel(flexbus->fb, FLEXBUS_IMR, 0);
+	} else {
+		rockchip_flexbus_writel(flexbus->fb, FLEXBUS_ICR, 0xFFFFFFFF);
 	}
 
 	return 0;
@@ -166,14 +168,10 @@ static int rk_flexbus_spi_config(struct rk_flexbus_spi *flexbus, u32 mode)
 
 	ctrl = FLEXBUS_TX_CTL_UNIT_BYTE | flexbus->dfs_cfg;
 	ctrl |= (mode & 0x3U) << FLEXBUS_TX_CTL_CPHA_SHIFT;
-	if (!(mode & SPI_LSB_FIRST))
-		ctrl |= FLEXBUS_TX_CTL_MSB;
 	rockchip_flexbus_writel(flexbus->fb, FLEXBUS_TX_CTL, ctrl);
 
 	ctrl = FLEXBUS_RX_CTL_UNIT_BYTE | flexbus->dfs_cfg | FLEXBUS_RXD_DY | FLEXBUS_AUTOPAD;
 	ctrl |= (mode & 0x3U) << FLEXBUS_RX_CTL_CPHA_SHIFT;
-	if (!(mode & SPI_LSB_FIRST))
-		ctrl |= FLEXBUS_RX_CTL_MSB;
 	rockchip_flexbus_writel(flexbus->fb, FLEXBUS_RX_CTL, ctrl);
 
 	rk_flexbus_spi_set_delay_lines(flexbus, flexbus->dll_cells);

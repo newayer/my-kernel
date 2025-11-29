@@ -253,6 +253,7 @@ static int dw8250_rs485_config(struct uart_port *p, struct ktermios *termios,
 static bool dw8250_detect_rs485_hw(struct uart_port *p)
 {
 	u32 reg;
+	u32 rs485_delay[2];
 
 #ifdef CONFIG_ARCH_ROCKCHIP
 	dw8250_writel_ext(p, DW_UART_TCR, 1);
@@ -263,7 +264,10 @@ static bool dw8250_detect_rs485_hw(struct uart_port *p)
 #ifdef CONFIG_ARCH_ROCKCHIP
 	dw8250_writel_ext(p, DW_UART_TCR, 0);
 #endif
-	return reg;
+	if (!device_property_read_u32_array(p->dev, "rs485-rts-delay", rs485_delay, 2))
+		return 0;
+	else
+		return reg;
 }
 
 #ifndef CONFIG_ARCH_ROCKCHIP

@@ -291,11 +291,11 @@ static long rpmsg_eptdev_ioctl(struct file *fp, unsigned int cmd,
 
 	if (cmd != RPMSG_DESTROY_EPT_IOCTL)
 		return -EINVAL;
-
+#if 0
 	/* Don't allow to destroy a default endpoint. */
 	if (eptdev->default_ept)
 		return -EINVAL;
-
+#endif
 	return rpmsg_chrdev_eptdev_destroy(&eptdev->dev, NULL);
 }
 

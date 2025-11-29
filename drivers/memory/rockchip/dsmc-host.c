@@ -780,8 +780,8 @@ static void dsmc_data_init(struct rockchip_dsmc *dsmc)
 			cs_cfg->wrap_size = DSMC_BURST_WRAPSIZE_16CLK;
 			cs_cfg->wrap2incr_en = 1;
 			cs_cfg->acs = 1;
-			cs_cfg->max_length_en = 0;
-			cs_cfg->max_length = 0x0;
+			cs_cfg->max_length_en = 1;
+			cs_cfg->max_length = 0x7f;
 		}
 	}
 }
@@ -1065,13 +1065,13 @@ static int rk_dsmc_probe(struct platform_device *pdev)
 		dev_err(dev, "DSMC memory remap fail!\n");
 		goto err_release_dma;
 	}
-
+#if 0
 	if (rockchip_dsmc_dll_training(priv)) {
 		ret = -ENODEV;
 		dev_err(dev, "DSMC dll training fail!\n");
 		goto err_release_dma;
 	}
-
+#endif
 	return 0;
 
 err_release_dma:

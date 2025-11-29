@@ -1,0 +1,4 @@
+#source "drivers/net/wireless/unisoc_marlin/unisocwcn/Kconfig"
+#source "drivers/net/wireless/unisoc_marlin/unisocwifi/Kconfig"
+#source "drivers/net/wireless/unisoc_marlin/unisocbt/Kconfig"
+#source "drivers/net/wireless/unisoc_marlin/unisocfm/Kconfig"

@@ -1692,7 +1692,6 @@ static int rockchip_hdmi_parse_dt(struct rockchip_hdmi *hdmi)
 	if (IS_ERR(hdmi->enable_gpio)) {
 		ret = PTR_ERR(hdmi->enable_gpio);
 		dev_err(hdmi->dev, "failed to request enable GPIO: %d\n", ret);
-		return ret;
 	}
 
 	hdmi->avdd_0v9 = devm_regulator_get_optional(hdmi->dev, "avdd-0v9");
@@ -1889,13 +1888,6 @@ dw_hdmi_rockchip_mode_valid(struct dw_hdmi *dw_hdmi, void *data,
 			return MODE_BAD;
 	};
 
-	if (hdmi->is_hdmi_qp) {
-		if (!hdmi->enable_gpio && mode->clock > 600000)
-			return MODE_BAD;
-
-		return MODE_OK;
-	}
-
 	/*
 	 * Pixel clocks we support are always < 2GHz and so fit in an
 	 * int.  We should make sure source rate does too so we don't get
@@ -1985,7 +1977,7 @@ static void dw_hdmi_rockchip_encoder_enable(struct drm_encoder *encoder)
 	clk_set_rate(hdmi->phyref_clk,
 		     crtc->state->adjusted_mode.crtc_clock * 1000);
 
-	if (hdmi->is_hdmi_qp) {
+	if (hdmi->is_hdmi_qp && hdmi->enable_gpio) {
 		if (hdmi->link_cfg.frl_mode)
 			gpiod_direction_output(hdmi->enable_gpio, 0);
 		else
@@ -2689,7 +2681,7 @@ secondary:
 			} else if (hdmi->link_cfg.rate_per_lane >= 12 ||
 				   !hdmi->link_cfg.rate_per_lane) {
 				hdmi->link_cfg.frl_lanes = 4;
-				hdmi->link_cfg.rate_per_lane = 12;
+				hdmi->link_cfg.rate_per_lane = 10;
 			}
 			bus_width = hdmi->link_cfg.frl_lanes *
 				hdmi->link_cfg.rate_per_lane * 1000000;

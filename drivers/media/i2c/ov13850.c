@@ -37,7 +37,7 @@
 
 #define OV13850_LINK_FREQ_300MHZ	300000000
 /* pixel rate = link frequency * 2 * lanes / BITS_PER_SAMPLE */
-#define OV13850_PIXEL_RATE		(OV13850_LINK_FREQ_300MHZ * 2 * 2 / 10)
+#define OV13850_PIXEL_RATE		(OV13850_LINK_FREQ_300MHZ / 10 * 8)
 #define OV13850_XVCLK_FREQ		24000000
 
 #define CHIP_ID				0x00d850
@@ -74,7 +74,7 @@
 #define OV13850_REG_VALUE_16BIT		2
 #define OV13850_REG_VALUE_24BIT		3
 
-#define OV13850_LANES			2
+#define OV13850_LANES			4
 #define OV13850_BITS_PER_SAMPLE		10
 
 #define OV13850_CHIP_REVISION_REG	0x302A
@@ -354,7 +354,7 @@ static const struct regval ov13850_global_regs_r2a[] = {
 	{0x300f, 0x11},
 	{0x3010, 0x01},
 	{0x3011, 0x76},
-	{0x3012, 0x21},
+	{0x3012, 0x41},
 	{0x3013, 0x12},
 	{0x3014, 0x11},
 	{0x301f, 0x03},
@@ -559,7 +559,7 @@ static const struct regval ov13850_global_regs_r2a[] = {
 
 /*
  * Xclk 24Mhz
- * max_framerate 30fps
+ * max_framerate 60fps
  * mipi_datarate per lane 600Mbps
  */
 static const struct regval ov13850_2112x1568_regs[] = {
@@ -603,7 +603,7 @@ static const struct regval ov13850_2112x1568_regs[] = {
 
 /*
  * Xclk 24Mhz
- * max_framerate 7fps
+ * max_framerate 30fps
  * mipi_datarate per lane 600Mbps
  */
 static const struct regval ov13850_4224x3136_regs[] = {
@@ -649,7 +649,7 @@ static const struct ov13850_mode supported_modes[] = {
 		.height = 1568,
 		.max_fps = {
 			.numerator = 10000,
-			.denominator = 300000,
+			.denominator = 600000,
 		},
 		.exp_def = 0x0600,
 		.hts_def = 0x12c0,
@@ -659,8 +659,8 @@ static const struct ov13850_mode supported_modes[] = {
 		.width = 4224,
 		.height = 3136,
 		.max_fps = {
-			.numerator = 20000,
-			.denominator = 150000,
+			.numerator = 10000,
+			.denominator = 300000,
 		},
 		.exp_def = 0x0600,
 		.hts_def = 0x12c0,

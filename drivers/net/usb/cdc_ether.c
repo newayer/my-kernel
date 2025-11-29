@@ -775,6 +775,12 @@ static const struct usb_device_id	products[] = {
 	.driver_info = 0,
 },
 
+/* Corechip SR9900 Based USB 2.0 Ethernet Adapters */
+{
+	USB_DEVICE_AND_INTERFACE_INFO(0x0fe6, 0x9900, USB_CLASS_COMM, USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+	.driver_info = 0,
+},
+
 /* Realtek RTL8153 Based USB 3.0 Ethernet Adapters */
 {
 	USB_DEVICE_AND_INTERFACE_INFO(REALTEK_VENDOR_ID, 0x8153, USB_CLASS_COMM,

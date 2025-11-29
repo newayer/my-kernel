@@ -297,6 +297,11 @@ config REALTEK_PHY
 	help
 	  Supports the Realtek 821x PHY.
 
+config MAXIO_PHY
+	tristate "Maxio PHYs"
+	help
+	  Supports the Maxio PHY.
+
 config RENESAS_PHY
 	tristate "Renesas PHYs"
 	help

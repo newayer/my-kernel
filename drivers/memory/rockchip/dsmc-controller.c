@@ -1019,11 +1019,12 @@ int rockchip_dsmc_lb_init(struct rockchip_dsmc *dsmc, uint32_t cs)
 	int ret = 0;
 
 	dsmc_ctrller_cfg_for_lb(dsmc, cs);
+#if 0
 	ret = dsmc_lb_cmn_config(dsmc, cs);
 	if (ret)
 		return ret;
 	dsmc_lb_csr_config(dsmc, cs);
-
+#endif
 	return ret;
 }
 EXPORT_SYMBOL(rockchip_dsmc_lb_init);

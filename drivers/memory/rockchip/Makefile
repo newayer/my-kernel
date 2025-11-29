@@ -3,6 +3,8 @@
 # Makefile for the Rockchip DSMC drivers.
 #
 
+ccflags-y := -Wno-unused-function -Wall
+
 obj-$(CONFIG_ROCKCHIP_DSMC) += dsmc.o
 dsmc-y += dsmc-controller.o dsmc-lb-device.o dsmc-host.o
 
