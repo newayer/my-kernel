@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: GPL-2.0
+#
+# Rockchip HW Detector configuration
+#
+
+config ROCKCHIP_HW_DETECTOR
+	tristate "Rockchip Hardware Detector"
+	depends on ARCH_ROCKCHIP && IIO
+	help
+	  This driver provides hardware version detection and voltage monitoring
+	  for Rockchip platforms using SARADC.
+	  
+	  It supports:
+	  - Hardware version detection via ADC thresholds
+	  - Battery voltage monitoring with calibration
+	  - Multiple channel support
+	  - Configurable sampling and averaging
+	  - Sysfs interface for user space access
+	  
+	  If unsure, say N.

@@ -1,0 +1,126 @@
+# Documentation/devicetree/bindings/misc/rockchip,hw-detector.yaml
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/misc/rockchip,hw-detector.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Rockchip Hardware Detector
+
+maintainers:
+  - Newayer <cn_gwq@sina.com>
+
+description: |
+  Rockchip hardware version detector and voltage monitor using SARADC.
+
+  This binding describes a hardware detector that uses SARADC channels
+  to detect hardware version and monitor battery voltage.
+
+properties:
+  compatible:
+    const: rockchip,hw-detector
+
+  io-channels:
+    minItems: 1
+    maxItems: 2
+    description:
+      List of ADC channels for hardware detection and voltage monitoring.
+      First channel is for hardware version, second for voltage.
+
+  io-channel-names:
+    minItems: 1
+    maxItems: 2
+    items:
+      - const: hw_version
+      - const: vbat
+
+  hw-version-adc-channel:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description:
+      Index of ADC channel in io-channels for hardware version detection.
+    default: 0
+
+  vbat-adc-channel:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description:
+      Index of ADC channel in io-channels for battery voltage monitoring.
+    default: 1
+
+  hw-version-thresholds:
+    $ref: /schemas/types.yaml#/definitions/uint32-array
+    description: |
+      Array of voltage thresholds for hardware version detection.
+      Format: <min1 max1 version1 min2 max2 version2 ...>
+      Units: millivolts
+
+  vbat-divider-ratio:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+      Voltage divider ratio multiplied by 1000.
+      Actual ratio = value / 1000.
+
+  vbat-calibration:
+    $ref: /schemas/types.yaml#/definitions/uint32-array
+    description: |
+      Calibration points for voltage measurement.
+      Format: <adc1_mv actual1_mv adc2_mv actual2_mv>
+
+  sample-count:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: Number of samples to average.
+    default: 5
+
+  sample-interval-ms:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: Interval between samples in milliseconds.
+    default: 10
+
+  debounce-count:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: Number of consistent readings required for debouncing.
+    default: 3
+
+  poll-interval-ms:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: Polling interval for automatic updates (0 to disable).
+    default: 0
+
+  vref-supply:
+    description: ADC reference voltage regulator.
+
+  power-supply:
+    description: Main power supply regulator.
+
+required:
+  - compatible
+  - io-channels
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/interrupt-controller/irq.h>
+
+    saradc: adc@ff288000 {
+        compatible = "rockchip,rk3568-saradc";
+        reg = <0x0 0xff288000 0x0 0x100>;
+        #io-channel-cells = <1>;
+        vref-supply = <&vcca_1v8>;
+    };
+
+    hw-detector {
+        compatible = "rockchip,hw-detector";
+        io-channels = <&saradc 2>, <&saradc 3>;
+        io-channel-names = "hw_version", "vbat";
+
+        hw-version-thresholds = <0 150 0 151 450 1 451 1350 2 1351 2100 3>;
+        vbat-divider-ratio = <4922>; // 4.922 * 1000
+        vbat-calibration = <1422 7000 1707 8400>;
+
+        sample-count = <5>;
+        sample-interval-ms = <10>;
+        poll-interval-ms = <1000>;
+
+        vref-supply = <&vcca_1v8>;
+        power-supply = <&vcc_3v3>;
+    };
+
