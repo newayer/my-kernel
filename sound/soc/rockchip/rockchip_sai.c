@@ -32,7 +32,7 @@
 #define FW_RATIO_MIN		1
 #define MAXBURST_PER_FIFO	8
 
-#define DEFAULT_FS		48000
+#define DEFAULT_FS		8000
 #define TIMEOUT_US		1000
 #define WAIT_TIME_MS_MAX	10000
 #define QUIRK_ALWAYS_ON		BIT(0)
