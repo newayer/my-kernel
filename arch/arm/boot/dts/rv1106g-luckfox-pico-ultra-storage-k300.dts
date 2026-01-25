@@ -17,7 +17,7 @@
 		compatible = "spi-gpio";
 		#address-cells = <1>;
 		gpio-sck = <&gpio1 RK_PD3 GPIO_ACTIVE_LOW>;
-		gpio-miso = <&gpio1 RK_PD2 GPIO_ACTIVE_HIGH>;
+		gpio-miso = <&gpio1 RK_PC7 GPIO_ACTIVE_HIGH>;
 		gpio-mosi = <&gpio1 RK_PC6 GPIO_ACTIVE_HIGH>;
 		num-chipselects = <0>;
 		pinctrl-names = "default";
@@ -120,8 +120,7 @@
 
 &spi0 {
 	status = "okay";
-	spi-slave;
-	slave {
+	spidev@0 {
 		compatible ="rockchip,spidev";
 		reg = <0>;
 		id = <0>;
@@ -133,7 +132,7 @@
 		spi3gpio_pins: spi3gpio_pins {
 			rockchip,pins =
 				<1 RK_PD3 0 &pcfg_pull_none>,
-				<1 RK_PD2 0 &pcfg_pull_none>,
+				<1 RK_PC7 0 &pcfg_pull_none>,
 				<1 RK_PC6 0 &pcfg_pull_none>;
 		};
 	};
