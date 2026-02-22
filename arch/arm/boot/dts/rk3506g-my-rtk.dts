@@ -1,19 +1,10 @@
-// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
-/*
- * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
- */
-
 /dts-v1/;
 
 #include "rk3506-my-base-nand.dtsi"
 
 / {
-	model = "Rockchip RK3506G(QFN128) EVB1 V10 Board";
-	compatible = "rockchip,rk3506g-evb1-v10", "rockchip,rk3506";
-
-	chosen {
-		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=ttyFIQ0 ubi.mtd=2 root=ubi0:rootfs rw rootfstype=ubifs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
-	};
+	model = "Rockchip RK3506G(QFN128) RTK Board";
+	compatible = "rockchip,rk3506g-rtk", "rockchip,rk3506";
 
 	extcon_usb: extcon-usb {
 		compatible = "linux,extcon-usb-gpio";
@@ -36,7 +27,7 @@
 			label = "bd_led";
 			linux,default-trigger = "none";
 			default-state = "off";
-			gpios = <&gpio1 RK_PB6 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio1 RK_PB6 GPIO_ACTIVE_HIGH>;
 		};
 
 		rtk_led: work_led3 {
@@ -74,50 +65,42 @@
 		precharge-current-microamp = <180000>;
 		charge-term-current-microamp = <180000>;
 	};
-};
 
-&pinctrl {
-	usb {
-		usb_extcon_vbus: usb-extcon-vbus {
-			rockchip,pins = <3 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
+	my_gpio_init: my-gpio-init {
+		compatible = "dnxt,my-gpio-init";
+		status = "okay";
+
+		init-delay-ms = <0>;
+
+		gpios = <&gpio0 RK_PB0 GPIO_ACTIVE_LOW    // 0 BD-RST-L
+				&gpio3 RK_PB1 GPIO_ACTIVE_HIGH    // 1 PWROFF-H
+				&gpio3 RK_PA7 GPIO_ACTIVE_HIGH    // 2 BD-ON-H
+		>;
+
+		gpio-names = "bd_rst_l",
+		             "pwroff_h",
+		             "bd_on_h";
+
+		//                  0 1 2
+		gpio-init-states = <1 0 0>;
+
+		// format: <gpio_index delay_ms>
+		gpio-delays = <2 10>;
+
+		// format: <gpio_index delay_ms target_state>
+		gpio-state-delays = <2 10 1>;
 	};
 
-	bq25601 {
-		bq25601_int: bq25601-int {
-			rockchip,pins = <0 RK_PA7 RK_FUNC_GPIO &pcfg_pull_up>;
-		};
+	wireless-wlan {
+		compatible = "wlan-platdata";
+		rockchip,grf = <&grf>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_wake_host>;
+		WIFI,vbat_gpio = <&gpio3 RK_PA6 GPIO_ACTIVE_HIGH>;
+		WIFI,poweren_gpio = <&gpio3 RK_PA3 GPIO_ACTIVE_HIGH>;
+		WIFI,host_wake_irq = <&gpio3 RK_PA0 GPIO_ACTIVE_HIGH>;
+		status = "okay";
 	};
-
-	lis3dh {
-		lis3dh_int1: lis3dh-int1 {
-			rockchip,pins = <0 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-	};
-};
-
-&usb2phy {
-	extcon = <&extcon_usb>;
-};
-
-&u2phy_otg0 {
-	rockchip,gpio-vbus-det;
-};
-
-&u2phy_otg1 {
-	status = "okay";
-};
-
-&usb20_otg1 {
-	dr_mode = "host";
-	status = "okay";
-};
-
-&uart1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&rm_io16_uart1_rx &rm_io17_uart1_tx>;
-	dma-names = "tx", "rx";
-	status = "okay";
 };
 
 &i2c0 {
@@ -176,11 +159,64 @@
 		irq-gpio = <&gpio0 RK_PB2 IRQ_TYPE_EDGE_RISING>;
 
 		mount-matrix = "0", "1", "0",
-						"-1", "0", "0",
-						"0", "0", "1";
+					   "-1", "0", "0",
+					   "0", "0", "1";
+	};
+};
+
+
+&pinctrl {
+	usb {
+		usb_extcon_vbus: usb-extcon-vbus {
+			rockchip,pins = <3 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	bq25601 {
+		bq25601_int: bq25601-int {
+			rockchip,pins = <0 RK_PA7 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+	lis3dh {
+		lis3dh_int1: lis3dh-int1 {
+			rockchip,pins = <0 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	wireless-wlan {
+		wifi_wake_host: wifi-wake-host {
+			rockchip,pins = <3 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>,
+							<3 RK_PA3 RK_FUNC_GPIO &pcfg_pull_none>,
+							<3 RK_PA0 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
 	};
 };
 
 &pwm0_4ch_0 {
+	status = "okay";
+};
+
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io16_uart1_rx &rm_io17_uart1_tx>;
+	dma-names = "tx", "rx";
+	status = "okay";
+};
+
+&usb2phy {
+	extcon = <&extcon_usb>;
+};
+
+&u2phy_otg0 {
+	rockchip,gpio-vbus-det;
+};
+
+&u2phy_otg1 {
+	status = "okay";
+};
+
+&usb20_otg1 {
+	dr_mode = "host";
 	status = "okay";
 };
