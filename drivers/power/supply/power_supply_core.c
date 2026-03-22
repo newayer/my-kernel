@@ -49,13 +49,13 @@ static bool __power_supply_is_supplied_by(struct power_supply *supplier,
 		if (!supplier->desc->name)
 			return false;
 		for (i = 0; i < supply->num_supplies; i++)
-			if (!strcmp(supplier->desc->name, supply->supplied_from[i]))
+			if (supply->supplied_from[i] && !strcmp(supplier->desc->name, supply->supplied_from[i]))
 				return true;
 	} else {
 		if (!supply->desc->name)
 			return false;
 		for (i = 0; i < supplier->num_supplicants; i++)
-			if (!strcmp(supplier->supplied_to[i], supply->desc->name))
+			if (supplier->supplied_to[i] && !strcmp(supplier->supplied_to[i], supply->desc->name))
 				return true;
 	}
 

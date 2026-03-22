@@ -15,7 +15,7 @@
 
 	extcon_usb: extcon-usb {
 		compatible = "linux,extcon-usb-gpio";
-		vbus-gpio = <&gpio1 RK_PB1 GPIO_ACTIVE_LOW>;
+		vbus-gpio = <&gpio1 RK_PB1 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&usb_extcon_vbus>;
 		status = "okay";

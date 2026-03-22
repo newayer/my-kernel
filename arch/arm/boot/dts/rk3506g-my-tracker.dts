@@ -15,7 +15,7 @@
 
 	extcon_usb: extcon-usb {
 		compatible = "linux,extcon-usb-gpio";
-		vbus-gpio = <&gpio1 RK_PA7 GPIO_ACTIVE_LOW>;
+		vbus-gpio = <&gpio1 RK_PA7 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&usb_extcon_vbus>;
 		status = "okay";
@@ -86,7 +86,7 @@
 	bat: battery {
 		compatible = "simple-battery";
 		constant-charge-current-max-microamp = <2040000>;
-		constant-charge-voltage-max-microvolt = <4352000>;
+		constant-charge-voltage-max-microvolt = <4200000>;
 		precharge-current-microamp = <180000>;
 		charge-term-current-microamp = <180000>;
 	};

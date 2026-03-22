@@ -19,49 +19,22 @@
 		status = "okay";
 		heart_led: work_led1 {
 			label = "run";
-			gpios = <&gpio1 RK_PB7 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio1 RK_PB7 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "heartbeat";
 			default-state = "off";
 		};
-		bd_led: work_led2 {
-			label = "bd_led";
+		wifi_led: work_led2 {
+			label = "wifi_led";
 			linux,default-trigger = "none";
 			default-state = "off";
 			gpios = <&gpio1 RK_PB6 GPIO_ACTIVE_HIGH>;
-		};
-
-		rtk_led: work_led3 {
-			label = "rtk_led";
-			linux,default-trigger = "none";
-			default-state = "off";
-			gpios = <&gpio1 RK_PB5 GPIO_ACTIVE_HIGH>;
-		};
-		wifi_led: work_led4 {
-			label = "wifi_led";
-			linux,default-trigger = "none";
-			default-state = "on";
-			gpios = <&gpio1 RK_PB4 GPIO_ACTIVE_HIGH>;
-		};
-
-		bat1_led: work_led5 {
-			label = "bat1_led";
-			linux,default-trigger = "none";
-			default-state = "off";
-			gpios = <&gpio1 RK_PB1 GPIO_ACTIVE_HIGH>;
-		};
-
-		bat2_led: work_led6 {
-			label = "bat2_led";
-			linux,default-trigger = "none";
-			default-state = "off";
-			gpios = <&gpio1 RK_PB0 GPIO_ACTIVE_HIGH>;
 		};
 	};
 
 	bat: battery {
 		compatible = "simple-battery";
 		constant-charge-current-max-microamp = <2040000>;
-		constant-charge-voltage-max-microvolt = <4352000>;
+		constant-charge-voltage-max-microvolt = <4200000>;
 		precharge-current-microamp = <180000>;
 		charge-term-current-microamp = <180000>;
 	};
@@ -139,6 +112,10 @@
 				0x2F 0x00 0x64 0xA5 0xB5 0x11 0xF0 0x11
 		>;
 		cellwise,monitor-interval-ms = <5000>; /* 监控间隔 */
+
+		monitored-battery = <&bat>;
+
+		power-supplies = <&bq25601>;
 	};
 };
 
@@ -200,6 +177,13 @@
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io16_uart1_rx &rm_io17_uart1_tx>;
+	dma-names = "tx", "rx";
+	status = "okay";
+};
+
+&uart2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io30_uart2_rx &rm_io29_uart2_tx>;
 	dma-names = "tx", "rx";
 	status = "okay";
 };
