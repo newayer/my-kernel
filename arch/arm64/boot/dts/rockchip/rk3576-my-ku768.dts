@@ -28,49 +28,73 @@
 		compatible = "wlan-platdata";
 		pinctrl-names = "default";
 		pinctrl-0 = <&wifi_gpios>;
-		WIFI,poweren_gpio = <&gpio2 RK_PD7 GPIO_ACTIVE_HIGH>;
-		WIFI,host_wake_irq = <&gpio3 RK_PA5 GPIO_ACTIVE_HIGH>;
+		WIFI,vbat_gpio = <&gpio0 RK_PD3 GPIO_ACTIVE_HIGH>;
+		WIFI,poweren_gpio = <&gpio0 RK_PD1 GPIO_ACTIVE_HIGH>;
+		WIFI,host_wake_irq = <&gpio0 RK_PD0 GPIO_ACTIVE_HIGH>;
 		status = "okay";
 	};
 
-	fan: pwm-fan {
+	fan1: pwm-fan1 {
 		compatible = "pwm-fan";
 		#cooling-cells = <2>;
-		pwms = <&pwm0_2ch_0 0 50000 0>;
+		pwms = <&pwm0_2ch_1 0 50000 0>;
 		cooling-levels = <0 50 100 150 200 255>;
-		rockchip,temp-trips = <25000   5>;
+		rockchip,temp-trips = <25000 5>;
+	};
+
+	fan2: pwm-fan2 {
+		compatible = "pwm-fan";
+		#cooling-cells = <2>;
+		pwms = <&pwm2_8ch_1 0 50000 0>;
+		cooling-levels = <0 50 100 150 200 255>;
+		rockchip,temp-trips = <25000 5>;
+	};
+
+	fan3: pwm-fan3 {
+		compatible = "pwm-fan";
+		#cooling-cells = <2>;
+		pwms = <&pwm1_6ch_4 0 50000 0>;
+		cooling-levels = <0 50 100 150 200 255>;
+		rockchip,temp-trips = <25000 5>;
 	};
 
 	leds {
 		status = "okay";
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
-		pinctrl-0 = <&som_led0 &som_led1 &user_led0 &user_led1>;
+		pinctrl-0 = <&sys_work_led &work_led &wifi_led &geo_led &leo_led>;
 
-		som_led0 {
+		sys_work_led {
 			label = "heartbeat";
-			gpios = <&gpio4 RK_PB3 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio3 RK_PB7 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "heartbeat";
 			default-state = "off";
 		};
 
-		som_led1 {
-			label = "lway-led";
-			gpios = <&gpio4 RK_PB2 GPIO_ACTIVE_HIGH>;
+		work_led {
+			label = "heartbeat";
+			gpios = <&gpio3 RK_PD5 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+			default-state = "off";
+		};
+
+		wifi_led {
+			label = "wifi-led";
+			gpios = <&gpio3 RK_PC0 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "default-on";
 			default-state = "off";
 		};
 
-		user_led0 {
-			label = "wifi_led";
-			gpios = <&gpio3 RK_PD2 GPIO_ACTIVE_HIGH>;
+		geo_led {
+			label = "geo_led";
+			gpios = <&gpio3 RK_PB2 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "default-on";
 			default-state = "off";
 		};
 
-		user_led1 {
-			label = "hway-led";
-			gpios = <&gpio3 RK_PA6 GPIO_ACTIVE_HIGH>;
+		leo_led {
+			label = "leo_led";
+			gpios = <&gpio3 RK_PB1 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "default-on";
 			default-state = "off";
 		};
@@ -80,182 +104,137 @@
 		compatible = "gpio-keys";
 		autorepeat;
 		pinctrl-names = "default";
-		pinctrl-0 = <&user_key0>;
+		pinctrl-0 = <&switch_btn>;
 
-		user_key0 {
-			label = "user-key0";
+		hl_way_sw {
+			label = "hl_way_sw";
 			linux,code = <KEY_PROG2>;
-			gpios = <&gpio4 RK_PA5 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio3 RK_PD6 GPIO_ACTIVE_LOW>;
 			debounce-interval = <50>;
 		};
+	};
+
+	my_gpio_init: my-gpio-init {
+		compatible = "dnxt,my-gpio-init";
+		status = "okay";
+
+		init-delay-ms = <0>;
+
+		gpios = <
+			&gpio0 RK_PC7 GPIO_ACTIVE_HIGH    // 0 USB1_NRST
+			&gpio4 RK_PA2 GPIO_ACTIVE_HIGH    // 1 EN_FS
+			&gpio4 RK_PA5 GPIO_ACTIVE_HIGH    // 2 EN_SM
+			&gpio0 RK_PC3 GPIO_ACTIVE_HIGH    // 3 EN_HBB
+		>;
+
+		gpio-names = "usb1_nrst", "fans_en", "sm_en", "hbb_en";
+
+		//                  0 1 2 3 4 5 6 7 8 9 10
+		gpio-init-states = <0 1 1 1>;
+
+		// format: <gpio_index delay_ms>
+		gpio-delays = <0 0>;
+
+		// format: <gpio_index delay_ms target_state>
+		gpio-state-delays = <0 10 1>;
 	};
 };
 
 &gmac0 {
-	phy-mode = "rgmii";
+	phy-mode = "rgmii-rxid";
 	clock_in_out = "output";
 
-	snps,reset-gpio = <&gpio3 RK_PD6 GPIO_ACTIVE_LOW>;
+	snps,reset-gpio = <&gpio3 RK_PA6 GPIO_ACTIVE_LOW>;
 	snps,reset-active-low;
-	snps,reset-delays-us = <0 10000 50000>;
+	snps,reset-delays-us = <0 20000 100000>;
 
 	pinctrl-names = "default";
-	pinctrl-0 = <&eth0m1_tx_bus2
+	pinctrl-0 = <&eth0m1_miim
+				&eth0m1_tx_bus2
 				&eth0m1_rx_bus2
 				&eth0m1_rgmii_clk
 				&eth0m1_rgmii_bus>;
 
-	tx_delay = <0x30>;
-	rx_delay = <0x20>;
+	tx_delay = <0x21>;
+	/* rx_delay = <0x3f>; */
 
-	phy-handle = <&ksz9896_phy0>;
+	phy-handle = <&rgmii_phy0>;
 	status = "okay";
+};
 
-	fixed-link {
-		speed = <1000>;
-		full-duplex;
-		pause;
+&mdio0 {
+	rgmii_phy0: phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x0>;
+		clocks = <&cru REFCLKO25M_GMAC0_OUT>;
+		motorcomm,keep-pll-enabled;
+		motorcomm,auto-sleep-disabled;
 	};
 };
 
-&i2c1 {
+&gmac1 {
+	/* Use rgmii-rxid mode to disable rx delay inside Soc */
+	phy-mode = "rgmii-rxid";
+	clock_in_out = "output";
+
+	snps,reset-gpio = <&gpio3 RK_PA7 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	snps,reset-delays-us = <0 20000 100000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&eth1m0_miim
+				&eth1m0_tx_bus2
+				&eth1m0_rx_bus2
+				&eth1m0_rgmii_clk
+				&eth1m0_rgmii_bus>;
+
+	tx_delay = <0x20>;
+	/* rx_delay = <0x3f>; */
+
+	phy-handle = <&rgmii_phy1>;
+	status = "okay";
+};
+
+&mdio1 {
+	rgmii_phy1: phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x1>;
+		clocks = <&cru REFCLKO25M_GMAC1_OUT>;
+		motorcomm,keep-pll-enabled;
+		motorcomm,auto-sleep-disabled;
+	};
+};
+
+&i2c2 {
 	status = "okay";
 };
 
 &i2c3 {
-	pinctrl-0 = <&i2c3m2_xfer>;
 	status = "okay";
 };
 
-&i2c4 {
-	pinctrl-0 = <&i2c4m3_xfer>;
+&i2c5 {
+	status = "okay";
+
+	ds1307@68 {
+		compatible = "dallas,ds1307";
+		reg = <0x68>;
+		status = "okay";
+	};
+};
+
+&i2c6 {
+	pinctrl-0 = <&i2c6m3_xfer>;
 	status = "okay";
 };
 
 &i2c7 {
-	pinctrl-0 = <&i2c7m1_xfer>;
-	status = "okay";
-
-	i2c_ksz9896: ksz9896@5f {
-		compatible = "microchip,ksz9896";
-		reg = <0x5f>;
-		reset-gpio = <&gpio3 RK_PD6 GPIO_ACTIVE_LOW>;
-		phy-mode = "rgmii";
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-			port@0 {
-				reg = <0>;
-				label = "lan1";
-			};
-			port@1 {
-				reg = <1>;
-				label = "lan2";
-			};
-			port@2 {
-				reg = <2>;
-				label = "lan3";
-			};
-			port@3 {
-				reg = <3>;
-				label = "lan4";
-			};
-			port@4 {
-				reg = <4>;
-				label = "lan5";
-			};
-			ksz9896_phy0: port@5 {
-				reg = <5>;
-				label = "cpu";
-				ethernet = <&gmac0>;
-				phy-mode = "rgmii";
-				fixed-link {
-					speed = <1000>;
-					full-duplex;
-					pause;
-				};
-			};
-		};
-	};
-};
-
-&i2c9 {
-	pinctrl-0 = <&i2c9m3_xfer>;
+	pinctrl-0 = <&i2c7m3_xfer>;
 	status = "okay";
 };
 
-&spi0 {
-	compatible = "rockchip,spi-slave";
-	status = "okay";
-	max-freq = <10000000>;
-	pinctrl-0 = <&spi0m0_clk &spi0m0_miso &spi0m0_mosi &spi0m0_csn0>;
-	#address-cells = <1>;
-	#size-cells = <0>;
-	slave@0 {
-		compatible = "rockchip,spidev";
-		spi-max-frequency = <10000000>;
-		reg = <0>;
-		spi-msb-first;
-		status = "okay";
-	};
-};
-
-&spi1 {
-	status = "okay";
-	max-freq = <10000000>;
-	pinctrl-0 = <&spi1m0_clk &spi1m0_mosi &spi1m0_cs0 &spi1m0_cs1>;
-	spi_test@0 {
-		compatible = "rockchip,spidev";
-		spi-max-frequency = <10000000>;
-		id = <0>;
-		reg = <0>;
-		spi-msb-first;
-	};
-	spi_test@1 {
-		compatible = "rockchip,spidev";
-		spi-max-frequency = <10000000>;
-		id = <1>;
-		reg = <1>;
-		spi-msb-first;
-	};
-};
-
-&spi2 {
-	pinctrl-0 = <&spi2m1_csn0 &spi2m1_csn1 &spi2m1_pins>;
-	status = "okay";
-};
-
-&spi3 {
-	compatible = "rockchip,spi-slave";
-	status = "okay";
-	max-freq = <10000000>;
-	pinctrl-0 = <&spi3m2_clk &spi3m2_miso &spi3m2_mosi &spi3m2_csn0>;
-	#address-cells = <1>;
-	#size-cells = <0>;
-	slave@0 {
-		compatible = "rockchip,spidev";
-		spi-max-frequency = <10000000>;
-		reg = <0>;
-		spi-msb-first;
-		status = "okay";
-	};
-};
-
-&spi4 {
-	status = "okay";
-};
-
-&uart1 {
-	status = "okay";
-};
-
-&uart2 {
-	pinctrl-0 = <&uart2m1_xfer>;
-	status = "okay";
-};
-
-&uart5 {
-	pinctrl-0 = <&uart5m1_xfer>;
+&uart7 {
+	pinctrl-0 = <&uart7m2_xfer>;
 	status = "okay";
 };
 
@@ -264,106 +243,54 @@
 	status = "okay";
 };
 
-&uart9 {
-	pinctrl-0 = <&uart9m1_xfer &uart9m1_ctsn &uart9m1_rtsn>;
+/* FAN1-PWM */
+&pwm0_2ch_1 {
 	status = "okay";
+	pinctrl-0 = <&pwm0m3_ch1>;
 };
 
-&uart10 {
+/* FAN3-PWM */
+&pwm1_6ch_4 {
 	status = "okay";
+	pinctrl-0 = <&pwm1m3_ch4>;
 };
 
-&uart11 {
+/* FAN2-PWM */
+&pwm2_8ch_1 {
 	status = "okay";
-};
-
-&pwm2_8ch_6 {
-	status = "okay";
-	pinctrl-0 = <&pwm2m2_ch6>;
-};
-
-&pwm0_2ch_0 {
-	status = "okay";
-	pinctrl-0 = <&pwm0m0_ch0>;
+	pinctrl-0 = <&pwm2m3_ch1>;
 };
 
 &pinctrl {
-	spi0 {
-		spi0m0_clk: spi0m0-clk {
-			rockchip,pins = <0 RK_PC7 11 &pcfg_pull_none>;
-		};
-		spi0m0_miso: spi0m0-miso {
-			rockchip,pins = <0 RK_PD1 11 &pcfg_pull_none>;
-		};
-		spi0m0_mosi: spi0m0-mosi {
-			rockchip,pins = <0 RK_PD0 11 &pcfg_pull_none>;
-		};
-		spi0m0_csn0: spi0m0-csn0 {
-			rockchip,pins = <0 RK_PC6 11 &pcfg_pull_none>;
-		};
-	};
-
-	spi1 {
-		spi1m0_clk: spi1m0-clk {
-			rockchip,pins = <1 RK_PB4 11 &pcfg_pull_none>;
-		};
-		spi1m0_mosi: spi1m0-mosi {
-			rockchip,pins = <1 RK_PB5 11 &pcfg_pull_none>;
-		};
-		spi1m0_cs0: spi1m0-cs0 {
-			rockchip,pins = <1 RK_PB7 11 &pcfg_pull_none>;
-		};
-		spi1m0_cs1: spi1m0-cs1 {
-			rockchip,pins = <1 RK_PC0 11 &pcfg_pull_none>;
-		};
-	};
-
-	spi3 {
-		spi3m2_clk: spi3m2-clk {
-			rockchip,pins = <4 RK_PA7 9 &pcfg_pull_none>;
-		};
-		spi3m2_mosi: spi3m2-mosi {
-			rockchip,pins = <4 RK_PA4 9 &pcfg_pull_none>;
-		};
-		spi3m2_miso: spi3m2-miso {
-			rockchip,pins = <4 RK_PA6 9 &pcfg_pull_none>;
-		};
-		spi3m2_csn0: spi3m2-csn0 {
-			rockchip,pins = <4 RK_PA3 9 &pcfg_pull_none>;
-		};
-	};
-
 	leds {
-		som_led0: som-led0 {
-			rockchip,pins = <4 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>;
+		sys_work_led: sys-work-led {
+			rockchip,pins = <3 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
-		som_led1: sim-led1 {
-			rockchip,pins = <4 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
+		work_led: work-led {
+			rockchip,pins = <3 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
-		user_led0: user-led0 {
-			rockchip,pins = <3 RK_PD2 RK_FUNC_GPIO &pcfg_pull_none>;
+		wifi_led: wifi-led {
+			rockchip,pins = <3 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
-		user_led1: user-led1 {
-			rockchip,pins = <3 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
+		geo_led: geo-led {
+			rockchip,pins = <3 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		leo_led: leo-led {
+			rockchip,pins = <3 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
 	keys {
-		user_key0: user-key0 {
-			rockchip,pins = <4 RK_PA5 RK_FUNC_GPIO &pcfg_pull_up>;
-		};
-	};
-
-	usb {
-		usbc0_int: usbc0-int {
-			rockchip,pins = <4 RK_PC0 RK_FUNC_GPIO &pcfg_pull_up>;
+		switch_btn: switch-btn {
+			rockchip,pins = <3 RK_PD6 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
 
 	wireless-wlan {
 		wifi_gpios: wifi-gpios {
-			rockchip,pins = <2 RK_PD7 RK_FUNC_GPIO &pcfg_pull_none>,
-							<3 RK_PA5 RK_FUNC_GPIO &pcfg_pull_up>;
+			rockchip,pins = <0 RK_PD3 RK_FUNC_GPIO &pcfg_pull_none>,
+							<0 RK_PD1 RK_FUNC_GPIO &pcfg_pull_none>,
+							<0 RK_PD0 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
 };
