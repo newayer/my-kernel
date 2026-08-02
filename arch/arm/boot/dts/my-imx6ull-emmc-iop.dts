@@ -80,6 +80,21 @@
 	phy-mode = "rmii";
 	phy-handle = <&ethphy0>;
 	status = "okay";
+
+	mdio {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		ethphy0: ethernet-phy@0 {
+			compatible = "ethernet-phy-id0000.0128";
+			reg = <0>;
+		};
+
+		ethphy1: ethernet-phy@1 {
+			compatible = "ethernet-phy-id0000.0128";
+			reg = <1>;
+		};
+	};
 };
 
 &fec2 {
@@ -88,22 +103,6 @@
 	phy-mode = "rmii";
 	phy-handle = <&ethphy1>;
 	status = "disabled";
-
-	mdio {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		/delete-node/ ethernet-phy@2;
-		ethphy0: ethernet-phy@0 {
-			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <0>;
-		};
-
-		ethphy1: ethernet-phy@1 {
-			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <1>;
-		};
-	};
 };
 
 &gpc {
