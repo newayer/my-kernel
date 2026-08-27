@@ -1,0 +1,1 @@
+../../../../../arch/arm/boot/dts/vf610-pinfunc.h

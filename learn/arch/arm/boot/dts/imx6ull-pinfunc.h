@@ -1,0 +1,1 @@
+../../../../../arch/arm/boot/dts/imx6ull-pinfunc.h

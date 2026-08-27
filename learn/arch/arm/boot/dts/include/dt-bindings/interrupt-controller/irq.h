@@ -1,0 +1,1 @@
+../../../../../../../../arch/arm/boot/dts/include/dt-bindings/interrupt-controller/irq.h

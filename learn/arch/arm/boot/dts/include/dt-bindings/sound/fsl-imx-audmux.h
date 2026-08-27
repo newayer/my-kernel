@@ -1,0 +1,1 @@
+../../../../../../../../arch/arm/boot/dts/include/dt-bindings/sound/fsl-imx-audmux.h
