@@ -1,0 +1,304 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
+ *
+ */
+
+/dts-v1/;
+
+#include "rk3576.dtsi"
+#include "rk3576-my-base.dtsi"
+
+/ {
+	model = "TL3576-Based Board";
+	compatible = "tronlong,tl3576-evm", "rockchip,rk3576";
+
+	wireless_bluetooth: wireless-bluetooth {
+		compatible = "bluetooth-platdata";
+		//BT,reset_gpio = <&xl8574t 7 GPIO_ACTIVE_HIGH>;
+		status = "disabled";
+	};
+
+	wireless_wlan: wireless-wlan {
+		compatible = "wlan-platdata";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_gpios>;
+		WIFI,vbat_gpio = <&gpio0 RK_PD3 GPIO_ACTIVE_HIGH>;
+		WIFI,poweren_gpio = <&gpio0 RK_PD1 GPIO_ACTIVE_HIGH>;
+		WIFI,host_wake_irq = <&gpio0 RK_PD0 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+
+	fan: pwm-fan {
+		compatible = "pwm-fan";
+		#cooling-cells = <2>;
+		pwms = <&pwm1_6ch_4 0 50000 0>;
+		cooling-levels = <0 50 100 150 200 255>;
+		rockchip,temp-trips = <25000 5>;
+	};
+
+	leds {
+		status = "okay";
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&sys_work_led &led_1 &led_2 &led_3 &led_4 &led_5 &led_6>;
+
+		sys_work_led {
+			label = "heartbeat";
+			gpios = <&gpio3 RK_PD5 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+			default-state = "on";
+		};
+
+		led_1 {
+			label = "led_1";
+			gpios = <&gpio4 RK_PC0 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+			default-state = "off";
+		};
+
+		led_2 {
+			label = "led_2";
+			gpios = <&gpio4 RK_PC1 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+			default-state = "off";
+		};
+
+		led_3 {
+			label = "led_3";
+			gpios = <&gpio4 RK_PC2 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+			default-state = "off";
+		};
+
+		led_4 {
+			label = "led_4";
+			gpios = <&gpio4 RK_PC3 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+			default-state = "off";
+		};
+
+		led_5 {
+			label = "led_5";
+			gpios = <&gpio4 RK_PA4 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+			default-state = "off";
+		};
+
+		led_6 {
+			label = "led_6";
+			gpios = <&gpio4 RK_PA6 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+			default-state = "off";
+		};
+	};
+
+	my_gpio_init: my-gpio-init {
+		compatible = "dnxt,my-gpio-init";
+		status = "okay";
+
+		init-delay-ms = <0>;
+
+		gpios = <
+			&gpio0 RK_PC7 GPIO_ACTIVE_HIGH    // 0 USB1_NRST
+			&gpio4 RK_PA2 GPIO_ACTIVE_HIGH    // 1 EN_FS
+			&gpio4 RK_PA5 GPIO_ACTIVE_HIGH    // 2 EN_SM
+			&gpio0 RK_PC3 GPIO_ACTIVE_HIGH    // 3 EN_HBB
+		>;
+
+		gpio-names = "usb1_nrst", "fans_en", "sm_en", "hbb_en";
+
+		//                  0 1 2 3 4 5 6 7 8 9 10
+		gpio-init-states = <0 1 1 1>;
+
+		// format: <gpio_index delay_ms>
+		gpio-delays = <0 0>;
+
+		// format: <gpio_index delay_ms target_state>
+		gpio-state-delays = <0 10 1>;
+	};
+
+	hw_detector: hw-detector {
+		compatible = "rockchip,hw-detector";
+		status = "okay";
+
+		io-channels = <&saradc 3>, <&saradc 2>;
+		io-channel-names = "hw_version", "vbat";
+
+		// 硬件版本检测参数
+		hw-version-adc-channel = <0>; // 对应io-channels中的第一个(通道3)
+		hw-version-thresholds = <
+								/* min(mV) max(mV) version */
+								0       200     0       // 版本1: 0-200mV (0.0V)
+								1600    2000    1       // 版本2: 1.6-2.0V (1.8V)
+								800     1000    2       // 版本3: 800-1000mV (0.9V)
+								250     350     3       // 版本4: 250-350mV (0.3V)
+								>;
+
+		// 电压检测参数
+		vbat-adc-channel = <1>; // 对应io-channels中的第二个(通道2)
+		vbat-divider-ratio = <21000>; // 分压比 * 1000 (200+10)/10
+		vbat-ref-voltage = <1800>; // 参考电压1800mV
+		vbat-calibration = <
+							/* adc电压(mV) 实际电压(mV) */
+							1143    24000    // 1.143V对应24V
+							1714    36000    // 1.714V对应36V
+							>;
+
+		sample-count = <5>;        // 每次采样次数
+		sample-interval-ms = <10>; // 采样间隔
+		debounce-count = <3>;      // 去抖动次数
+
+        vref-supply = <&vcc_1v8_s0>;
+	};
+};
+
+&gmac0 {
+	phy-mode = "rgmii-rxid";
+	clock_in_out = "output";
+
+	snps,reset-gpio = <&gpio3 RK_PA6 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	snps,reset-delays-us = <0 20000 100000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&eth0m1_miim
+				&eth0m1_tx_bus2
+				&eth0m1_rx_bus2
+				&eth0m1_rgmii_clk
+				&eth0m1_rgmii_bus>;
+
+	tx_delay = <0x21>;
+	/* rx_delay = <0x3f>; */
+
+	phy-handle = <&rgmii_phy0>;
+	status = "okay";
+};
+
+&mdio0 {
+	rgmii_phy0: phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x0>;
+		clocks = <&cru REFCLKO25M_GMAC0_OUT>;
+		motorcomm,keep-pll-enabled;
+		motorcomm,auto-sleep-disabled;
+	};
+};
+
+&gmac1 {
+	/* Use rgmii-rxid mode to disable rx delay inside Soc */
+	phy-mode = "rgmii-rxid";
+	clock_in_out = "output";
+
+	snps,reset-gpio = <&gpio3 RK_PA7 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	snps,reset-delays-us = <0 20000 100000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&eth1m0_miim
+				&eth1m0_tx_bus2
+				&eth1m0_rx_bus2
+				&eth1m0_rgmii_clk
+				&eth1m0_rgmii_bus>;
+
+	tx_delay = <0x20>;
+	/* rx_delay = <0x3f>; */
+
+	phy-handle = <&rgmii_phy1>;
+	status = "okay";
+};
+
+&mdio1 {
+	rgmii_phy1: phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x1>;
+		clocks = <&cru REFCLKO25M_GMAC1_OUT>;
+		motorcomm,keep-pll-enabled;
+		motorcomm,auto-sleep-disabled;
+	};
+};
+
+&i2c6 {
+	pinctrl-0 = <&i2c6m3_xfer>;
+	status = "okay";
+};
+
+&spi2 {
+	pinctrl-0 = <&spi1m2_csn1 &spi1m2_pins>;
+	status = "okay";
+};
+
+/* reserved */
+&uart1 {
+	pinctrl-0 = <&uart1m0_xfer>;
+	dma-names = "tx", "rx";
+	status = "okay";
+};
+
+/* NPU-UART2 */
+&uart2 {
+	pinctrl-0 = <&uart2m1_xfer>;
+	dma-names = "tx", "rx";
+	status = "okay";
+};
+
+/* XCPUART0 */
+&uart3 {
+	pinctrl-0 = <&uart3m2_xfer &uart3m2_rtsn &uart3m2_ctsn>;
+	dma-names = "tx", "rx";
+	status = "okay";
+};
+
+/* GNSS */
+&uart8 {
+	pinctrl-0 = <&uart8m2_xfer>;
+	dma-names = "tx", "rx";
+	status = "okay";
+};
+
+/* LTE */
+&uart10 {
+	pinctrl-0 = <&uart10m1_xfer &uart10m1_rtsn &uart10m1_ctsn>;
+	dma-names = "tx", "rx";
+	status = "okay";
+};
+
+/* FAN-PWM */
+&pwm1_6ch_4 {
+	status = "okay";
+	pinctrl-0 = <&pwm1m3_ch4>;
+};
+
+&pinctrl {
+	leds {
+		sys_work_led: sys-work-led {
+			rockchip,pins = <3 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_1: led-1 {
+			rockchip,pins = <4 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_2: led-2 {
+			rockchip,pins = <4 RK_PC1 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_3: led-3 {
+			rockchip,pins = <4 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_4: led-4 {
+			rockchip,pins = <4 RK_PC3 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_5: led-5 {
+			rockchip,pins = <4 RK_PA4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_6: led-6 {
+			rockchip,pins = <4 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	wireless-wlan {
+		wifi_gpios: wifi-gpios {
+			rockchip,pins = <0 RK_PD3 RK_FUNC_GPIO &pcfg_pull_none>,
+							<0 RK_PD1 RK_FUNC_GPIO &pcfg_pull_none>,
+							<0 RK_PD0 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+};
