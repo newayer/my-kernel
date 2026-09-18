@@ -42,10 +42,17 @@
 		status = "okay";
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
-		pinctrl-0 = <&sys_work_led &led_1 &led_2 &led_3 &led_4 &led_5 &led_6>;
+		pinctrl-0 = <&sys_work_led &work_led &led_1 &led_2 &led_3 &led_4 &led_5 &led_6>;
 
 		sys_work_led {
 			label = "heartbeat";
+			gpios = <&gpio0 RK_PD2 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+			default-state = "off";
+		};
+
+		work_led {
+			label = "work_led";
 			gpios = <&gpio3 RK_PD5 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "default-on";
 			default-state = "on";
@@ -106,10 +113,10 @@
 			&gpio3 RK_PB7 GPIO_ACTIVE_HIGH    // 2 LTE-RESET-H
 			&gpio3 RK_PD6 GPIO_ACTIVE_HIGH    // 3 SLIC-EN-H
 			&gpio3 RK_PB0 GPIO_ACTIVE_HIGH    // 4 XCP-EN-H
-			&gpio3 RK_PD6 GPIO_ACTIVE_HIGH    // 5 AP-RST-ANT
+			&gpio0 RK_PC7 GPIO_ACTIVE_HIGH    // 5 AP-RST-ANT
 		>;
 
-		gpio-names = "wifi_pwren", "lte_en_h", "lte_pwrkey_h", "lte_reset_h", "slic_en_h", "xcp_en_h", "ap_rst_ant";
+		gpio-names = "lte_en_h", "lte_pwrkey_h", "lte_reset_h", "slic_en_h", "xcp_en_h", "ap_rst_ant";
 
 		//                  0 1 2 3 4 5 6 7 8 9 10
 		gpio-init-states = <1 1 1 1 1 1>;
@@ -275,7 +282,10 @@
 &pinctrl {
 	leds {
 		sys_work_led: sys-work-led {
-			rockchip,pins = <3 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
+			rockchip,pins = <0 RK_PD2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		work_led: work-led {
+			rockchip,pins = <3 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 		led_1: led-1 {
 			rockchip,pins = <4 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
