@@ -122,10 +122,10 @@
 		gpio-init-states = <1 1 1 1 1 1>;
 
 		// format: <gpio_index delay_ms>
-		gpio-delays = <2 0>;
+		gpio-delays = <2 1>;
 
 		// format: <gpio_index delay_ms target_state>
-		gpio-state-delays = <2 10 1>;
+		gpio-state-delays = <2 10 0>;
 	};
 
 	hw_detector: hw-detector {
