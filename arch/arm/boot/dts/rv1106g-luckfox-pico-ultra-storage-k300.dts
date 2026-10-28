@@ -120,7 +120,8 @@
 
 &spi0 {
 	status = "okay";
-	spidev@0 {
+	spi-slave;
+	slave {
 		compatible ="rockchip,spidev";
 		reg = <0>;
 		id = <0>;
