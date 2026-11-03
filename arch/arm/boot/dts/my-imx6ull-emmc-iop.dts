@@ -344,10 +344,6 @@
 	};
 };
 
-&pxp {
-	status = "okay";
-};
-
 &qspi {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_qspi>;
@@ -403,6 +399,7 @@
 &uart7 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart7>;
+	fsl,dte-mode;
 	status = "okay";
 };
 

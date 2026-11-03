@@ -170,6 +170,8 @@ static inline void imx6ul_enet_init(void)
 static void __init imx6ul_init_machine(void)
 {
 	struct device *parent;
+	struct device_node *np;
+	void __iomem *iomux;
 
 	parent = imx_soc_device_init();
 	if (parent == NULL)
@@ -179,6 +181,20 @@ static void __init imx6ul_init_machine(void)
 	imx6ul_enet_init();
 	imx_anatop_init();
 	imx6ul_pm_init();
+
+	/* 规避 UART7/8 的 RTS 引脚与 ENET TX_CLK 的冲突 */
+	np = of_find_compatible_node(NULL, NULL, "fsl,imx6ul-iomuxc");
+	if (np) {
+		iomux = of_iomap(np, 0);
+		if (iomux) {
+			/*
+			 * 默认值 0x0 指向 ENETx_TX_CLK_ALT1，
+			 * 切换为 UARTx_RTS_B 引脚以避免 ENET 时钟干扰。
+			 */
+			writel_relaxed(0x2, iomux + 0x650); /* UART7_RTS_B_SELECT_INPUT */
+			writel_relaxed(0x3, iomux + 0x654); /* UART8_RTS_B_SELECT_INPUT */
+		}
+	}
 }
 
 static void __init imx6ul_init_irq(void)
