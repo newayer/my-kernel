@@ -1,15 +1,22 @@
-    {
-        "kconfig.env": {
-            "SRCARCH": "arm"
-        },
-        "ctags.languages": [
-            "C",
-            "C++",
-            "Kconfig",
-            "Make"
-        ],
-        "devicetree.bindings": [
-            "${workspaceFolder}/../Documentation/devicetree/bindings"
-        ],
-        "kerneldev.experimental.newDtsEngine": true
-    }
+{
+    "kconfig.env": {
+        "SRCARCH": "arm"
+    },
+    "ctags.languages": [
+        "C",
+        "C++",
+        "Kconfig",
+        "Make"
+    ],
+    "files.associations": {
+        "*.dts": "devicetree",
+        "*.dtsi": "devicetree"
+    },
+    "kerneldev.experimental.newKconfigEngine": true,
+    "devicetree.defaultDeviceOrgTreeBindings": [
+        "${workspaceFolder}/../Documentation/devicetree/bindings"
+    ],
+    "devicetree.defaultDeviceOrgBindingsMetaSchema": [
+        "${workspaceFolder}/../Documentation/devicetree/bindings/meta-schemas"
+    ]
+}
