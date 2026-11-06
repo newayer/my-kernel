@@ -43,7 +43,6 @@
 			};
 		};
 	};
-
 };
 
 &rgb {
@@ -108,7 +107,7 @@
 		reg = <0x5d>;
 		interrupt-parent = <&gpio1>;
 		interrupts = <RK_PC2 0>;
- 
+
 		irq-gpios = <&gpio1 RK_PC2 0>;
 		reset-gpios = <&gpio4 RK_PA4 GPIO_ACTIVE_HIGH>;
 		max-x = <800>;
@@ -117,10 +116,11 @@
 };
 
 &pinctrl {
-	gt911{
+	gt911 {
 		gt911_int_pin: gt911_int_pin {
 			rockchip,pins = <1 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
+
 		gt911_rst_pin: gt911_rst_pin {
 			rockchip,pins = <4 RK_PA4 RK_FUNC_GPIO &pcfg_pull_none>;
 		};

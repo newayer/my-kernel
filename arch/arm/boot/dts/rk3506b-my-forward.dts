@@ -33,9 +33,9 @@
 
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth_rmii0_miim_pins
-				&eth_rmii0_tx_bus2_pins
-				&eth_rmii0_rx_bus2_pins
-				&eth_rmii0_clk_pins>;
+		     &eth_rmii0_tx_bus2_pins
+		     &eth_rmii0_rx_bus2_pins
+		     &eth_rmii0_clk_pins>;
 
 	phy-handle = <&rmii_phy0>;
 	status = "okay";
@@ -50,9 +50,9 @@
 
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth_rmii1_miim_pins
-				&eth_rmii1_tx_bus2_pins
-				&eth_rmii1_rx_bus2_pins
-				&eth_rmii1_clk_pins>;
+		     &eth_rmii1_tx_bus2_pins
+		     &eth_rmii1_rx_bus2_pins
+		     &eth_rmii1_clk_pins>;
 
 	phy-handle = <&rmii_phy1>;
 	status = "okay";

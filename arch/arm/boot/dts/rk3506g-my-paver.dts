@@ -71,7 +71,7 @@
 		pinctrl-0 = <&uart5m0_rtsn_pins>;
 		pinctrl-1 = <&uart5_gpios>;
 		BT,power_gpio = <&gpio2 RK_PB3 GPIO_ACTIVE_HIGH>;
-		BT,wake_gpio =  <&gpio0 RK_PB0 GPIO_ACTIVE_HIGH>;
+		BT,wake_gpio = <&gpio0 RK_PB0 GPIO_ACTIVE_HIGH>;
 		BT,wake_host_irq = <&gpio0 RK_PB1 GPIO_ACTIVE_HIGH>;
 		status = "okay";
 	};
@@ -92,23 +92,19 @@
 
 		init-delay-ms = <0>;
 
-		gpios = <
-			&gpio1 RK_PA7 GPIO_ACTIVE_HIGH
-		>;
+		gpios = <&gpio1 RK_PA7 GPIO_ACTIVE_HIGH>;
 
 		gpio-names = "gps_rst";
 
 		gpio-init-states = <0>;
 
 		// format: <gpio_index delay_ms>
-		gpio-delays = <
-			0   50      // gps_rst在全局延时后50ms初始化
-		>;
+		gpio-delays = <0 50      // gps_rst在全局延时后50ms初始化
+			      >;
 
 		// format: <gpio_index delay_ms target_state>
-		gpio-state-delays = <
-			0   10   1   // gps_rst在初始化10ms保持高电平
-		>;
+		gpio-state-delays = <0 10 1   // gps_rst在初始化10ms保持高电平
+				    >;
 	};
 };
 
@@ -128,8 +124,8 @@
 	btn_keys {
 		key_bd: key-bd {
 			rockchip,pins = <1 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>,
-			                <1 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>,
-			                <1 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
+					<1 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>,
+					<1 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
@@ -142,7 +138,7 @@
 	wireless-wlan {
 		wifi_wake_host: wifi-wake-host {
 			rockchip,pins = <2 RK_PC0 RK_FUNC_GPIO &pcfg_pull_up>,
-			                <0 RK_PA7 RK_FUNC_GPIO &pcfg_pull_up>;
+					<0 RK_PA7 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
 };
@@ -211,17 +207,17 @@
 	status = "okay";
 
 	hym8563: hym8563@51 {
-			compatible = "haoyu,hym8563";
-			reg = <0x51>;
-			// #clock-cells = <0>;
-			// clock-frequency = <32768>;
-			// clock-output-names = "hym8563";
-			// pinctrl-names = "default";
-			// pinctrl-0 = <&hym8563_int>;
-			// interrupt-parent = <&gpio0>;
-			// interrupts = <RK_PC0 IRQ_TYPE_LEVEL_LOW>;
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+		// #clock-cells = <0>;
+		// clock-frequency = <32768>;
+		// clock-output-names = "hym8563";
+		// pinctrl-names = "default";
+		// pinctrl-0 = <&hym8563_int>;
+		// interrupt-parent = <&gpio0>;
+		// interrupts = <RK_PC0 IRQ_TYPE_LEVEL_LOW>;
 
-			wakeup-source;
+		wakeup-source;
 	};
 };
 

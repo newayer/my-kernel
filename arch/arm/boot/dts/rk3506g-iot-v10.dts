@@ -13,11 +13,12 @@
 / {
 	model = "Rockchip RK3506G(QFN128) EVB1 V10 Board";
 	compatible = "rockchip,rk3506g-evb1-v10", "rockchip,rk3506";
-	
-		// LED
+
+	// LED
 	leds {
 		compatible = "gpio-leds";
 		status = "okay";
+
 		heart_led {
 			label = "run";
 			gpios = <&gpio1 RK_PB3 GPIO_ACTIVE_LOW>;
@@ -31,7 +32,6 @@
 		#size-cells = <1>;
 		ranges;
 
-
 		drm_logo: drm-logo@0 {
 			compatible = "rockchip,drm-logo";
 			reg = <0x0 0x0>;
@@ -44,43 +44,43 @@
 };
 
 /*
-&uart1 {
-    pinctrl-names = "default";
-	pinctrl-0 = <&rm_io16_uart1_rx &rm_io17_uart1_tx>;
-	status = "okay";
-};
-&uart2 {
-    pinctrl-names = "default";
-	pinctrl-0 = <&rm_io0_uart2_rx &rm_io2_uart2_tx>;
-	status = "okay";
-};
-&uart3 {
-    pinctrl-names = "default";
-	pinctrl-0 = <&rm_io15_uart3_rx &rm_io14_uart3_tx>;
-	status = "okay";
-};
-&uart4 {
-    pinctrl-names = "default";
-	pinctrl-0 = <&rm_io30_uart4_rx &rm_io31_uart4_tx>;
-	status = "okay";
-};
-&can0 {
-	rockchip,rx-max-data = <18>;
-	assigned-clocks = <&cru CLK_CAN0>;
-	assigned-clock-rates = <300000000>;
-	pinctrl-0 = <&rm_io19_can0_tx &rm_io20_can0_rx>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-&can1 {
-	rockchip,rx-max-data = <18>;
-	assigned-clocks = <&cru CLK_CAN1>;
-	assigned-clock-rates = <300000000>;
-	pinctrl-0 = <&rm_io13_can1_tx &rm_io18_can1_rx>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-*/
+ * &uart1 {
+ * pinctrl-names = "default";
+ * pinctrl-0 = <&rm_io16_uart1_rx &rm_io17_uart1_tx>;
+ * status = "okay";
+ * };
+ * &uart2 {
+ * pinctrl-names = "default";
+ * pinctrl-0 = <&rm_io0_uart2_rx &rm_io2_uart2_tx>;
+ * status = "okay";
+ * };
+ * &uart3 {
+ * pinctrl-names = "default";
+ * pinctrl-0 = <&rm_io15_uart3_rx &rm_io14_uart3_tx>;
+ * status = "okay";
+ * };
+ * &uart4 {
+ * pinctrl-names = "default";
+ * pinctrl-0 = <&rm_io30_uart4_rx &rm_io31_uart4_tx>;
+ * status = "okay";
+ * };
+ * &can0 {
+ * rockchip,rx-max-data = <18>;
+ * assigned-clocks = <&cru CLK_CAN0>;
+ * assigned-clock-rates = <300000000>;
+ * pinctrl-0 = <&rm_io19_can0_tx &rm_io20_can0_rx>;
+ * pinctrl-names = "default";
+ * status = "okay";
+ * };
+ * &can1 {
+ * rockchip,rx-max-data = <18>;
+ * assigned-clocks = <&cru CLK_CAN1>;
+ * assigned-clock-rates = <300000000>;
+ * pinctrl-0 = <&rm_io13_can1_tx &rm_io18_can1_rx>;
+ * pinctrl-names = "default";
+ * status = "okay";
+ * };
+ */
 &ramoops {
 	reg = <0x1d3000 0x2d000>;
 	status = "okay";

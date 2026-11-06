@@ -10,25 +10,29 @@
 /plugin/;
 
 &uart1 {
-    pinctrl-names = "default";
+	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io16_uart1_rx &rm_io17_uart1_tx>;
 	status = "okay";
 };
+
 &uart2 {
-    pinctrl-names = "default";
+	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io0_uart2_rx &rm_io2_uart2_tx>;
 	status = "okay";
 };
+
 &uart3 {
-    pinctrl-names = "default";
+	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io15_uart3_rx &rm_io14_uart3_tx>;
 	status = "okay";
 };
+
 &uart4 {
-    pinctrl-names = "default";
+	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io30_uart4_rx &rm_io31_uart4_tx>;
 	status = "okay";
 };
+
 &can0 {
 	rockchip,rx-max-data = <18>;
 	assigned-clocks = <&cru CLK_CAN0>;
@@ -37,6 +41,7 @@
 	pinctrl-names = "default";
 	status = "okay";
 };
+
 &can1 {
 	rockchip,rx-max-data = <18>;
 	assigned-clocks = <&cru CLK_CAN1>;

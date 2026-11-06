@@ -18,6 +18,7 @@
 		gpio = <&gpio0 RK_PA1 GPIO_ACTIVE_HIGH>;
 		regulator-name = "vcc3v3_lcd_n";
 		regulator-boot-on;
+
 		regulator-state-mem {
 			regulator-off-in-suspend;
 		};

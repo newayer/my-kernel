@@ -18,5 +18,8 @@
     ],
     "devicetree.defaultDeviceOrgBindingsMetaSchema": [
         "${workspaceFolder}/../Documentation/devicetree/bindings/meta-schemas"
-    ]
+    ],
+    "[dts]": {
+        "editor.defaultFormatter": "kylebonnici.devicetree-lsp"
+    }
 }

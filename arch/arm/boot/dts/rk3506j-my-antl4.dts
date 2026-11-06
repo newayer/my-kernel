@@ -28,13 +28,13 @@
 			linux,default-trigger = "none";
 			default-state = "off";
 		};
+
 		star_g_led: star_g_led {
 			label = "star_g_led";
 			gpios = <&gpio4 RK_PA0 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "none";
 			default-state = "off";
 		};
-
 
 		bat0_r_led: bat0_r_led {
 			label = "bat0_r_led";
@@ -49,6 +49,7 @@
 			linux,default-trigger = "none";
 			default-state = "off";
 		};
+
 		bat1_g_led: bat1_g_led {
 			label = "bat1_g_led";
 			gpios = <&gpio4 RK_PA3 GPIO_ACTIVE_HIGH>;
@@ -62,6 +63,7 @@
 			linux,default-trigger = "none";
 			default-state = "off";
 		};
+
 		bat2_g_led: bat2_g_led {
 			label = "bat2_g_led";
 			gpios = <&gpio4 RK_PA2 GPIO_ACTIVE_HIGH>;
@@ -88,38 +90,36 @@
 		init-delay-ms = <0>;
 
 		gpios = <&gpio3 RK_PA6 GPIO_ACTIVE_HIGH    // 0 GD-ON-H
-				 &gpio2 RK_PA1 GPIO_ACTIVE_HIGH    // 1 PWROFF-H
-				 &gpio2 RK_PA3 GPIO_ACTIVE_HIGH    // 2 HOST-WAKE-WIFI
-				 &gpio2 RK_PA5 GPIO_ACTIVE_HIGH    // 3 TR-ON-H
-				 &gpio1 RK_PA0 GPIO_ACTIVE_HIGH    // 4 A2B-PWRKEY-H
-				 &gpio1 RK_PA1 GPIO_ACTIVE_HIGH    // 5 A2B-RST-L
-				 &gpio1 RK_PA2 GPIO_ACTIVE_HIGH    // 6 A2B-WAKE
-				 &gpio1 RK_PA3 GPIO_ACTIVE_HIGH    // 7 A2B-SLEEP
-				 &gpio1 RK_PB1 GPIO_ACTIVE_HIGH    // 8 BB-ON-H
-				 &gpio1 RK_PB3 GPIO_ACTIVE_HIGH    // 9 PHYON-H
-				 &gpio1 RK_PC1 GPIO_ACTIVE_HIGH    // 10 TR-STMRST-H
-				 &gpio1 RK_PC0 GPIO_ACTIVE_HIGH    // 11 555-RST-L
-				 &gpio1 RK_PB4 GPIO_ACTIVE_HIGH    // 12 SLIC-ON-H
-				 &gpio2 RK_PA4 GPIO_ACTIVE_HIGH>;  // 13 WIFI-PWRKEY-H
-
-
+			 &gpio2 RK_PA1 GPIO_ACTIVE_HIGH    // 1 PWROFF-H
+			 &gpio2 RK_PA3 GPIO_ACTIVE_HIGH    // 2 HOST-WAKE-WIFI
+			 &gpio2 RK_PA5 GPIO_ACTIVE_HIGH    // 3 TR-ON-H
+			 &gpio1 RK_PA0 GPIO_ACTIVE_HIGH    // 4 A2B-PWRKEY-H
+			 &gpio1 RK_PA1 GPIO_ACTIVE_HIGH    // 5 A2B-RST-L
+			 &gpio1 RK_PA2 GPIO_ACTIVE_HIGH    // 6 A2B-WAKE
+			 &gpio1 RK_PA3 GPIO_ACTIVE_HIGH    // 7 A2B-SLEEP
+			 &gpio1 RK_PB1 GPIO_ACTIVE_HIGH    // 8 BB-ON-H
+			 &gpio1 RK_PB3 GPIO_ACTIVE_HIGH    // 9 PHYON-H
+			 &gpio1 RK_PC1 GPIO_ACTIVE_HIGH    // 10 TR-STMRST-H
+			 &gpio1 RK_PC0 GPIO_ACTIVE_HIGH    // 11 555-RST-L
+			 &gpio1 RK_PB4 GPIO_ACTIVE_HIGH    // 12 SLIC-ON-H
+			 &gpio2 RK_PA4 GPIO_ACTIVE_HIGH>;  // 13 WIFI-PWRKEY-H
 		gpio-names = "gd_on_h",
-		             "pwroff_h",
-		             "host_wake_wifi",
-		             "tr_on_h",
-		             "a2b_pwrkey_h",
-		             "a2b_rst_l",
-		             "a2b_wake",
-		             "a2b_sleep",
-		             "bb_on_h",
-		             "phyon_h",
-		             "tr_stmrst_h",
-		             "rst_555_l",
-		             "slic_on_h",
-		             "wifi_pwrkey_h";
+			     "pwroff_h",
+			     "host_wake_wifi",
+			     "tr_on_h",
+			     "a2b_pwrkey_h",
+			     "a2b_rst_l",
+			     "a2b_wake",
+			     "a2b_sleep",
+			     "bb_on_h",
+			     "phyon_h",
+			     "tr_stmrst_h",
+			     "rst_555_l",
+			     "slic_on_h",
+			     "wifi_pwrkey_h";
 
 		//                  0 1 2 3 4 5 6 7 8 9 10 11 12 13
-		gpio-init-states = <1 0 0 1 1 1 0 0 1 1  0  1  1  1>;
+		gpio-init-states = <1 0 0 1 1 1 0 0 1 1 0 1 1 1>;
 
 		// format: <gpio_index delay_ms>
 		gpio-delays = <5 10>;
@@ -141,7 +141,7 @@
 		gpios = <&gpio0 RK_PD0 GPIO_ACTIVE_HIGH>;
 		gpios-states = <0>;
 		states = <3300000 0x1>,
-				 <1800000 0x0>;
+			 <1800000 0x0>;
 
 		startup-delay-us = <100000>;
 	};
@@ -223,28 +223,28 @@
 		// 硬件版本检测参数
 		hw-version-adc-channel = <0>; // 对应io-channels中的第一个(通道2)
 		hw-version-thresholds = <
-								/* min(mV) max(mV) version */
-								0       200     0       // 版本1: 0-200mV (0.0V)
-								1600    2000    1       // 版本2: 1.6-2.0V (1.8V)
-								800     1000    2       // 版本3: 800-1000mV (0.9V)
-								250     350     3       // 版本4: 250-350mV (0.3V)
-								>;
+					 /* min(mV) max(mV) version */
+					 0 200 0       // 版本1: 0-200mV (0.0V)
+					 1600 2000 1       // 版本2: 1.6-2.0V (1.8V)
+					 800 1000 2       // 版本3: 800-1000mV (0.9V)
+					 250 350 3       // 版本4: 250-350mV (0.3V)
+					>;
 
 		// 电压检测参数
 		vbat-adc-channel = <1>; // 对应io-channels中的第二个(通道3)
 		vbat-divider-ratio = <4922>; // 分压比 * 1000 (7.0/1.422≈4.922)
 		vbat-ref-voltage = <1800>; // 参考电压1800mV
 		vbat-calibration = <
-							/* adc电压(mV) 实际电压(mV) */
-							1422    7000    // 1.422V对应7.0V
-							1707    8400    // 1.707V对应8.4V
-							>;
+				    /* adc电压(mV) 实际电压(mV) */
+				    1422 7000    // 1.422V对应7.0V
+				    1707 8400    // 1.707V对应8.4V
+				   >;
 
 		sample-count = <5>;        // 每次采样次数
 		sample-interval-ms = <10>; // 采样间隔
 		debounce-count = <3>;      // 去抖动次数
 
-        vref-supply = <&vcc_1v8>;
+		vref-supply = <&vcc_1v8>;
 	};
 };
 
@@ -275,7 +275,6 @@
 	status = "okay";
 };
 
-
 &gmac0 {
 	clock_in_out = "input";
 
@@ -285,9 +284,9 @@
 
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth_rmii0_miim_pins
-				 &eth_rmii0_tx_bus2_pins
-				 &eth_rmii0_rx_bus2_pins
-				 &eth_rmii0_clk_pins>;
+		     &eth_rmii0_tx_bus2_pins
+		     &eth_rmii0_rx_bus2_pins
+		     &eth_rmii0_clk_pins>;
 
 	phy-handle = <&rmii_phy0>;
 	status = "okay";
@@ -312,8 +311,8 @@
 	wireless-wlan {
 		wifi_wake_host: wifi-wake-host {
 			rockchip,pins = <1 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>,
-							<2 RK_PA4 RK_FUNC_GPIO &pcfg_pull_none>,
-							<2 RK_PA2 RK_FUNC_GPIO &pcfg_pull_up>;
+					<2 RK_PA4 RK_FUNC_GPIO &pcfg_pull_none>,
+					<2 RK_PA2 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
 
@@ -327,6 +326,7 @@
 		proslic_int: proslic-int {
 			rockchip,pins = <1 RK_PB5 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
+
 		proslic_reset: proslic-reset {
 			rockchip,pins = <1 RK_PB6 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
@@ -341,9 +341,9 @@
 /* xw modem codec */
 &sai0 {
 	pinctrl-0 = <&sai0_lrck_pins
-				 &sai0_sclk_pins
-				 &sai0_sdi0_pins
-				 &sai0_sdo_pins>;
+		     &sai0_sclk_pins
+		     &sai0_sdi0_pins
+		     &sai0_sdo_pins>;
 	rockchip,trcm-sync-tx-only;
 	rockchip,mclk-fs = <256>;
 	status = "okay";
@@ -352,9 +352,9 @@
 /* proslic codec */
 &sai1 {
 	pinctrl-0 = <&sai1_lrck_pins
-				 &sai1_sclk_pins
-				 &sai1_sdi_pins
-				 &sai1_sdo0_pins>;
+		     &sai1_sclk_pins
+		     &sai1_sdi_pins
+		     &sai1_sdo0_pins>;
 	rockchip,trcm-sync-tx-only;
 	assigned-clocks = <&cru MCLK_SAI1>;
 	assigned-clock-rates = <2048000>;  // 2.048MHz

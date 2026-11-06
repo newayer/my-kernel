@@ -36,7 +36,6 @@
 			default-state = "off";
 		};
 
-
 		radar_led: radar-led {
 			label = "radar_led";
 			gpios = <&gpio4 RK_PA3 GPIO_ACTIVE_HIGH>;
@@ -71,27 +70,27 @@
 		init-delay-ms = <0>;
 
 		gpios = <&gpio1 RK_PA4 GPIO_ACTIVE_HIGH    // 0 PHYON-H
-				 &gpio0 RK_PA6 GPIO_ACTIVE_HIGH    // 1 HOST-WAKE-WIFI
-				 &gpio1 RK_PB5 GPIO_ACTIVE_HIGH    // 2 5GON-H
-				 &gpio1 RK_PC1 GPIO_ACTIVE_HIGH    // 3 5G-PWRKEY-H
-				 &gpio0 RK_PB1 GPIO_ACTIVE_HIGH    // 4 5GRST-L
-				 &gpio1 RK_PC7 GPIO_ACTIVE_HIGH    // 5 GD-ON-H
-				 &gpio1 RK_PC4 GPIO_ACTIVE_HIGH    // 6 GD-RST-L
-				 &gpio1 RK_PB6 GPIO_ACTIVE_HIGH    // 7 BIIION-H
-				 &gpio1 RK_PD0 GPIO_ACTIVE_HIGH    // 8 BIII-PWRKEY-H
-				 &gpio1 RK_PD1 GPIO_ACTIVE_HIGH    // 9 BIII-RST-L
-				 &gpio1 RK_PA5 GPIO_ACTIVE_HIGH>;  // 10 RADRON-H
+			 &gpio0 RK_PA6 GPIO_ACTIVE_HIGH    // 1 HOST-WAKE-WIFI
+			 &gpio1 RK_PB5 GPIO_ACTIVE_HIGH    // 2 5GON-H
+			 &gpio1 RK_PC1 GPIO_ACTIVE_HIGH    // 3 5G-PWRKEY-H
+			 &gpio0 RK_PB1 GPIO_ACTIVE_HIGH    // 4 5GRST-L
+			 &gpio1 RK_PC7 GPIO_ACTIVE_HIGH    // 5 GD-ON-H
+			 &gpio1 RK_PC4 GPIO_ACTIVE_HIGH    // 6 GD-RST-L
+			 &gpio1 RK_PB6 GPIO_ACTIVE_HIGH    // 7 BIIION-H
+			 &gpio1 RK_PD0 GPIO_ACTIVE_HIGH    // 8 BIII-PWRKEY-H
+			 &gpio1 RK_PD1 GPIO_ACTIVE_HIGH    // 9 BIII-RST-L
+			 &gpio1 RK_PA5 GPIO_ACTIVE_HIGH>;  // 10 RADRON-H
 
 		gpio-names = "phyon_h",
-		             "host_wake_wifi",
-		             "modem_on_h",
-		             "modem_pwrkey_h",
-		             "modem_rst_l",
-		             "gd_on_h",
-		             "gd_rst_l",
-		             "bd3_on_h",
-		             "bd3_pwrkey_h",
-		             "radar_on_h";
+			     "host_wake_wifi",
+			     "modem_on_h",
+			     "modem_pwrkey_h",
+			     "modem_rst_l",
+			     "gd_on_h",
+			     "gd_rst_l",
+			     "bd3_on_h",
+			     "bd3_pwrkey_h",
+			     "radar_on_h";
 
 		//                  0 1 2 3 4 5 6 7 8 9 10 11 12 13
 		gpio-init-states = <1 1 1 1 1 0 1 0 1 1 0>;
@@ -116,7 +115,7 @@
 		gpios = <&gpio0 RK_PD0 GPIO_ACTIVE_HIGH>;
 		gpios-states = <0>;
 		states = <3300000 0x1>,
-				 <1800000 0x0>;
+			 <1800000 0x0>;
 
 		startup-delay-us = <100000>;
 	};
@@ -141,18 +140,18 @@
 		// 硬件版本检测参数
 		hw-version-adc-channel = <0>; // 对应io-channels中的第一个(通道3)
 		hw-version-thresholds = <
-								/* min(mV) max(mV) version */
-								0       200     0       // 版本1: 0-200mV (0.0V)
-								1600    2000    1       // 版本2: 1.6-2.0V (1.8V)
-								800     1000    2       // 版本3: 800-1000mV (0.9V)
-								250     350     3       // 版本4: 250-350mV (0.3V)
-								>;
+					 /* min(mV) max(mV) version */
+					 0 200 0       // 版本1: 0-200mV (0.0V)
+					 1600 2000 1       // 版本2: 1.6-2.0V (1.8V)
+					 800 1000 2       // 版本3: 800-1000mV (0.9V)
+					 250 350 3       // 版本4: 250-350mV (0.3V)
+					>;
 
 		sample-count = <5>;        // 每次采样次数
 		sample-interval-ms = <10>; // 采样间隔
 		debounce-count = <3>;      // 去抖动次数
 
-        vref-supply = <&vcc_1v8>;
+		vref-supply = <&vcc_1v8>;
 	};
 };
 
@@ -171,9 +170,9 @@
 
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth_rmii0_miim_pins
-				 &eth_rmii0_tx_bus2_pins
-				 &eth_rmii0_rx_bus2_pins
-				 &eth_rmii0_clk_pins>;
+		     &eth_rmii0_tx_bus2_pins
+		     &eth_rmii0_rx_bus2_pins
+		     &eth_rmii0_clk_pins>;
 
 	phy-handle = <&rmii_phy0>;
 	status = "okay";
@@ -188,9 +187,9 @@
 
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth_rmii1_miim_pins
-				 &eth_rmii1_tx_bus2_pins
-				 &eth_rmii1_rx_bus2_pins
-				 &eth_rmii1_clk_pins>;
+		     &eth_rmii1_tx_bus2_pins
+		     &eth_rmii1_rx_bus2_pins
+		     &eth_rmii1_clk_pins>;
 
 	phy-handle = <&rmii_phy1>;
 	status = "okay";
@@ -225,8 +224,8 @@
 	wireless-wlan {
 		wifi_gpios: wifi-gpios {
 			rockchip,pins = <1 RK_PC6 RK_FUNC_GPIO &pcfg_pull_none>,
-							<0 RK_PA4 RK_FUNC_GPIO &pcfg_pull_none>,
-							<0 RK_PA7 RK_FUNC_GPIO &pcfg_pull_up>;
+					<0 RK_PA4 RK_FUNC_GPIO &pcfg_pull_none>,
+					<0 RK_PA7 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
 
