@@ -375,7 +375,6 @@
 &uart3 {// tiantong modem uart interface, origin uart2
 	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io6_uart3_rx &rm_io7_uart3_tx &rm_io2_uart3_ctsn &rm_io14_uart3_rtsn>;
-	dma-names = "tx", "rx";
 	status = "okay";
 };
 
