@@ -14,5 +14,9 @@
   ],
   "devicetree.defaultDeviceOrgBindingsMetaSchema": [
     "${workspaceFolder}/../Documentation/devicetree/bindings/meta-schemas"
+  ],
+  "devicetree.defaultIncludePaths": [
+    "${workspaceFolder}/include",
+    "${workspaceFolder}/arch/arm/boot/dts/include"
   ]
 }
