@@ -1,0 +1,16 @@
+/*
+ * Tronlong i.MX6ULL core board - NAND version
+ */
+
+/dts-v1/;
+
+#include "my-imx6ull-base.dtsi"
+
+/ {
+	model = "Tronlong i.MX6ULL Core Board (NAND)";
+	compatible = "fsl,imx6ull-14x14-evk", "fsl,imx6ull";
+};
+
+&gpmi {
+	status = "okay";
+};
